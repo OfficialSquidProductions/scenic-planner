@@ -1,5 +1,5 @@
 {
-  "name":"scenic-planner","version":"1.4.0","description":"Offline scene, shot and lighting planning","author":"Squid Productions","license":"MIT","private":true,"main":"main.cjs",
+  "name":"scenic-planner","version":"1.4.1","description":"Offline scene, shot and lighting planning","author":"Squid Productions","license":"MIT","private":true,"main":"main.cjs",
   "scripts":{"dist":"electron-builder --win nsis --x64 --publish never"},
   "dependencies":{"electron-updater":"6.8.9"},
   "devDependencies":{"electron":"44.7.0","electron-builder":"26.15.3"},

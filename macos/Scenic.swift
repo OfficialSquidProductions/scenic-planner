@@ -133,7 +133,7 @@ final class ScenicApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
         catch { showError(error.localizedDescription) }
     }
     @objc func about() {
-        NSApp.orderFrontStandardAboutPanel(options: [.applicationName: "Scenic", .applicationVersion: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "", .version: Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "", .credits: NSAttributedString(string: "A Squid Production™ Software\nTop-down scene, shot, and lighting design.\nWorks entirely on your Mac.")])
+        NSApp.orderFrontStandardAboutPanel(options: [.applicationName: "Scenic", .applicationVersion: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "", .version: Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "", .credits: NSAttributedString(string: "A Squid Productions™ Software\nTop-down scene, shot, and lighting design.\nWorks entirely on your Mac.")])
     }
     func showError(_ text: String) {
         let alert = NSAlert(); alert.messageText = "Scenic"; alert.informativeText = text; alert.alertStyle = .warning; alert.addButton(withTitle: "OK"); alert.runModal()
