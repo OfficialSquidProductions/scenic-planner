@@ -6,7 +6,7 @@
   "build":{
     "appId":"org.squidproductions.scenic","productName":"Scenic",
     "directories":{"output":"../release/windows","buildResources":"assets"},
-    "files":["*.cjs","package.json"],"extraResources":[{"from":"../dist","to":"web"}],
+    "files":["*.cjs","package.json"],"extraResources":[{"from":"../dist","to":"web"},{"from":"../LICENSE","to":"Scenic-LICENSE.txt"}],
     "publish":[{"provider":"generic","url":"https://github.com/OfficialSquidProductions/scenic-planner/releases/latest/download/"}],
     "win":{"target":"nsis","icon":"assets/icon.ico","artifactName":"Scenic-Windows-Setup.exe","verifyUpdateCodeSignature":false},
     "nsis":{"oneClick":true,"perMachine":false,"allowElevation":false,"createDesktopShortcut":true,"createStartMenuShortcut":true,"deleteAppDataOnUninstall":false,"runAfterFinish":false}

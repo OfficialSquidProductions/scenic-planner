@@ -23,6 +23,7 @@ def build(dmg, update=False):
     frameworks=contents/'Frameworks';frameworks.mkdir()
     shutil.copytree(sparkle/'Sparkle.framework',frameworks/'Sparkle.framework',symlinks=True)
     shutil.copy2(sparkle/'LICENSE',res/'Sparkle-LICENSE.txt')
+    shutil.copy2(ROOT/'LICENSE',res/'Scenic-LICENSE.txt')
     for arch in ['arm64','x86_64']:
         run('swiftc','-O','-module-cache-path',CACHE/'swift','-target',arch+'-apple-macos13.3','-F',frameworks,'-framework','Sparkle','-Xlinker','-rpath','-Xlinker','@executable_path/../Frameworks',ROOT/'macos/Scenic.swift',ROOT/'macos/Updates.swift','-o',CACHE/('Scenic-'+arch))
     run('lipo','-create',CACHE/'Scenic-arm64',CACHE/'Scenic-x86_64','-output',mac/'Scenic')
@@ -42,7 +43,8 @@ def build(dmg, update=False):
     if dmg:
         stage=CACHE/'dmg-stage'
         if stage.exists():shutil.rmtree(stage)
-        stage.mkdir();shutil.copytree(app,stage/'Scenic.app');(stage/'Applications').symlink_to('/Applications',target_is_directory=True)
+        stage.mkdir();shutil.copytree(app,stage/'Scenic.app',symlinks=True);(stage/'Applications').symlink_to('/Applications',target_is_directory=True)
+        run('codesign','--verify','--deep','--strict',stage/'Scenic.app')
         shutil.copy2(res/'READ ME.txt',stage/'Read me.txt')
         run('hdiutil','create','-ov','-volname','Scenic','-srcfolder',stage,'-format','UDZO',OUT/'Scenic-Mac.dmg')
         run('hdiutil','verify',OUT/'Scenic-Mac.dmg')

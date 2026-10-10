@@ -48,6 +48,11 @@ jobs:
           $tag = "v$version"
           $exe = 'release/windows/Scenic-Windows-Setup.exe'
           (Get-FileHash $exe -Algorithm SHA256).Hash.ToLower() + '  Scenic-Windows-Setup.exe' | Set-Content release/windows/SHA256-Windows.txt
+          $existing = gh release view $tag --json assets 2>$null
+          if ($LASTEXITCODE -eq 0 -and (($existing | ConvertFrom-Json).assets.name -contains 'Scenic-Windows-Setup.exe')) {
+            Write-Output 'This Windows version is already published. Increase release.json version to publish another immutable installer.'
+            exit 0
+          }
           gh release view $tag *> $null
           if ($LASTEXITCODE) { gh release create $tag --title "Scenic $version" --notes "Offline scene, shot and lighting planning for Mac and Windows. Windows installer passed packaged-app, installation, saved-workspace, and reinstall checks. See the README for requirements and update details." }
           if ($LASTEXITCODE) { exit $LASTEXITCODE }

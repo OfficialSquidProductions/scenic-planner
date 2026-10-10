@@ -26,12 +26,12 @@ parent.mkdir(exist_ok=True)
 staging=parent/('.Scenic-install-'+str(uuid.uuid4())+'.app')
 previous=None
 try:
-    shutil.copytree(source,staging)
+    shutil.copytree(source,staging,symlinks=True)
     subprocess.run(['codesign','--verify','--deep','--strict',str(staging)],check=True)
     if destination.exists():
         backup=root/'.cache'/('Scenic-previous-'+str(uuid.uuid4())+'.app')
         backup.parent.mkdir(exist_ok=True)
-        shutil.copytree(destination,backup)
+        shutil.copytree(destination,backup,symlinks=True)
         previous=parent/('.Scenic-replaced-'+str(uuid.uuid4())+'.app')
         destination.rename(previous)
     try:staging.rename(destination)
