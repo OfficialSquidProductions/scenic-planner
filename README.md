@@ -12,7 +12,7 @@ Projects autosave atomically to `~/Library/Application Support/Scenic/workspace.
 
 Use File > Open Project, Save Project As, Import Image, and Export Map for native file dialogs. Save Project As exports the existing portable `.scenic` format, so web projects can be transferred into the app. File > Save immediately saves the local workspace.
 
-Build with `python3 tools/build_macos.py` using Xcode command-line tools. The script creates a universal app and a verified disk image in `release/`. The app uses AppKit and WebKit supplied by macOS; it bundles only the editor, logo, and icon. No commercial font files or user projects are included. This personal build is ad-hoc signed, not notarized for public distribution.
+Build with `python3 tools/build_macos.py` using Xcode command-line tools. The script creates a universal app and a verified disk image in `release/`. The app uses AppKit and WebKit supplied by macOS; it bundles the editor, branding, and Sparkle updater. No commercial font files or user projects are included. The current release is ad-hoc signed and is not Apple-notarized.
 
 ## Windows app
 
@@ -68,5 +68,7 @@ Lighting is an artistic 2D approximation of direct light, with radial falloff, d
 Uses the supplied blue SP icon for the Mac app, the transparent red SP logo in the header, and the small Squid Productions banner, Spanish Red (#E60026), light and dark palettes, Futura, and locally available Reross Quadratic for headings. Commercial fonts are referenced by local font name rather than redistributed; devices without these fonts use system sans-serif fallbacks.
 
 ## Verification
+
+Release 1.4.0 passed [Windows build, installation, and reinstall checks](https://github.com/OfficialSquidProductions/scenic-planner/actions/runs/38023876811) on a Windows runner. The published installer was downloaded and checked against that tested artifact and its SHA-256/SHA-512 metadata. A Mac test bundle marked as 1.3.9 successfully updated through the public Sparkle feed to 1.4.0 (build 5), relaunched, and retained the workspace byte-for-byte. The public download site serves HTTPS.
 
 Run `node tests/geometry.cjs`, `node tests/catalog.cjs`, `node tests/model.cjs`, and `node tests/windows-store.cjs` to verify measurements, catalog validation, occlusion, wall attachments, door/window behavior, movement, sunlight, and multi-production storage migration. Source is buildless HTML/CSS/JavaScript in `dist/`.
