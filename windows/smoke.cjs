@@ -8,7 +8,7 @@ module.exports=async({win,store,flush,report})=>{
  await js("document.getElementById('add-scene').click()");const scenes=await js('doc.scenes.length');assert.ok(scenes>1);
  await js("document.getElementById('undo').click()");assert.equal(await js('doc.scenes.length'),scenes-1);
  await js("document.getElementById('redo').click()");assert.equal(await js('doc.scenes.length'),scenes);checks.push('New scene, Undo and Redo');
- await js("document.getElementById('project-name').value='Windows verification';document.getElementById('project-name').dispatchEvent(new Event('change'))");
+ await js("document.getElementById('project-name').focus();document.getElementById('project-name').value='Windows verification';document.getElementById('project-name').dispatchEvent(new Event('input'));document.getElementById('project-name').dispatchEvent(new Event('change'))");
  assert.equal(await flush(),true);const saved=fs.readFileSync(store.current,'utf8');assert.ok(saved.includes('Windows verification'));assert.equal(JSON.parse(saved).projects.length,initial);checks.push('Workspace edits save atomically outside installation');
  await js("document.getElementById('theme').click()");const theme=await js('document.documentElement.dataset.theme');assert.ok(['light','dark'].includes(theme));await flush();
  await win.reload();for(let i=0;i<100;i++){if(await js('window.scenicReady===true'))break;await new Promise(r=>setTimeout(r,100));}

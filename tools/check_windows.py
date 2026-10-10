@@ -3,7 +3,10 @@
 import hashlib,json,os,pathlib,subprocess,tempfile,time
 ROOT=pathlib.Path(__file__).resolve().parents[1];OUT=ROOT/'release/windows-verification';OUT.mkdir(parents=True,exist_ok=True)
 def smoke(exe,label):
- report=OUT/(label+'.json');subprocess.run([str(exe),'--smoke-test',str(report)],check=True,timeout=120)
+ report=OUT/(label+'.json');result=subprocess.run([str(exe),'--smoke-test',str(report)],timeout=120)
+ if result.returncode:
+  if report.exists():print(report.read_text(),flush=True)
+  result.check_returncode()
  result=json.loads(report.read_text());assert result['passed'],result;print(label+': passed',flush=True)
 exe=ROOT/'release/windows/win-unpacked/Scenic.exe';smoke(exe,'packaged')
 installer=ROOT/'release/windows/Scenic-Windows-Setup.exe'
