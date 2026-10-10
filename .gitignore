@@ -1,0 +1,15 @@
+.cache/
+release/
+.DS_Store
+node_modules/
+__pycache__/
+*.pyc
+.openai/
+website/assets/
+windows/assets/
+scenic-*-preview.*
+scenic-preview.jpg
+*.scenic
+*.pem
+*.p12
+.env*

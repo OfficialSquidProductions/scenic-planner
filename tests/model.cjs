@@ -1,0 +1,52 @@
+const assert=require('node:assert/strict'),m=require('../dist/model.js'),g=require('../dist/engine.js'),catalog=require('../dist/catalog.js');
+const wall={id:'wall',type:'wall',name:'Wall',x:0,y:0,x2:360,y2:0,thickness:9};
+const window={id:'window',type:'set',asset:'window',name:'Window',x:180,y:12,width:144,height:24,rotation:0,curtains:false};
+assert(m.snapOpening(window,[wall],20));assert.equal(window.y,0);assert.equal(window.wallT,.5);
+let objects=[wall,window];assert(!g.blocked({x:180,y:-100},{x:180,y:100},m.effectiveWalls(objects)),'Uncovered window admits light');
+assert(g.blocked({x:30,y:-100},{x:30,y:100},m.effectiveWalls(objects)),'Wall beside window remains opaque');
+window.curtains=true;assert(g.blocked({x:180,y:-100},{x:180,y:100},m.effectiveWalls(objects)),'Curtains close the light opening');
+window.curtains=false;wall.y=50;wall.y2=50;m.syncOpenings(objects);assert.equal(window.y,50,'Opening follows its wall');
+const door={...window,id:'door',asset:'door',width:108,open:false,curtains:false,hinge:'Left',swingSide:'Side A'};objects=[wall,door];
+assert(g.blocked({x:180,y:-100},{x:180,y:200},m.effectiveWalls(objects)),'Closed door blocks');door.open=true;
+assert(!g.blocked({x:180,y:-100},{x:180,y:200},m.effectiveWalls(objects)),'Open door admits light');
+const leftLeaf=m.doorLeaves(door)[0];assert(leftLeaf.y2>leftLeaf.y);door.swingSide='Side B';assert(m.doorLeaves(door)[0].y2<leftLeaf.y);
+door.hinge='Right';assert(m.doorLeaves(door)[0].x>leftLeaf.x,'Hinge reverses');
+// Multiple overlapping cuts must merge, preserving the solid wall on each side.
+const window2={...window,id:'second',x:216,wallT:.6};const cuts=m.effectiveWalls([wall,window,window2]);assert.equal(cuts.length,2);assert(cuts.every(w=>w.x2>=w.x));
+const diagonal={...wall,x:0,y:0,x2:360,y2:360},angled={...window,wallId:undefined,x:180,y:190};assert(m.snapOpening(angled,[diagonal],30));assert.equal(angled.rotation,45);assert.equal(angled.x,angled.y);
+assert(!m.snapOpening({...window,width:600},[wall],Infinity),'Oversize opening cannot cut a short wall');
+const unbound={...window,x:900,y:900};assert(!m.snapOpening(unbound,[wall],20));assert.equal(unbound.wallId,undefined,'Dragging away detaches');
+const marks=[{x:0,y:0,rotation:170},{x:100,y:200,rotation:-170},{x:300,y:400,rotation:90}];
+assert.deepEqual(m.pathPosition(marks,0),marks[0]);assert.deepEqual(m.pathPosition(marks,.5),{x:100,y:200,rotation:-170});assert.equal(m.pathPosition(marks,.25).rotation,180,'Preview turns across the shortest angle');
+assert.equal(m.markLabel(0),'A');assert.equal(m.markLabel(26),'AA');
+const sun={id:'sun',name:'Sun',type:'light',asset:'sun',x:0,y:0,rotation:0,enabled:true,...catalog.lightPresets.sun};
+assert.equal(m.sunState(sun).azimuth,180);assert.equal(m.sunState(sun).altitude,75);assert(m.sunState(sun).strength>0);
+assert.equal(m.sunState({...sun,time:2}).strength,0);assert.equal(m.sunState({...sun,time:6}).daylight,false);assert(m.sunState({...sun,time:7}).temperature<m.sunState(sun).temperature);
+assert.equal(m.sunState({...sun,riseDirection:0,setDirection:180}).azimuth,90);
+const project={version:1,name:'Legacy',active:'s',scenes:[{id:'s',title:'Scene',ambient:30,objects:[{...wall},sun,{id:'actor',name:'Talent',type:'actor',x:0,y:0,rotation:0,marks}]}]};
+assert(m.validProject(project));const workspace=m.workspaceFrom(project,'p1');assert(m.validWorkspace(workspace));assert.equal(project.projectId,undefined,'Migration does not mutate old saved data');
+workspace.projects.push({...structuredClone(project),projectId:'p2'});workspace.activeProject='p2';assert(m.validWorkspace(JSON.parse(JSON.stringify(workspace))));
+workspace.projects[0].scenes[0].objects.push({...sun,id:'sun2'});assert(!m.validWorkspace(workspace),'A second sun cannot enter via import');
+workspace.projects[0].scenes[0].objects.pop();workspace.projects[0].scenes[0].objects.at(-1).marks[0].x=NaN;assert(!m.validWorkspace(workspace),'Invalid movement coordinates rejected');
+assert.throws(()=>m.workspaceFrom({version:2,projects:[]},'bad'));
+console.log('Scene model verified: wall snapping and following, window curtains, door states and swings, overlapping apertures, movement interpolation, solar daylight, one-sun validation, and multi-project migration.');
+
+// All routes share one clock while retaining each object's duration.
+const talent={type:'actor',marks:[{x:0,y:0,rotation:0},{x:100,y:0,rotation:90}],pathDuration:4};
+const camera={type:'camera',marks:[{x:0,y:0,rotation:0},{x:0,y:200,rotation:0}],pathDuration:8};
+const fixture={type:'light',marks:[{x:50,y:0,rotation:0},{x:150,y:0,rotation:0}],pathDuration:2};
+const source=JSON.stringify([talent,camera,fixture]);
+assert.equal(m.motionDuration([talent,camera,fixture]),8000);
+assert.equal(m.motionPose(talent,2000).x,50);assert.equal(m.motionPose(camera,2000).y,50);assert.equal(m.motionPose(fixture,2000).x,150);
+assert.equal(JSON.stringify([talent,camera,fixture]),source,'Playback preserves saved poses and marks');
+const clock={start:1000,elapsed:0,duration:8000,paused:false};assert.equal(m.playbackElapsed(clock,3000),2000);
+clock.elapsed=m.playbackElapsed(clock,3000);clock.paused=true;assert.equal(m.playbackElapsed(clock,7000),2000,'Pause freezes all routes');
+clock.start=7000;clock.paused=false;assert.equal(m.playbackElapsed(clock,8000),3000,'Resume preserves elapsed motion');
+assert.equal(m.playbackElapsed(clock,20000),8000,'Playback clamps to final marks');
+assert.deepEqual(m.lightColor({temperature:3200}),g.temperature(3200));
+assert.deepEqual(m.lightColor({temperature:3200,rgbEnabled:true,red:255,green:0,blue:128}),[255,0,128]);
+assert.deepEqual(m.lightColor({temperature:3200,rgbEnabled:false,red:255,green:0,blue:128}),g.temperature(3200),'Temperature mode preserves existing light color');
+const rgbProject=structuredClone(project);rgbProject.scenes[0].objects= [{...sun,id:'rgb',kind:undefined,asset:undefined,rgbEnabled:true,red:0,green:128,blue:255}];
+assert(m.validProject(rgbProject));assert(m.validProject(JSON.parse(JSON.stringify(rgbProject))),'RGB survives portable export/import');
+for(const value of [-1,256,NaN,12.5]){rgbProject.scenes[0].objects[0].red=value;assert(!m.validProject(rgbProject),'Invalid RGB rejected');}
+console.log('Scene-wide transport verified: simultaneous routes, separate durations, pause/resume, final poses, and non-destructive previews. RGB channels and storage validated.');

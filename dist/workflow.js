@@ -1,0 +1,80 @@
+/* Workspace, library, movement, and architectural controls. */
+let workspace=ScenicModel.workspaceFrom(doc,uid()),playback=null,contextScene=null,libraryQuery='',pendingDelete=null;
+doc=workspace.projects[0];
+function workspaceData(){const index=workspace.projects.findIndex(p=>p.projectId===doc.projectId);if(index>=0)workspace.projects[index]=doc;workspace.activeProject=doc.projectId;return workspace;}
+function loadWorkspace(data){workspace=ScenicModel.workspaceFrom(data,uid());doc=workspace.projects.find(p=>p.projectId===workspace.activeProject);selected=null;stopPlayback();wallStart=null;images.clear();}
+function blankScene(){return {id:uid(),title:'UNTITLED SCENE',subtitle:'New scene',notes:'',ambient:30,objects:[]};}
+function newProject(){snapshot();const first=blankScene();const p={version:1,projectId:uid(),name:'Untitled production',theme:doc.theme,active:first.id,scenes:[first]};workspaceData().projects.push(p);doc=p;selected=null;stopPlayback();setTool('select');showShots(false);fit();commit();$('project-name').focus();$('project-name').select();}
+function renderProjects(){
+ const select=$('production-select');select.innerHTML=workspaceData().projects.map(p=>`<option value="${esc(p.projectId)}">${esc(p.name)} · ${p.scenes.length} ${p.scenes.length===1?'scene':'scenes'}</option>`).join('');select.value=doc.projectId;
+ select.onchange=()=>{workspaceData();const next=workspace.projects.find(p=>p.projectId===select.value);if(!next||next===doc)return;doc=next;selected=null;stopPlayback();setTool('select');showShots(false);applyTheme();fit();commit();};
+}
+function deleteScene(id){const target=doc.scenes.find(s=>s.id===id);if(!target)return;snapshot();doc.scenes=doc.scenes.filter(s=>s.id!==id);if(!doc.scenes.length)doc.scenes.push(blankScene());if(doc.active===id)doc.active=doc.scenes[0].id;selected=null;stopPlayback();hideContextMenu();setTool('select');fit();commit();toast('Scene deleted · Undo to restore');}
+function renderScenes(){
+ $('scenes').innerHTML=doc.scenes.map((s,i)=>`<button class="scene-row ${s.id===doc.active?'active':''}" data-scene="${s.id}" title="Right-click for scene actions"><span class="scene-icon">${String(i+1).padStart(2,'0')}</span><span><strong>${esc(s.subtitle||s.title.replace(/^(INT\.|EXT\.)\s*/,'').split('—')[0].trim())}</strong><small>${s.objects.filter(o=>o.type==='camera').length} shots · ${s.objects.filter(o=>o.type==='light').length} lights</small></span><span class="scene-more">›</span></button>`).join('');
+ document.querySelectorAll('[data-scene]').forEach(b=>{b.onclick=()=>{doc.active=b.dataset.scene;selected=null;stopPlayback();setTool('select');showShots(false);fit();commit();};b.oncontextmenu=e=>{e.preventDefault();contextScene=b.dataset.scene;const menu=$('scene-context');menu.hidden=false;menu.style.left=Math.min(e.clientX,innerWidth-190)+'px';menu.style.top=Math.min(e.clientY,innerHeight-60)+'px';$('context-delete-scene').focus();};b.onkeydown=e=>{if(e.key==='ContextMenu'||e.shiftKey&&e.key==='F10'){e.preventDefault();const r=b.getBoundingClientRect();b.oncontextmenu({preventDefault(){},clientX:r.right,clientY:r.top});}};});
+}
+function hideContextMenu(){$('scene-context').hidden=true;contextScene=null;}
+function askDeleteProject(){pendingDelete=doc.projectId;$('delete-production-name').textContent=doc.name;$('delete-production-detail').textContent=`This removes all ${doc.scenes.length} scenes in this production. You can undo this until Scenic closes.`;$('settings').close();$('delete-production').showModal();}
+function deleteProject(){if(pendingDelete!==doc.projectId)return;snapshot();workspaceData();workspace.projects=workspace.projects.filter(p=>p.projectId!==pendingDelete);if(!workspace.projects.length){const first=blankScene();workspace.projects.push({version:1,projectId:uid(),name:'Untitled production',theme:doc.theme,active:first.id,scenes:[first]});}doc=workspace.projects[0];pendingDelete=null;selected=null;stopPlayback();$('delete-production').close();setTool('select');applyTheme();fit();commit();toast('Production deleted · Undo to restore');}
+function renderLibrary(mode=libraryMode){
+ const previousMode=libraryMode;libraryMode=mode;const panel=$('library'),oldScroll=panel.scrollTop,query=libraryQuery.trim().toLowerCase(),browsing=!!mode||!!query;
+ panel.classList.toggle('catalog-menu',browsing);
+ $('library-heading').innerHTML=mode?`<button id="library-back" class="library-back" aria-label="Back to Build your scene">←</button><h2>${({props:'Props',set:'Set',lights:'Lights'})[mode]}</h2><span class="tiny">CLICK TO PLACE</span>`:'<h2>Build your scene</h2><span class="tiny">CLICK TO PLACE</span>';
+ if(!browsing){panel.innerHTML=[['wall','Wall'],['camera','Camera'],['actor','Talent']].map(([n,label])=>`<button data-tool="${n}" aria-label="Place ${label}">${svg(n)}<span>${label}</span></button>`).join('')+[['props','Props','laptop'],['set','Set','sofa'],['lights','Lights','led-panel']].map(([category,label,asset])=>`<button data-category="${category}" aria-label="Open ${label} library">${assetIcon(ScenicCatalog.get(asset))}<span>${label} <b>↗</b></span></button>`).join('');
+ }else{
+  const items=ScenicCatalog.items.filter(i=>query?`${i.name} ${i.group==='Doors & windows'?'':i.group} ${i.category}`.toLowerCase().includes(query):i.category===mode),groups=[...new Set(items.map(i=>query?({props:'Props',set:'Set',lights:'Lights'})[i.category]+' · '+i.group:i.group))];
+  panel.innerHTML=`<div class="catalog-tabs">${['props','set','lights'].map(c=>`<button data-category="${c}" aria-pressed="${mode===c}">${({props:'Props',set:'Set',lights:'Lights'})[c]}</button>`).join('')}</div><p class="catalog-hint">${query?`${items.length} results across Props, Set & Lights.`:'Choose an item, then click the map.'}</p>`+groups.map(group=>`<section class="catalog-group"><h3>${esc(group)}</h3><div class="catalog-grid">${items.filter(i=>(query?({props:'Props',set:'Set',lights:'Lights'})[i.category]+' · '+i.group:i.group)===group).map(i=>{const unavailable=i.id==='sun'&&scene().objects.some(o=>o.kind==='sun');return `<button data-asset="${i.id}" aria-label="Place ${i.name}" ${unavailable?'disabled':''}>${assetIcon(i)}<span>${i.name}</span><small>${i.id==='sun'?unavailable?'Already in this scene':'One per scene · time of day':i.category==='lights'?'Lighting preset':formatLength(i.width)+' × '+formatLength(i.height)}</small></button>`;}).join('')}</div></section>`).join('')+(items.length?'':'<p class="catalog-empty">No items found. Try “door”, “lamp”, or “laptop”.</p>');
+ }
+ panel.querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>{showShots(false);setTool(b.dataset.tool);});
+ panel.querySelectorAll('[data-asset]').forEach(b=>b.onclick=()=>{showShots(false);setTool('asset:'+b.dataset.asset);});
+ panel.querySelectorAll('[data-category]').forEach(b=>b.onclick=()=>{setTool('select');renderLibrary(b.dataset.category);});
+ if($('library-back'))$('library-back').onclick=()=>{libraryQuery='';$('library-search').value='';renderLibrary(null);setTool('select');};
+ panel.scrollTop=previousMode===mode?oldScroll:0;
+}
+function toggleField(label,prop,value){return `<label class="toggle-label">${label}<input aria-label="${label}" data-prop="${prop}" type="checkbox" ${value?'checked':''}></label>`;}
+function openingInspector(o){const kind=ScenicModel.openingKind(o);return `<div class="section-label">${kind==='door'?'DOOR':'WINDOW'} PLACEMENT</div><p class="empty-hint">${o.wallId?'Attached to wall. Moves with the wall.':'Drag near a wall to snap into place.'}</p><button id="snap-opening" class="text-button">Snap to nearest wall</button><div class="field-row">${lengthField('Opening width','width',o.width,9,5000)}</div>${kind==='door'?toggleField('Door open','open',o.open)+selectField('Hinge side','hinge',o.hinge||'Left',['Left','Right'])+selectField('Opens toward','swingSide',o.swingSide||'Side A',['Side A','Side B'])+'<p class="empty-hint">The swing arc shows Side A. Choose Side B to reverse the opening direction.</p>':toggleField('Curtains closed','curtains',o.curtains)+'<p class="empty-hint">Uncovered windows admit light. Closed curtains block the opening.</p>'}`;}
+function timeLabel(hour){let minutes=Math.round(hour*60),h=Math.floor(minutes/60)%24,m=minutes%60;return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;}
+function sunInspector(o){const state=ScenicModel.sunState(o);return `${toggleField('Sun enabled','enabled',o.enabled)}${range('Sun intensity','power',o.power,0,100,'%')}${range('Time of day','time',o.time,0,24,'time')}<div class="field-row">${input('Sunrise · hour','sunrise',o.sunrise,'number','min="0" max="23.75" step="0.25"')}${input('Sunset · hour','sunset',o.sunset,'number','min="0.25" max="24" step="0.25"')}</div>${range('Rises from · compass','riseDirection',o.riseDirection,0,360,'°')}${range('Sets toward · compass','setDirection',o.setDirection,0,360,'°')}<p class="sun-readout">${state.daylight?`${timeLabel(o.time)} · ${Math.round(state.azimuth)}° bearing · ${Math.round(state.altitude)}° elevation`:`${timeLabel(o.time)} · Sun below horizon`}</p><p class="empty-hint">0° north · 90° east · 180° south · 270° west.<br>Directional 2D sun study with wall shadows and openings. Set daylight hours and bearings for your location; this is a creative guide rather than a geographic solar calculation.</p>`;}
+function movementInspector(o){const marks=o.marks||[],next=ScenicModel.markLabel(marks.length);return `<div class="section-label">MOVEMENT · A → B → C</div><p class="empty-hint">Record A, move the object, then record B. Each recorded position stays on the map.</p><div class="movement-list">${marks.map((m,i)=>`<div class="movement-row"><button data-go-mark="${i}" aria-label="Go to position ${ScenicModel.markLabel(i)}"><b>${ScenicModel.markLabel(i)}</b><span>${formatLength(m.x)}, ${formatLength(m.y)}</span></button><button data-remove-mark="${i}" aria-label="Remove position ${ScenicModel.markLabel(i)}">×</button><input data-mark-note="${i}" aria-label="Position ${ScenicModel.markLabel(i)} notes" value="${esc(m.notes||'')}" placeholder="Action or movement notes"></div>`).join('')}</div><div class="property-actions"><button id="record-mark" ${marks.length>=100?'disabled':''}>Record ${next}</button><button id="place-mark" ${marks.length>=100?'disabled':''}>Place ${next} on map</button></div>${marks.length?toggleField('Show movement path','showRoute',o.showRoute!==false):''}${marks.length>1?`${range('Preview duration','pathDuration',o.pathDuration||5,1,60,' s')}<button id="play-path" class="movement-play">${playback?.id===o.id?'Stop preview':'▶ Preview movement'}</button>`:''}`;}
+function recordMark(o,p=o){if(!ScenicModel.movable(o)||(o.marks||[]).length>=100)return;snapshot();o.marks=o.marks||[];o.marks.push({x:p.x,y:p.y,rotation:o.rotation||0,notes:''});o.x=p.x;o.y=p.y;o.showRoute=true;stopPlayback();setTool('select');commit();}
+function bindExtraInspector(){const o=object();if(!o)return;
+ if($('snap-opening'))$('snap-opening').onclick=()=>{snapshot();if(!ScenicModel.snapOpening(o,scene().objects,Infinity))toast('Draw a wall at least as wide as this opening first');commit();};
+ if($('record-mark'))$('record-mark').onclick=()=>recordMark(o);
+ if($('place-mark'))$('place-mark').onclick=()=>{setTool('mark:'+o.id);toast('Click the map for position '+ScenicModel.markLabel((o.marks||[]).length));};
+ document.querySelectorAll('[data-go-mark]').forEach(b=>b.onclick=()=>{snapshot();const m=o.marks[+b.dataset.goMark];Object.assign(o,{x:m.x,y:m.y,rotation:m.rotation});stopPlayback();setTool('select');commit();});
+ document.querySelectorAll('[data-remove-mark]').forEach(b=>b.onclick=()=>{snapshot();o.marks.splice(+b.dataset.removeMark,1);stopPlayback();commit();});
+ document.querySelectorAll('[data-mark-note]').forEach(el=>{let recorded=false;el.onfocus=()=>recorded=false;el.oninput=()=>{if(!recorded){snapshot();recorded=true;}o.marks[+el.dataset.markNote].notes=el.value;save();};});
+ if($('play-path'))$('play-path').onclick=()=>{if(playback?.id===o.id)stopPlayback();else{showShots(false);playback={id:o.id,start:performance.now(),duration:(o.pathDuration||5)*1000};}renderInspector();invalidate();};
+}
+function afterObjectChange(o,prop){if(!o)return;stopPlayback();
+ if(ScenicModel.openingKind(o)){
+  if(['x','y','rotation'].includes(prop))ScenicModel.snapOpening(o,scene().objects,Math.max(36,18/view.z));
+  ScenicModel.syncOpenings(scene().objects);
+ }
+ if(o.type==='wall')ScenicModel.syncOpenings(scene().objects);
+ updateRGB(o,prop);
+ if(o.kind==='sun'){
+  o.sunrise=Math.min(o.sunrise,o.sunset-.25);o.sunset=Math.max(o.sunset,o.sunrise+.25);
+  const r=document.querySelector('.sun-readout'),state=ScenicModel.sunState(o);if(r)r.textContent=state.daylight?`${timeLabel(o.time)} · ${Math.round(state.azimuth)}° bearing · ${Math.round(state.altitude)}° elevation`:`${timeLabel(o.time)} · Sun below horizon`;
+ }
+}
+function displayObject(o){if(!playback||!o.marks?.length)return o;if(playback.mode!=='scene'&&playback.id!==o.id)return o;if(playback.mode==='scene'&&o.marks.length<2)return o;return {...o,...ScenicModel.motionPose(o,ScenicModel.playbackElapsed(playback,performance.now()))};}
+function setupWorkflow(){
+ setupControls();
+ $('new-project').onclick=newProject;$('library-search').oninput=e=>{libraryQuery=e.target.value;renderLibrary();$('library').scrollTop=0;};
+ $('context-delete-scene').onclick=()=>deleteScene(contextScene);document.addEventListener('pointerdown',e=>{if(!e.target.closest('#scene-context'))hideContextMenu();});window.addEventListener('keydown',e=>{if(e.key==='Escape')hideContextMenu();});
+ const openSettings=()=>{$('settings-theme').value=doc.theme;$('settings').showModal();};$('settings-button').onclick=openSettings;$('close-settings').onclick=()=>$('settings').close();
+ $('settings-theme').onchange=e=>{doc.theme=e.target.value;applyTheme();save();};$('settings-guide').onclick=()=>{$('settings').close();$('guide').showModal();};$('delete-project').onclick=askDeleteProject;$('cancel-delete-production').onclick=()=>$('delete-production').close();$('confirm-delete-production').onclick=deleteProject;
+ for(const side of ['left','right']){
+  const handle=$(side+'-resizer'),key='scenic-'+side+'-width';let start=null;
+  const limit=()=>{const other=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--'+(side==='left'?'right':'left')+'-width'))||(side==='left'?268:230);return Math.max(side==='left'?190:220,Math.min(side==='left'?560:430,innerWidth-other-282));};
+  const setWidth=width=>{const value=Math.max(side==='left'?190:220,Math.min(limit(),width));document.documentElement.style.setProperty('--'+side+'-width',value+'px');handle.setAttribute('aria-valuenow',value);localStorage.setItem(key,value);};
+  const stored=Number(localStorage.getItem(key));if(stored)setWidth(stored);window.addEventListener('resize',()=>{if(innerWidth>900)setWidth(parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--'+side+'-width'))||(side==='left'?230:268));});
+  handle.onpointerdown=e=>{start={x:e.clientX,width:(side==='left'?document.querySelector('.sidebar'):document.querySelector('.inspector')).getBoundingClientRect().width};handle.setPointerCapture(e.pointerId);document.body.classList.add('resizing');};
+  handle.onpointermove=e=>{if(start)setWidth(start.width+(e.clientX-start.x)*(side==='left'?1:-1));};
+  handle.onpointerup=handle.onpointercancel=()=>{start=null;document.body.classList.remove('resizing');};
+  handle.onkeydown=e=>{if(['ArrowLeft','ArrowRight','Home'].includes(e.key)){e.preventDefault();e.stopPropagation();const width=(side==='left'?document.querySelector('.sidebar'):document.querySelector('.inspector')).getBoundingClientRect().width;setWidth(e.key==='Home'?(side==='left'?230:268):width+(e.key==='ArrowRight'?24:-24)*(side==='left'?1:-1));}};
+ }
+}
+init();

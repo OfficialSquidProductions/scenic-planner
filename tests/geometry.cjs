@@ -1,0 +1,11 @@
+const assert=require('node:assert/strict');const g=require('../dist/engine.js');
+const wall={x:50,y:-100,x2:50,y2:100};
+assert.equal(g.rayDistance({x:0,y:0},0,{x:50,y:-100},{x:50,y:100}),50);
+assert(g.blocked({x:0,y:0},{x:100,y:0},[wall]),'Solid wall must block the light');
+assert(!g.blocked({x:0,y:0},{x:25,y:0},[wall]),'Point before wall must remain lit');
+const doorway=[{x:50,y:-100,x2:50,y2:-10},{x:50,y:10,x2:50,y2:100}];
+assert(!g.blocked({x:0,y:0},{x:100,y:0},doorway),'Door gap must let light through');
+assert(g.blocked({x:0,y:0},{x:100,y:60},doorway),'Wall beside doorway must cast a shadow');
+const polygon=g.visibility({x:0,y:0},[{x:50,y:-200,x2:50,y2:200}],150);assert(polygon.every(p=>p.x<=50.001),'Visibility polygon must stop at a wall spanning its radius');
+assert(!g.blocked({x:0,y:0},{x:0,y:100},[wall]),'Parallel rays must not be blocked');
+console.log('Geometry verified: solid walls, doorway gaps, near-side light, parallel rays, and visibility clipping.');
