@@ -4,6 +4,14 @@ module.exports=async({win,store,flush,report})=>{
  for(let i=0;i<100;i++){if(await js('window.scenicReady===true'))break;await new Promise(r=>setTimeout(r,100));}
  assert.equal(await js('window.scenicReady'),true);assert.equal(await js('!!window.ScenicWindows && !!window.ScenicDesktop'),true);checks.push('Bundled offline editor and isolated native storage bridge load');
  assert.equal(await js("document.querySelector('#scene-canvas').width>0"),true);
+ await js("document.getElementById('settings-button').click();document.getElementById('show-changelog').click()");
+ assert.equal(await js("document.getElementById('changelog').open"),true);
+ assert.equal(await js('window.ScenicChangelog.version'),require('./package.json').version);
+ assert.ok((await js("document.getElementById('changelog-entries').innerText")).includes('Current version'));
+ assert.ok((await js("document.getElementById('changelog-entries').innerText")).includes('Previous release'));
+ const notesPNG=await win.webContents.capturePage();fs.writeFileSync(path.join(path.dirname(report),'windows-changelog.png'),notesPNG.toPNG());
+ await js("document.getElementById('close-changelog').click()");assert.equal(await js("document.getElementById('changelog').open"),false);
+ checks.push('Offline changelog opens from Settings, matches the installed version, shows recent history, and closes');
  const initial=await js('workspaceData().projects.length');
  await js("document.getElementById('add-scene').click()");const scenes=await js('doc.scenes.length');assert.ok(scenes>1);
  await js("document.getElementById('undo').click()");assert.equal(await js('doc.scenes.length'),scenes-1);

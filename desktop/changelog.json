@@ -1,0 +1,20 @@
+[
+  {
+    "version": "1.4.13",
+    "changes": [
+      "See what is new before updating: Mac and Windows update prompts now include the release's changes.",
+      "Reopen What's New from Settings or the Scenic menu to review the installed version and recent changes offline."
+    ]
+  },
+  {
+    "version": "1.4.12",
+    "changes": [
+      "Add room presets, edit individual walls, and group walls to move, resize, or rotate them together.",
+      "Box-select scene items to move, duplicate, or delete them together.",
+      "Turn talent with facing handles, aim cameras and lights directly, and preview camera coverage using lens and sensor dimensions.",
+      "Plan with improved real-world scale, editable talent footprints, and reference-image calibration.",
+      "Calculate sun direction offline using shoot location, date, time zone, and map north, or keep using manual Sun mode.",
+      "Gear is removed from the library and search; existing saved gear remains readable and editable."
+    ]
+  }
+]

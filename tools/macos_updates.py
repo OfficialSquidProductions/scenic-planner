@@ -1,4 +1,4 @@
-"""Production Desk's offline Sparkle configuration and signed release packaging."""
+"""Scenic's offline Sparkle configuration and signed release packaging."""
 import base64
 import hashlib
 import html
@@ -10,6 +10,7 @@ import shutil
 import subprocess
 from urllib.parse import urlparse, urljoin
 import xml.etree.ElementTree as ET
+from release_notes import prepare_release_notes
 
 ROOT = Path(__file__).resolve().parent.parent
 SPARKLE_NS = "http://www.andymatuschak.org/xml-namespaces/sparkle"
@@ -50,6 +51,9 @@ def updater_plist(config):
 
 
 def build_update_release(app, config, notes=None):
+    notes = Path(notes) if notes else prepare_release_notes(config)
+    if not notes.is_file() or not notes.read_text(encoding="utf-8").strip():
+        raise ValueError("Release notes are required before packaging an update")
     distribution = sparkle_distribution(config)
     public_key = subprocess.check_output([str(distribution / "bin/generate_keys"), "--account", config["keychain_account"], "-p"], text=True).strip()
     if public_key != config["public_key"]:
@@ -75,8 +79,7 @@ def build_update_release(app, config, notes=None):
         raise ValueError("This release archive already exists. Increase the release build rather than overwriting it.")
     subprocess.run(["codesign", "--verify", "--deep", "--strict", str(app)], check=True)
     subprocess.run(["ditto", "-c", "-k", "--sequesterRsrc", "--keepParent", str(app), str(archive)], check=True)
-    if notes:
-        shutil.copyfile(notes, output / (name + ".html"))
+    shutil.copyfile(notes, output / (name + ".html"))
     prefix = urljoin(config["feed_url"], "./")
     subprocess.run([str(distribution / "bin/generate_appcast"), "--account", config["keychain_account"],
                     "--download-url-prefix", prefix, "--maximum-versions", "1", "--maximum-deltas", "0", "--embed-release-notes",
@@ -94,6 +97,7 @@ def validate_release(output, config, distribution):
     item = matches[0]
     if item.findtext("{%s}shortVersionString" % SPARKLE_NS) != config["version"]:
         raise RuntimeError("The update version does not match the app")
+    validate_release_notes(item)
     enclosure = item.find("enclosure")
     archive_name = "Scenic-" + config["version"] + "-" + config["build"] + ".zip"
     if enclosure is None or enclosure.get("url") != urljoin(config["feed_url"], archive_name):
@@ -106,3 +110,8 @@ def validate_release(output, config, distribution):
         raise RuntimeError("Unsigned update rejected")
     subprocess.run([str(distribution / "bin/sign_update"), "--account", config["keychain_account"],
                     "--verify", str(archive), signature], check=True)
+
+
+def validate_release_notes(item):
+    if not (item.findtext("description") or "").strip():
+        raise RuntimeError("The update feed must embed release notes for the update prompt")

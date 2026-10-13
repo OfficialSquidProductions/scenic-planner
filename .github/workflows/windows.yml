@@ -48,6 +48,12 @@ jobs:
           node tests/windows-store.cjs
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
       - run: python -m pip install Pillow==11.3.0
+      - name: Release notes and update prompts
+        run: |
+          python -m unittest discover -s tests -p "test_release_notes.py"
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          node tests/updates.cjs
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
       - run: python tools/build_windows.py
       - run: python tools/check_windows.py
       - uses: actions/upload-artifact@v4
@@ -70,7 +76,7 @@ jobs:
             exit 0
           }
           gh release view $tag *> $null
-          if ($LASTEXITCODE) { gh release create $tag --draft --title "Scenic $version" --notes "Offline scene, shot and lighting planning for Mac and Windows. Windows installer passed packaged-app, installation, saved-workspace, and reinstall checks. See the README for requirements and update details." }
+          if ($LASTEXITCODE) { gh release create $tag --draft --title "Scenic $version" --notes-file desktop/release-notes.txt }
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           gh release upload $tag $exe release/windows/latest.yml release/windows/Scenic-Windows-Setup.exe.blockmap release/windows/SHA256-Windows.txt
           if ($LASTEXITCODE) { exit $LASTEXITCODE }

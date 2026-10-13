@@ -2,6 +2,11 @@
 """Test the packaged app, installer, installed copy, and a preserving reinstall."""
 import hashlib,json,os,pathlib,subprocess,tempfile,time
 ROOT=pathlib.Path(__file__).resolve().parents[1];OUT=ROOT/'release/windows-verification';OUT.mkdir(parents=True,exist_ok=True)
+metadata=json.loads(subprocess.check_output(['node','-e',"const fs=require('node:fs'),yaml=require('./windows/node_modules/js-yaml');process.stdout.write(JSON.stringify(yaml.load(fs.readFileSync('release/windows/latest.yml','utf8'))));"],cwd=ROOT,text=True))
+config=json.loads((ROOT/'desktop/release.json').read_text())
+assert metadata['version']==config['version']
+assert metadata['releaseNotes']==(ROOT/'desktop/release-notes.txt').read_text(encoding='utf-8'), 'Windows update metadata must contain this release’s notes'
+print('Windows update metadata: version and release notes verified',flush=True)
 def smoke(exe,label):
  report=OUT/(label+'.json');result=subprocess.run([str(exe),'--smoke-test',str(report)],timeout=120)
  if result.returncode:

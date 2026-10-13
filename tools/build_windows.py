@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Create the self-contained Windows x64 NSIS installer on Windows."""
 import json, pathlib, subprocess, sys
+from release_notes import prepare_release_notes
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 if sys.platform!='win32':raise SystemExit('Use a Windows x64 machine or the Windows GitHub Actions workflow.')
 from PIL import Image
-config=json.loads((ROOT/'desktop/release.json').read_text());p=ROOT/'windows/package.json';package=json.loads(p.read_text());package['version']=config['version'];p.write_text(json.dumps(package,indent=2)+'\n')
+config=json.loads((ROOT/'desktop/release.json').read_text());prepare_release_notes(config);p=ROOT/'windows/package.json';package=json.loads(p.read_text());package['version']=config['version'];package['build']['releaseInfo']={'releaseNotes':(ROOT/'desktop/release-notes.txt').read_text(encoding='utf-8')};p.write_text(json.dumps(package,indent=2)+'\n')
 assets=ROOT/'windows/assets';assets.mkdir(exist_ok=True)
 logo=Image.open(ROOT/'dist/assets/sp-blue.png').convert('RGBA');logo.thumbnail((256,256));logo.save(assets/'icon.ico',sizes=[(16,16),(32,32),(48,48),(64,64),(128,128),(256,256)])
 subprocess.run(['npm.cmd','ci'],cwd=ROOT/'windows',check=True)

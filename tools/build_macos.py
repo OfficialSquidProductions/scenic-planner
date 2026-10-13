@@ -2,6 +2,7 @@
 """Build Scenic.app from local assets using Apple's system frameworks. No web server."""
 import pathlib, plistlib, shutil, subprocess, argparse
 from macos_updates import release_config, sparkle_distribution, updater_plist, build_update_release
+from release_notes import prepare_release_notes
 ROOT=pathlib.Path(__file__).resolve().parent.parent
 OUT=ROOT/'release'
 CACHE=ROOT/'.cache'
@@ -10,7 +11,7 @@ def run(*args):
     subprocess.run([str(a) for a in args],check=True)
 
 def build(dmg, update=False):
-    config=release_config();sparkle=sparkle_distribution(config)
+    config=release_config();prepare_release_notes(config);sparkle=sparkle_distribution(config)
     OUT.mkdir(exist_ok=True);CACHE.mkdir(exist_ok=True)
     destination=OUT/'Scenic.app'
     app=CACHE/'build-Scenic.app'
@@ -24,6 +25,7 @@ def build(dmg, update=False):
     shutil.copytree(sparkle/'Sparkle.framework',frameworks/'Sparkle.framework',symlinks=True)
     shutil.copy2(sparkle/'LICENSE',res/'Sparkle-LICENSE.txt')
     shutil.copy2(ROOT/'LICENSE',res/'Scenic-LICENSE.txt')
+    shutil.copy2(ROOT/'desktop/changelog.json',res/'Scenic-Changelog.json')
     for arch in ['arm64','x86_64']:
         run('swiftc','-O','-module-cache-path',CACHE/'swift','-target',arch+'-apple-macos13.3','-F',frameworks,'-framework','Sparkle','-Xlinker','-rpath','-Xlinker','@executable_path/../Frameworks',ROOT/'macos/Scenic.swift',ROOT/'macos/Updates.swift','-o',CACHE/('Scenic-'+arch))
     run('lipo','-create',CACHE/'Scenic-arm64',CACHE/'Scenic-x86_64','-output',mac/'Scenic')

@@ -2,6 +2,11 @@ import AppKit
 import WebKit
 import UniformTypeIdentifiers
 
+struct ScenicReleaseNote: Decodable {
+    let version: String
+    let changes: [String]
+}
+
 struct WorkspaceStore {
     let root: URL
     var current: URL { root.appendingPathComponent("workspace.json") }
@@ -47,6 +52,7 @@ final class ScenicApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
     var flushing = false
     var pendingOpen: URL?
     let updates = ScenicUpdates()
+    var releaseNotesWindow: NSWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.applicationIconImage = NSImage(contentsOf: Bundle.main.resourceURL!.appendingPathComponent("ScenicBlue.icns"))
@@ -86,6 +92,7 @@ final class ScenicApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
         }
         let app = submenu("Scenic")
         add(app, "About Scenic", #selector(about))
+        add(app, "What’s New…", #selector(showChangelog))
         updates.addMenuItems(to: app)
         add(app, "Show Project Data Folder", #selector(showData))
         app.addItem(.separator()); add(app, "Hide Scenic", #selector(NSApplication.hide(_:)), "h")
@@ -124,6 +131,44 @@ final class ScenicApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
     @objc func map() { click("map-tab") }
     @objc func shots() { click("shots-tab") }
     @objc func guide() { click("help") }
+    @objc func showChangelog() {
+        if let existing = releaseNotesWindow { existing.makeKeyAndOrderFront(nil); return }
+        guard let url = Bundle.main.url(forResource: "Scenic-Changelog", withExtension: "json"),
+              let data = try? Data(contentsOf: url),
+              let entries = try? JSONDecoder().decode([ScenicReleaseNote].self, from: data), !entries.isEmpty else {
+            showError("Release notes are unavailable in this build."); return
+        }
+        let notes = NSMutableAttributedString()
+        func append(_ text: String, size: CGFloat, bold: Bool = false, color: NSColor = .labelColor) {
+            let paragraph = NSMutableParagraphStyle(); paragraph.paragraphSpacing = 12; paragraph.lineSpacing = 5
+            notes.append(NSAttributedString(string: text + "\n", attributes: [
+                .font: bold ? NSFont.boldSystemFont(ofSize: size) : NSFont.systemFont(ofSize: size),
+                .foregroundColor: color, .paragraphStyle: paragraph
+            ]))
+        }
+        append("What’s New", size: 28, bold: true)
+        append("Installed version " + entries[0].version, size: 13, color: .secondaryLabelColor)
+        for (index, entry) in entries.enumerated() {
+            append("Scenic " + entry.version + (index == 0 ? " · Current version" : " · Previous release"), size: 19, bold: true)
+            for change in entry.changes { append("• " + change, size: 14) }
+            append("", size: 6)
+        }
+        append("Choose Scenic → Check for Updates to review the next release before installing.", size: 12, color: .secondaryLabelColor)
+        let scroll = NSScrollView(frame: NSRect(x: 0, y: 0, width: 640, height: 560))
+        scroll.hasVerticalScroller = true; scroll.autoresizingMask = [.width, .height]
+        let text = NSTextView(frame: scroll.contentView.bounds)
+        text.isEditable = false; text.isSelectable = true; text.isRichText = true
+        text.textContainerInset = NSSize(width: 24, height: 24)
+        text.isVerticallyResizable = true; text.isHorizontallyResizable = false
+        text.autoresizingMask = [.width]; text.textContainer?.widthTracksTextView = true
+        text.textStorage?.setAttributedString(notes)
+        text.setAccessibilityLabel("Scenic release notes")
+        scroll.documentView = text
+        let panel = NSWindow(contentRect: scroll.frame, styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
+        panel.title = "What’s New in Scenic"; panel.minSize = NSSize(width: 440, height: 360)
+        panel.isReleasedWhenClosed = false; panel.contentView = scroll
+        panel.center(); releaseNotesWindow = panel; panel.makeKeyAndOrderFront(nil)
+    }
     @objc func closeWindow() { window.performClose(nil) }
     @objc func undo() { web.evaluateJavaScript("(['INPUT','TEXTAREA'].includes(document.activeElement.tagName) ? document.execCommand('undo') : undo())", completionHandler: nil) }
     @objc func redo() { web.evaluateJavaScript("(['INPUT','TEXTAREA'].includes(document.activeElement.tagName) ? document.execCommand('redo') : redo())", completionHandler: nil) }
@@ -148,6 +193,8 @@ final class ScenicApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
               url.isFileURL, url.standardizedFileURL.path.hasPrefix(webRoot.standardizedFileURL.path + "/"),
               let b = message.body as? [String: Any], let id = b["id"] as? String, let action = b["action"] as? String else { return }
         switch action {
+        case "showChangelog":
+            showChangelog(); reply(id, result: true)
         case "reportBug":
             let mailURL = URL(string: "mailto:alexanderhosier@squidproductions.org?subject=Scenic%20bug%20report")!
             if NSWorkspace.shared.open(mailURL) { reply(id, result: true) }
