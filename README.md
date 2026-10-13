@@ -72,7 +72,7 @@ Uses the supplied blue SP icon for the Mac app, the transparent red SP logo and 
 
 ## Verification
 
-Release 1.4.0 passed [Windows build, installation, and reinstall checks](https://github.com/OfficialSquidProductions/scenic-planner/actions/runs/38023876811) on a Windows runner. The published installer was downloaded and checked against that tested artifact and its SHA-256/SHA-512 metadata. A Mac test bundle marked as 1.3.9 successfully updated through the public Sparkle feed to 1.4.0 (build 5), relaunched, and retained the workspace byte-for-byte. The public download site serves HTTPS.
+Release 1.4.12 passed [Windows build, installation, and reinstall checks](https://github.com/OfficialSquidProductions/scenic-planner/actions/runs/38432527339) on a Windows runner. Packaged and installed app checks passed, including failed-save protection and saved-workspace preservation on reinstall. The universal Mac build, native storage, DMG integrity, updater save blocking/retry, and signed-archive tamper rejection were verified. Published downloads include SHA-256 checksums; Windows updater metadata also provides SHA-512 validation. The public download site serves HTTPS.
 
 Run `node tests/solar.cjs`, `node tests/camera.cjs`, `node tests/scale.cjs`, `node tests/selection.cjs`, `node tests/groups.cjs`, `node tests/transforms.cjs`, `node tests/rooms.cjs`, `node tests/room-editor.cjs`, `node tests/geometry.cjs`, `node tests/catalog.cjs`, `node tests/model.cjs`, and `node tests/windows-store.cjs` to verify measurements, catalog validation, occlusion, wall attachments, door/window behavior, movement, sunlight, and multi-production storage migration. Source is buildless HTML/CSS/JavaScript in `dist/`.
 
