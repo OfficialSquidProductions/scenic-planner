@@ -27,7 +27,17 @@ jobs:
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           node tests/catalog.cjs
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          node tests/camera.cjs
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          node tests/scale.cjs
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          node tests/solar.cjs
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
           node tests/model.cjs
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          node tests/selection.cjs
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          node tests/groups.cjs
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           node tests/rooms.cjs
           if ($LASTEXITCODE) { exit $LASTEXITCODE }

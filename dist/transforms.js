@@ -1,15 +1,18 @@
 /* Pure map-handle geometry. All deltas use the pose at pointer-down. */
 (function(root){
 'use strict';
-const boxTypes=new Set(['room','image','sofa','table','prop','set']);
+const model=typeof module==='object'&&module.exports?require('./model.js'):root.ScenicModel;
+const boxTypes=new Set(['wallGroup','room','image','sofa','table','prop','set','gear']);
 const angle=o=>o.type==='wall'?Math.atan2(o.y2-o.y,o.x2-o.x):(o.rotation||0)*Math.PI/180;
 const center=o=>o.type==='wall'?{x:(o.x+o.x2)/2,y:(o.y+o.y2)/2}:{x:o.x,y:o.y};
 const rotate=(p,a)=>({x:p.x*Math.cos(a)-p.y*Math.sin(a),y:p.x*Math.sin(a)+p.y*Math.cos(a)});
 const normalize=degrees=>((degrees+180)%360+360)%360-180;
-const supported=o=>!!o&&!o.locked&&(o.type==='wall'||boxTypes.has(o.type));
+const aimable=o=>!!o&&(o.type==='actor'||o.type==='camera'||o.type==='light'&&o.kind!=='sun');
+const supported=o=>!!o&&!o.locked&&(o.type==='wall'||boxTypes.has(o.type)||aimable(o));
 function handles(o,zoom=1){
  if(!supported(o))return [];
  const c=center(o),a=angle(o),toWorld=p=>{const r=rotate(p,a);return{x:c.x+r.x,y:c.y+r.y};};
+ if(aimable(o)){const base=Math.max(o.type==='actor'?model.actorFootprint(o).width/2+10:o.type==='light'?24:28,20/zoom);return [{kind:'rotate',...toWorld({x:base+28/zoom,y:0}),base:toWorld({x:base,y:0})}];}
  if(o.type==='wall')return [
   {kind:'rotate',...toWorld({x:0,y:-(o.thickness/2+30/zoom)}),base:c},
   {kind:'start',x:o.x,y:o.y},{kind:'end',x:o.x2,y:o.y2}
@@ -25,9 +28,9 @@ function cursor(o,h){
  return ['ew-resize','nwse-resize','ns-resize','nesw-resize'][i];
 }
 function apply(o,h,start,p,{step=0,proportional=false,angleStep=0,min=1.5,max=5000}={}){
- if(!supported(o))return {};
+ if(!supported(o)||aimable(o)&&h.kind!=='rotate')return {};
  const c=center(o),a=angle(o),dx=p.x-start.x,dy=p.y-start.y;
- if(Math.hypot(dx,dy)<1e-9)return o.type==='wall'?{x:o.x,y:o.y,x2:o.x2,y2:o.y2}:{x:o.x,y:o.y,width:o.width,height:o.height,rotation:o.rotation};
+ if(Math.hypot(dx,dy)<1e-9)return aimable(o)?{rotation:o.rotation||0}:o.type==='wall'?{x:o.x,y:o.y,x2:o.x2,y2:o.y2}:{x:o.x,y:o.y,width:o.width,height:o.height,rotation:o.rotation};
  const quantize=n=>step?Math.round(n/step)*step:n,clamp=n=>Math.max(min,Math.min(max,n));
  if(h.kind==='rotate'){
   const from=Math.atan2(start.y-c.y,start.x-c.x),to=Math.atan2(p.y-c.y,p.x-c.x);
@@ -54,6 +57,6 @@ function apply(o,h,start,p,{step=0,proportional=false,angleStep=0,min=1.5,max=50
  const shift=rotate({x:h.sx*(w-o.width)/2,y:h.sy*(height-o.height)/2},a);
  return {x:o.x+shift.x,y:o.y+shift.y,width:w,height};
 }
-const api={angle,center,rotate,normalize,supported,handles,hit,cursor,apply};
+const api={angle,center,rotate,normalize,aimable,supported,handles,hit,cursor,apply};
 if(typeof module==='object'&&module.exports)module.exports=api;else root.ScenicTransforms=api;
 })(globalThis);

@@ -14,7 +14,7 @@ for(const rotation of [-170,-90,0,47,135])for(const h of t.handles({...box,rotat
 }
 const proportional={...box,...t.apply(box,corner,corner,{x:corner.x+90,y:corner.y+2},{proportional:true})};near(proportional.width/proportional.height,box.width/box.height);
 for(const type of ['sofa','table','set','prop','image']){const o={...box,type};assert.equal(t.handles(o,1).length,9);assert.deepEqual(t.handles({...o,locked:true},1),[]);assert.deepEqual(t.apply({...o,locked:true},corner,corner,{x:0,y:0}),{});}
-assert.deepEqual(t.handles(null,1),[]);assert.deepEqual(t.handles({type:'camera'},1),[]);
+assert.deepEqual(t.handles(null,1),[]);assert.deepEqual(t.handles({type:'unknown'},1),[]);assert.deepEqual(t.handles({type:'light',kind:'sun'},1),[]);
 const clamped=t.apply(box,corner,corner,{x:1e7,y:1e7});assert(clamped.width<=5000&&clamped.height<=5000);
 const inverted=t.apply(box,corner,corner,{x:-1e7,y:-1e7});assert(inverted.width>=1.5&&inverted.height>=1.5);
 const image={...box,id:'image',type:'image',opacity:65,src:'data:image/png;base64,AA=='};const side=t.handles(image,2).find(h=>h.sx===1&&h.sy===0);
@@ -34,3 +34,20 @@ const reset=t.apply(box,corner,corner,corner);near(reset.width,box.width);near(r
 for(const zoom of [.1,.5,1,4]){const h=t.handles(box,zoom)[0];assert.equal(t.hit(box,{x:h.x+9/zoom,y:h.y},zoom).kind,'rotate');assert.equal(t.hit(box,{x:h.x+11/zoom,y:h.y},zoom),null);}
 const project={version:1,name:'Handles',active:'s',scenes:[{id:'s',title:'Scene',ambient:30,objects:[resized,wrot,imageResult]}]};assert(m.validProject(project));assert(m.validProject(JSON.parse(JSON.stringify(project))));
 console.log('Map handles verified: all eight anchored resize directions on rotated objects, proportions, limits, grid snapping, image preservation/locking, midpoint rotation, 15-degree snapping, wall openings and shadows, zoom hit targets, and project round trips.');
+
+for(const type of ['camera','light','actor'])for(const rotation of [-179,-90,0,65,179])for(const zoom of [.1,1,4]){
+ const o={id:type,type,name:type,x:400,y:300,rotation},before=JSON.stringify(o),hs=t.handles(o,zoom);assert.equal(hs.length,1);const h=hs[0];assert.equal(h.kind,'rotate');
+ const delta=t.rotate({x:h.x-o.x,y:h.y-o.y},Math.PI/2),p={x:o.x+delta.x,y:o.y+delta.y};
+ const result=t.apply(o,h,h,p);near(result.rotation,t.normalize(rotation+90));assert.deepEqual(Object.keys(result),['rotation']);assert.equal(JSON.stringify(o),before);
+ const aimed={...o,...result};pointNear(aimed,o);assert.equal(t.hit(o,h,zoom).kind,'rotate');assert.equal(t.cursor(o,h),'grab');
+ near(t.apply(o,h,h,p,{angleStep:15}).rotation%15,0);assert.deepEqual(t.apply(o,h,h,h),{rotation});
+ assert.deepEqual(t.handles({...o,locked:true},zoom),[]);
+ const front=t.rotate({x:h.x-o.x,y:h.y-o.y},-t.angle(o));near(front.y,0);assert(front.x>0,'Aim handle sits in front of the lens or beam');
+}
+console.log('Camera/light aiming and talent facing verified: rotation-only handles, forward placement, full angle range, fixed position, zoom targets, 15-degree snapping, and no-op/locking behavior.');
+
+const talent={id:'talent',type:'actor',name:'Alex',x:400,y:300,rotation:0,color:'#cf7d96',marks:[{x:100,y:100,rotation:-90,notes:'A'}],pathDuration:5};
+const talentHandle=t.handles(talent,1)[0],faced={...talent,...t.apply(talent,talentHandle,talentHandle,{x:400,y:300+(talentHandle.x-400)})};
+near(faced.rotation,90);assert.deepEqual(faced.marks,talent.marks);assert.equal(faced.color,talent.color);assert.equal(faced.name,talent.name);
+const facingProject={version:1,name:'Facing',active:'s',scenes:[{id:'s',title:'Scene',ambient:30,objects:[faced]}]};assert(m.validProject(JSON.parse(JSON.stringify(facingProject))));
+console.log('Talent facing preserves marker styling, recorded marks, and portable project storage.');

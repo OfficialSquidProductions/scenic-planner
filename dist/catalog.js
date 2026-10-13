@@ -2,6 +2,8 @@
 (function(root){
 'use strict';
 const UNITS_PER_INCH=3;
+const DEFAULT_WALL_THICKNESS=4.5*UNITS_PER_INCH;
+const ACTOR_FOOTPRINT={width:18*UNITS_PER_INCH,height:24*UNITS_PER_INCH};
 function formatLength(units){
  const inches=Math.round(Math.abs(units)/UNITS_PER_INCH*10)/10,sign=units<0&&inches?'−':'';
  if(inches<12)return `${sign}${inches} in`;
@@ -57,10 +59,25 @@ const entries=[
  ['mug','Mug','props','Everyday objects',5,4,'mug'],['book','Book','props','Everyday objects',6,9,'book'],['bottle','Bottle','props','Everyday objects',3,3,'bottle'],['keys','Keys','props','Everyday objects',3,2,'keys'],['bag','Bag','props','Everyday objects',16,12,'bag'],['plate','Plate','props','Everyday objects',10,10,'plate'],
  ['car','Car','set','Vehicles',72,180,'car'],['sofa','Sofa','set','Living room',84,36,'sofa'],['armchair','Armchair','set','Living room',34,34,'armchair'],['coffee-table','Coffee table','set','Living room',48,24,'table'],['side-table','Side table','set','Living room',20,20,'table'],['tv','TV & console','set','Living room',60,16,'tv'],['rug','Rug','set','Living room',96,60,'rug'],['plant','Potted plant','set','Living room',18,18,'plant'],['floor-lamp','Floor lamp','set','Living room',16,16,'lamp'],
  ['dining-table','Dining table','set','Kitchen & dining',72,36,'table'],['chair','Dining chair','set','Kitchen & dining',20,22,'chair'],['counter','Kitchen counter','set','Kitchen & dining',72,25,'counter'],['island','Kitchen island','set','Kitchen & dining',72,36,'counter'],['sink','Sink','set','Kitchen & dining',30,25,'sink'],['stove','Stove','set','Kitchen & dining',30,26,'stove'],['fridge','Refrigerator','set','Kitchen & dining',36,30,'fridge'],
- ['bed','Queen bed','set','Bedroom',60,80,'bed'],['nightstand','Nightstand','set','Bedroom',24,18,'table'],['dresser','Dresser','set','Bedroom',60,20,'dresser'],['wardrobe','Wardrobe','set','Bedroom',60,24,'wardrobe'],['desk','Desk','set','Bedroom',48,24,'table'],
+ ['bed','Queen bed · mattress size','set','Bedroom',60,80,'bed'],['nightstand','Nightstand','set','Bedroom',24,18,'table'],['dresser','Dresser','set','Bedroom',60,20,'dresser'],['wardrobe','Wardrobe','set','Bedroom',60,24,'wardrobe'],['desk','Desk','set','Bedroom',48,24,'table'],
  ['tub','Bathtub','set','Bathroom',30,60,'tub'],['toilet','Toilet','set','Bathroom',20,28,'toilet'],['vanity','Vanity & basin','set','Bathroom',36,22,'sink'],['door','Hinged door','set','Doors & windows',36,36,'door']
 ];
 entries.push(
+ ['apple-box-full','Full apple box (8 in high)','gear','Apple boxes',20,12,'apple-box'],
+ ['apple-box-half','Half apple box (4 in high)','gear','Apple boxes',20,12,'apple-box'],
+ ['apple-box-quarter','Quarter apple box (2 in high)','gear','Apple boxes',20,12,'apple-box'],
+ ['apple-box-pancake','Pancake apple box (1 in high)','gear','Apple boxes',20,12,'apple-box'],
+ ['directors-monitor','Director’s monitor & stand','gear','Video village',28,24,'monitor-stand'],
+ ['monitor-cart','Monitor cart','gear','Video village',36,24,'monitor-cart'],
+ ['directors-chair','Director’s chair','gear','Video village',24,24,'chair'],
+ ['boom-mic','Boom microphone & pole','gear','Sound',96,8,'boom'],
+ ['sound-cart','Sound cart','gear','Sound',36,24,'gear-cart'],
+ ['c-stand','C-stand','gear','Grip & support',40,40,'stand'],
+ ['camera-tripod','Camera tripod','gear','Grip & support',36,36,'tripod'],
+ ['sandbag','Sandbag','gear','Grip & support',16,10,'sandbag'],
+ ['camera-dolly','Camera dolly','gear','Grip & support',48,36,'dolly'],
+ ['equipment-case','Equipment case','gear','Cases & carts',24,16,'gear-case'],
+ ['equipment-cart','Equipment cart','gear','Cases & carts',48,24,'gear-cart'],
  ['door-double','Double doors','set','Doors & windows',72,36,'door'],
  ['door-french','French doors','set','Doors & windows',60,30,'door'],
  ['door-sliding','Sliding door','set','Doors & windows',72,8,'door'],
@@ -85,6 +102,26 @@ shapes.sun=['M18 12A6 6 0 1 1 6 12A6 6 0 1 1 18 12Z','M12 0V3 M12 21V24 M0 12H3 
 shapes['room-square']=['M1 1H23V23H1Z',''];
 shapes['room-circle']=['M23 12A11 11 0 1 1 1 12A11 11 0 1 1 23 12Z',''];
 shapes['room-l']=['M1 1H12V12H23V23H1Z',''];
+shapes['apple-box']=['M0 0H24V24H0Z','M3 3H21V21H3Z M8 10H16V14H8Z'];
+shapes['monitor-stand']=['M0 0H24V6H0Z M12 6V22 M2 22H22','M2 2H22V4H2Z M12 12L2 22 M12 12L22 22'];
+shapes['monitor-cart']=['M2 3H22V21H2Z M0 3H2 M22 3H24 M0 21H2 M22 21H24','M4 6H20V10H4Z M6 13H18V18H6Z'];
+shapes.boom=['M0 9H18V15H0Z M18 3H24V21H18Z','M2 12H18 M20 6V18 M22 6V18'];
+shapes.stand=['M12 12L12 0 M12 12L2 22 M12 12L22 22','M14 12A2 2 0 1 1 10 12A2 2 0 1 1 14 12Z M12 12L22 4'];
+shapes.tripod=['M12 10L12 0 M12 10L1 23 M12 10L23 23','M8 7H16V14H8Z'];
+shapes.sandbag=['M2 2Q12 0 22 2L24 12L22 22Q12 24 2 22L0 12Z','M12 1V23 M9 9H15V15H9Z'];
+shapes['gear-case']=['M0 2H24V24H0Z','M8 2V0H16V2 M0 8H24 M4 6V10 M20 6V10 M3 12H21V21H3Z'];
+shapes['gear-cart']=['M2 2H22V22H2Z M0 2H2 M22 2H24 M0 22H2 M22 22H24','M5 5H19V19H5Z M2 0H22'];
+shapes.dolly=['M3 0H21V24H3Z M0 3H3 M21 3H24 M0 21H3 M21 21H24','M6 3H18V21H6Z M12 3V21 M6 12H18'];
+// Bounds of body + detail geometry. Normalize these to the entered physical
+// footprint rather than treating unused space in the 24-unit icon as size.
+const shapeBounds=Object.fromEntries(Object.keys(shapes).map(shape=>[shape,[0,0,24,24]]));
+Object.assign(shapeBounds,{
+ remote:[3,0,18,24],phone:[2,0,20,24],mug:[1,0,23,24],bottle:[2,0,20,24],
+ keys:[0,6,24,13],controller:[0,2,24,225/11],toilet:[2,0,20,24],spot:[3,0,18,24],
+ 'room-square':[1,1,22,22],'room-circle':[1,1,22,22],'room-l':[1,1,22,22],
+ 'monitor-stand':[0,0,24,22],'monitor-cart':[0,3,24,18],stand:[2,0,20,22],
+ boom:[0,3,24,18],tripod:[1,0,22,23],sandbag:[0,1,24,22],'gear-cart':[0,0,24,22]
+});
 const items=entries.map(([id,name,category,group,width,height,shape])=>({id,name,category,group,width:width*UNITS_PER_INCH,height:height*UNITS_PER_INCH,shape}));
 const lightPresets={
  'led-panel':{power:75,temperature:5600,beam:120,radius:650},
@@ -95,6 +132,6 @@ const lightPresets={
  overhead:{power:65,temperature:4000,beam:360,radius:500},
  sun:{power:80,temperature:5600,beam:360,radius:1000,kind:'sun',rotation:0,time:12,sunrise:6,sunset:18,riseDirection:90,setDirection:270}
 };
-const api={lightPresets,UNITS_PER_INCH,formatLength,parseLength,items,shapes,get:id=>items.find(item=>item.id===id)};
+const api={DEFAULT_WALL_THICKNESS,ACTOR_FOOTPRINT,shapeBounds,lightPresets,UNITS_PER_INCH,formatLength,parseLength,items,shapes,get:id=>items.find(item=>item.id===id)};
 if(typeof module==='object'&&module.exports)module.exports=api;else root.ScenicCatalog=api;
 })(globalThis);
