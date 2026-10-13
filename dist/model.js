@@ -7,25 +7,74 @@ const finite=n=>Number.isFinite(n),coordinate=n=>finite(n)&&Math.abs(n)<100000;
 const openingKind=o=>o.type==='set'&&(o.asset==='door'||o.asset?.startsWith('door-'))?'door':o.type==='set'&&(o.asset==='window'||o.asset?.startsWith('window-'))?'window':null;
 const movable=o=>['actor','camera','light'].includes(o.type)&&o.kind!=='sun';
 const markLabel=i=>i<26?String.fromCharCode(65+i):String.fromCharCode(64+Math.floor(i/26))+String.fromCharCode(65+i%26);
+function roomSegments(room){
+ const points=room.asset==='room-circle'?Array.from({length:64},(_,i)=>[Math.cos(i*Math.PI/32)/2,Math.sin(i*Math.PI/32)/2]):room.asset==='room-l'?[[-.5,-.5],[0,-.5],[0,0],[.5,0],[.5,.5],[-.5,.5]]:[[-.5,-.5],[.5,-.5],[.5,.5],[-.5,.5]];
+ const a=room.rotation*Math.PI/180,c=Math.cos(a),s=Math.sin(a),vertices=points.map(([x,y])=>({x:room.x+x*room.width*c-y*room.height*s,y:room.y+x*room.width*s+y*room.height*c}));
+ return vertices.map((p,i)=>({...p,x2:vertices[(i+1)%vertices.length].x,y2:vertices[(i+1)%vertices.length].y,thickness:room.thickness,id:room.id}));
+}
+function boundary(wall){
+ let length=0;const segments=(wall.type==='room'?roomSegments(wall):[wall]).map(w=>{const start=length;length+=Math.hypot(w.x2-w.x,w.y2-w.y);return {...w,start,end:length};});
+ return {segments,length};
+}
+function splitRoom(objects,id,makeId){
+ const room=objects.find(o=>o.id===id&&o.type==='room');if(!room)return null;
+ const {segments,length}=boundary(room);
+ if(objects.length-1+segments.length>2000)return null;
+ const walls=segments.map((w,i)=>({id:makeId(),type:'wall',name:`${room.name} · Wall ${i+1}`,x:w.x,y:w.y,x2:w.x2,y2:w.y2,thickness:room.thickness}));
+ if(walls.some(w=>![w.x,w.y,w.x2,w.y2].every(coordinate)))return null;
+ const result=objects.flatMap(o=>{
+  if(o===room)return walls;
+  if(!openingKind(o)||o.wallId!==id)return [o];
+  const pose=wallPose(o,objects);if(!pose){const copy={...o};delete copy.wallId;delete copy.wallT;delete copy.wallIds;return [copy];}
+  const distance=pose.wallT*length,index=Math.max(0,segments.findIndex(w=>w.end>=distance)),w=segments[index];
+  return [{...o,x:pose.x,y:pose.y,rotation:pose.rotation,wallId:walls[index].id,wallT:(distance-w.start)/(w.end-w.start),wallIds:walls.map(w=>w.id)}];
+ });
+ return {objects:result,walls};
+}
+// An opening may span several short walls after a curved room is separated.
+// Follow only its original walls that still meet at endpoints, so deleting or
+// moving an individual wall cannot leave an invisible opening in another wall.
+function openingWallCuts(o,objects){
+ const primary=objects.find(w=>w.id===o.wallId&&w.type==='wall');if(!primary)return [];
+ const walls=objects.filter(w=>w.type==='wall'&&o.wallIds.includes(w.id)),cuts=[];
+ for(const initialDirection of [-1,1]){
+  let wall=primary,direction=initialDirection,remaining=o.width/2,position=o.wallT,visited=new Set();
+  while(wall&&remaining>1e-7&&!visited.has(wall.id)){
+   visited.add(wall.id);const length=Math.hypot(wall.x2-wall.x,wall.y2-wall.y);if(length<1e-7)break;
+   const taken=Math.min(remaining,(direction>0?1-position:position)*length),end=position+direction*taken/length;
+   if(taken>1e-7)cuts.push({wallId:wall.id,start:Math.min(position,end),end:Math.max(position,end)});
+   remaining-=taken;if(remaining<=1e-7)break;
+   const point=direction>0?{x:wall.x2,y:wall.y2}:wall;
+   const next=walls.find(w=>!visited.has(w.id)&&(Math.hypot(w.x-point.x,w.y-point.y)<1e-6||Math.hypot(w.x2-point.x,w.y2-point.y)<1e-6));
+   if(!next)break;direction=Math.hypot(next.x-point.x,next.y-point.y)<1e-6?1:-1;wall=next;position=direction>0?0:1;
+  }
+ }
+ return cuts;
+}
 function wallPose(o,objects){
- const wall=objects.find(w=>w.id===o.wallId&&w.type==='wall');
+ const wall=objects.find(w=>w.id===o.wallId&&['wall','room'].includes(w.type));
  if(!wall)return null;
- const dx=wall.x2-wall.x,dy=wall.y2-wall.y,len=Math.hypot(dx,dy);if(len<o.width||len<1)return null;
- const t=Math.max(o.width/2/len,Math.min(1-o.width/2/len,o.wallT??.5));
- return {x:wall.x+dx*t,y:wall.y+dy*t,rotation:Math.atan2(dy,dx)*180/Math.PI,wallT:t,wall};
+ const {segments,length:len}=boundary(wall);if((!o.wallIds&&len<o.width)||len<1)return null;
+ const t=wall.type==='room'||o.wallIds?(o.wallT??.5):Math.max(o.width/2/len,Math.min(1-o.width/2/len,o.wallT??.5)),distance=t*len;
+ const w=segments.find(w=>w.end>=distance)||segments.at(-1),along=(distance-w.start)/(w.end-w.start||1),dx=w.x2-w.x,dy=w.y2-w.y;
+ return {x:w.x+dx*along,y:w.y+dy*along,rotation:Math.atan2(dy,dx)*180/Math.PI,wallT:t,wall};
 }
 function syncOpenings(objects){
- for(const o of objects.filter(openingKind)){const pose=wallPose(o,objects);if(pose){o.x=pose.x;o.y=pose.y;o.rotation=pose.rotation;o.wallT=pose.wallT;}else{delete o.wallId;delete o.wallT;}}
+ for(const o of objects.filter(openingKind)){const pose=wallPose(o,objects);if(pose){o.x=pose.x;o.y=pose.y;o.rotation=pose.rotation;o.wallT=pose.wallT;if(o.wallIds)o.wallIds=o.wallIds.filter(id=>objects.some(w=>w.id===id&&w.type==='wall'));}else{delete o.wallId;delete o.wallT;delete o.wallIds;}}
 }
 function snapOpening(o,objects,tolerance=54){
  let best=null;
- for(const w of objects.filter(w=>w.type==='wall')){
-  const dx=w.x2-w.x,dy=w.y2-w.y,len=Math.hypot(dx,dy);if(len<o.width||len<1)continue;
-  const half=o.width/2/len,t=Math.max(half,Math.min(1-half,((o.x-w.x)*dx+(o.y-w.y)*dy)/(len*len)));
+ for(const wall of objects.filter(w=>['wall','room'].includes(w.type))){
+ const {segments,length}=boundary(wall);
+ for(const w of segments){
+  const curved=wall.asset==='room-circle';
+  const dx=w.x2-w.x,dy=w.y2-w.y,len=Math.hypot(dx,dy);if((!curved&&len<o.width)||len<1||length<o.width)continue;
+  const half=curved?0:o.width/2/len,t=Math.max(half,Math.min(1-half,((o.x-w.x)*dx+(o.y-w.y)*dy)/(len*len)));
   const x=w.x+dx*t,y=w.y+dy*t,distance=Math.hypot(o.x-x,o.y-y);
-  if(distance<=tolerance&&(!best||distance<best.distance))best={x,y,rotation:Math.atan2(dy,dx)*180/Math.PI,wallId:w.id,wallT:t,distance};
+  if(distance<=tolerance&&(!best||distance<best.distance))best={x,y,rotation:Math.atan2(dy,dx)*180/Math.PI,wallId:wall.id,wallT:(w.start+t*len)/length,distance};
  }
- delete o.wallId;delete o.wallT;
+ }
+ delete o.wallId;delete o.wallT;delete o.wallIds;
  if(!best)return false;
  Object.assign(o,{x:best.x,y:best.y,rotation:best.rotation,wallId:best.wallId,wallT:best.wallT});return true;
 }
@@ -39,12 +88,16 @@ function doorLeaves(o){
 }
 function effectiveWalls(objects){
  const result=[];
- for(const wall of objects.filter(o=>o.type==='wall')){
-  const len=Math.hypot(wall.x2-wall.x,wall.y2-wall.y);if(len<.001)continue;
-  const cuts=objects.filter(o=>openingKind(o)&&o.wallId===wall.id&&wallPose(o,objects)&&(openingKind(o)==='door'?o.open:!o.curtains)).map(o=>[Math.max(0,o.wallT-o.width/2/len),Math.min(1,o.wallT+o.width/2/len)]).sort((a,b)=>a[0]-b[0]);
-  let cursor=0;
-  const segment=(a,b)=>{if(b-a>.00001)result.push({...wall,x:wall.x+(wall.x2-wall.x)*a,y:wall.y+(wall.y2-wall.y)*a,x2:wall.x+(wall.x2-wall.x)*b,y2:wall.y+(wall.y2-wall.y)*b});};
-  for(const [a,b] of cuts){segment(cursor,a);cursor=Math.max(cursor,b);}segment(cursor,1);
+ const spanning=objects.filter(o=>openingKind(o)&&o.wallIds&&wallPose(o,objects)&&(openingKind(o)==='door'?o.open:!o.curtains)).flatMap(o=>openingWallCuts(o,objects));
+ for(const wall of objects.filter(o=>['wall','room'].includes(o.type))){
+  const {segments,length:len}=boundary(wall);if(len<.001)continue;
+  const cuts=objects.filter(o=>openingKind(o)&&!o.wallIds&&o.wallId===wall.id&&wallPose(o,objects)&&(openingKind(o)==='door'?o.open:!o.curtains)).flatMap(o=>{const t=wallPose(o,objects).wallT,a=t-o.width/2/len,b=t+o.width/2/len;return wall.type==='room'?a<0?[[0,b],[1+a,1]]:b>1?[[a,1],[0,b-1]]:[[a,b]]:[[Math.max(0,a),Math.min(1,b)]];}).concat(spanning.filter(c=>c.wallId===wall.id).map(c=>[c.start,c.end])).sort((a,b)=>a[0]-b[0]);
+  for(const w of segments){
+  const start=w.start/len,end=w.end/len;
+  let cursor=start;
+  const segment=(a,b)=>{if(b-a>.00001){const t=(a-start)/(end-start),u=(b-start)/(end-start);result.push({...w,x:w.x+(w.x2-w.x)*t,y:w.y+(w.y2-w.y)*t,x2:w.x+(w.x2-w.x)*u,y2:w.y+(w.y2-w.y)*u});}};
+  for(const [a,b] of cuts){if(b<=start||a>=end)continue;segment(cursor,Math.max(cursor,a));cursor=Math.max(cursor,Math.min(end,b));}segment(cursor,end);
+  }
  }
  for(const o of objects.filter(o=>openingKind(o)==='door'&&o.open&&o.wallId&&wallPose(o,objects)))result.push(...doorLeaves(o));
  return result;
@@ -74,11 +127,12 @@ function validProject(p){
   if(!s||typeof s.id!=='string'||ids.has(s.id)||typeof s.title!=='string'||!Array.isArray(s.objects)||s.objects.length>2000||!finite(s.ambient)||s.ambient<0||s.ambient>100)return false;ids.add(s.id);
   const objectIds=new Set();let suns=0;
   for(const o of s.objects){
-   if(!o||typeof o.id!=='string'||objectIds.has(o.id)||typeof o.name!=='string'||!['wall','camera','light','actor','sofa','table','prop','set','image'].includes(o.type)||![o.x,o.y].every(coordinate))return false;objectIds.add(o.id);
-   const nums={wall:['x2','y2','thickness'],camera:['rotation','fov','lens'],light:['rotation','power','temperature','beam','radius'],actor:['rotation'],sofa:['width','height','rotation'],table:['width','height','rotation'],prop:['width','height','rotation'],set:['width','height','rotation'],image:['width','height','rotation','opacity']}[o.type];
+   if(!o||typeof o.id!=='string'||objectIds.has(o.id)||typeof o.name!=='string'||!['wall','room','camera','light','actor','sofa','table','prop','set','image'].includes(o.type)||![o.x,o.y].every(coordinate))return false;objectIds.add(o.id);
+   const nums={wall:['x2','y2','thickness'],room:['width','height','rotation','thickness'],camera:['rotation','fov','lens'],light:['rotation','power','temperature','beam','radius'],actor:['rotation'],sofa:['width','height','rotation'],table:['width','height','rotation'],prop:['width','height','rotation'],set:['width','height','rotation'],image:['width','height','rotation','opacity']}[o.type];
    if(!nums.every(k=>finite(o[k])))return false;
    if(o.type==='wall'&&(!coordinate(o.x2)||!coordinate(o.y2)||o.thickness<=0||o.thickness>100))return false;
-   if(['image','table','sofa','prop','set'].includes(o.type)&&(!(o.width>0&&o.width<=5000)||!(o.height>0&&o.height<=5000)))return false;
+   if(['room','image','table','sofa','prop','set'].includes(o.type)&&(!(o.width>0&&o.width<=5000)||!(o.height>0&&o.height<=5000)))return false;
+   if(o.type==='room'&&(catalog.get(o.asset)?.category!=='walls'||o.thickness<=0||o.thickness>100||o.keepProportions!==undefined&&typeof o.keepProportions!=='boolean'))return false;
    if(['prop','set'].includes(o.type)&&catalog.get(o.asset)?.category!==(o.type==='prop'?'props':'set'))return false;
    if(o.type==='light'){
     if(o.radius<1||o.radius>2000||o.power<0||o.power>100||o.beam<1||o.beam>360||o.temperature<2000||o.temperature>10000||typeof o.enabled!=='boolean')return false;
@@ -92,13 +146,14 @@ function validProject(p){
    if(o.type==='image'&&(typeof o.src!=='string'||!/^data:image\/(png|jpeg|webp);base64,/.test(o.src)))return false;
    if(openingKind(o)){
     if(o.wallId!==undefined&&(typeof o.wallId!=='string'||!finite(o.wallT)||o.wallT<0||o.wallT>1))return false;
+    if(o.wallIds!==undefined&&(!Array.isArray(o.wallIds)||!o.wallIds.length||o.wallIds.length>128||new Set(o.wallIds).size!==o.wallIds.length||!o.wallIds.includes(o.wallId)||!o.wallIds.every(id=>typeof id==='string'&&s.objects.some(w=>w.id===id&&w.type==='wall'))))return false;
     if(o.open!==undefined&&typeof o.open!=='boolean'||o.curtains!==undefined&&typeof o.curtains!=='boolean')return false;
     if(o.hinge!==undefined&&!['Left','Right'].includes(o.hinge)||o.swingSide!==undefined&&!['Side A','Side B'].includes(o.swingSide))return false;
    }
    if(o.marks!==undefined&&(!movable(o)||!Array.isArray(o.marks)||o.marks.length>100||!o.marks.every(m=>m&&coordinate(m.x)&&coordinate(m.y)&&finite(m.rotation)&&(m.notes===undefined||typeof m.notes==='string'))))return false;
    if(o.pathDuration!==undefined&&(!finite(o.pathDuration)||o.pathDuration<1||o.pathDuration>60))return false;
   }
-  for(const o of s.objects.filter(openingKind))if(o.wallId&&!s.objects.some(w=>w.id===o.wallId&&w.type==='wall'))return false;
+  for(const o of s.objects.filter(openingKind))if(o.wallId&&!s.objects.some(w=>w.id===o.wallId&&['wall','room'].includes(w.type)))return false;
  }
  return ids.has(p.active);
 }
@@ -108,6 +163,6 @@ function workspaceFrom(data,id){
  if(!validProject(data))throw Error('The saved project could not be read. Your existing files have been preserved.');
  const p=structuredClone(data);p.projectId=p.projectId||id;return {version:2,activeProject:p.projectId,projects:[p]};
 }
-const api={playbackElapsed,motionPose,motionDuration,lightColor,openingKind,movable,markLabel,wallPose,syncOpenings,snapOpening,doorLeaves,effectiveWalls,sunState,pathPosition,validProject,validWorkspace,workspaceFrom};
+const api={splitRoom,roomSegments,playbackElapsed,motionPose,motionDuration,lightColor,openingKind,movable,markLabel,wallPose,syncOpenings,snapOpening,doorLeaves,effectiveWalls,sunState,pathPosition,validProject,validWorkspace,workspaceFrom};
 if(typeof module==='object'&&module.exports)module.exports=api;else root.ScenicModel=api;
 })(globalThis);

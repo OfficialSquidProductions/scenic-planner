@@ -29,6 +29,12 @@ jobs:
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           node tests/model.cjs
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          node tests/rooms.cjs
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          node tests/room-editor.cjs
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          node tests/transforms.cjs
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
           node tests/windows-store.cjs
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
       - run: python -m pip install Pillow==11.3.0
@@ -54,7 +60,7 @@ jobs:
             exit 0
           }
           gh release view $tag *> $null
-          if ($LASTEXITCODE) { gh release create $tag --title "Scenic $version" --notes "Offline scene, shot and lighting planning for Mac and Windows. Windows installer passed packaged-app, installation, saved-workspace, and reinstall checks. See the README for requirements and update details." }
+          if ($LASTEXITCODE) { gh release create $tag --draft --title "Scenic $version" --notes "Offline scene, shot and lighting planning for Mac and Windows. Windows installer passed packaged-app, installation, saved-workspace, and reinstall checks. See the README for requirements and update details." }
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           gh release upload $tag $exe release/windows/latest.yml release/windows/Scenic-Windows-Setup.exe.blockmap release/windows/SHA256-Windows.txt
           if ($LASTEXITCODE) { exit $LASTEXITCODE }

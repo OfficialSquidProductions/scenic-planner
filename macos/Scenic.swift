@@ -148,6 +148,10 @@ final class ScenicApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
               url.isFileURL, url.standardizedFileURL.path.hasPrefix(webRoot.standardizedFileURL.path + "/"),
               let b = message.body as? [String: Any], let id = b["id"] as? String, let action = b["action"] as? String else { return }
         switch action {
+        case "reportBug":
+            let mailURL = URL(string: "mailto:alexanderhosier@squidproductions.org?subject=Scenic%20bug%20report")!
+            if NSWorkspace.shared.open(mailURL) { reply(id, result: true) }
+            else { reply(id, error: "Could not open email") }
         case "readProject":
             queue.async { [self] in
                 do { let (text, recovered) = try store.read(); DispatchQueue.main.async { self.reply(id, result: ["project": text as Any? ?? NSNull(), "recovered": recovered]) } }

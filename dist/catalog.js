@@ -49,6 +49,10 @@ const shapes={
  lamp:['M24 12A12 12 0 1 1 0 12A12 12 0 1 1 24 12Z','M18 12A6 6 0 1 1 6 12A6 6 0 1 1 18 12Z M12 6V18 M6 12H18']
 };
 const entries=[
+ ['room-square','Square room','walls','Room shapes',144,144,'room-square'],
+ ['room-rectangle','Rectangular room','walls','Room shapes',192,144,'room-square'],
+ ['room-circle','Circular room','walls','Room shapes',144,144,'room-circle'],
+ ['room-l','L-shaped room','walls','Room shapes',192,192,'room-l'],
  ['laptop','Laptop','props','Electronics',14,10,'laptop'],['remote','Remote','props','Electronics',7,2,'remote'],['controller','Game controller','props','Electronics',6.5,4.5,'controller'],['phone','Phone','props','Electronics',3,6,'phone'],['headphones','Headphones','props','Electronics',7,8,'headphones'],['hand-camera','Handheld camera','props','Electronics',6,4,'camera'],
  ['mug','Mug','props','Everyday objects',5,4,'mug'],['book','Book','props','Everyday objects',6,9,'book'],['bottle','Bottle','props','Everyday objects',3,3,'bottle'],['keys','Keys','props','Everyday objects',3,2,'keys'],['bag','Bag','props','Everyday objects',16,12,'bag'],['plate','Plate','props','Everyday objects',10,10,'plate'],
  ['car','Car','set','Vehicles',72,180,'car'],['sofa','Sofa','set','Living room',84,36,'sofa'],['armchair','Armchair','set','Living room',34,34,'armchair'],['coffee-table','Coffee table','set','Living room',48,24,'table'],['side-table','Side table','set','Living room',20,20,'table'],['tv','TV & console','set','Living room',60,16,'tv'],['rug','Rug','set','Living room',96,60,'rug'],['plant','Potted plant','set','Living room',18,18,'plant'],['floor-lamp','Floor lamp','set','Living room',16,16,'lamp'],
@@ -78,6 +82,9 @@ shapes.panel=['M0 0H24V24H0Z','M3 3H21V21H3Z M6 0V24 M12 0V24 M18 0V24'];
 shapes.softbox=['M6 0H18L24 6V18L18 24H6L0 18V6Z','M12 0V24 M0 12H24'];
 shapes.spot=['M3 0H21V18L17 24H7L3 18Z','M3 6H21 M3 12H21 M3 18H21'];
 shapes.sun=['M18 12A6 6 0 1 1 6 12A6 6 0 1 1 18 12Z','M12 0V3 M12 21V24 M0 12H3 M21 12H24 M3 3L5 5 M19 19L21 21 M3 21L5 19 M19 5L21 3'];
+shapes['room-square']=['M1 1H23V23H1Z',''];
+shapes['room-circle']=['M23 12A11 11 0 1 1 1 12A11 11 0 1 1 23 12Z',''];
+shapes['room-l']=['M1 1H12V12H23V23H1Z',''];
 const items=entries.map(([id,name,category,group,width,height,shape])=>({id,name,category,group,width:width*UNITS_PER_INCH,height:height*UNITS_PER_INCH,shape}));
 const lightPresets={
  'led-panel':{power:75,temperature:5600,beam:120,radius:650},

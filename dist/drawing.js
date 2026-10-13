@@ -45,3 +45,36 @@ function drawSun(c,left,top,right,bottom){
 function drawSunMarker(o){
  const state=ScenicModel.sunState(o);localShape(o,()=>{ctx.strokeStyle=state.daylight&&o.enabled?'#e4b65d':color('--muted');ctx.fillStyle='#d8ad5922';ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,18,0,Math.PI*2);ctx.fill();ctx.stroke();for(let i=0;i<8;i++){const a=i*Math.PI/4;ctx.beginPath();ctx.moveTo(Math.cos(a)*23,Math.sin(a)*23);ctx.lineTo(Math.cos(a)*29,Math.sin(a)*29);ctx.stroke();}});label(o,'Sun · '+timeLabel(o.time),43);
 }
+
+/* Selection handles are screen-sized at every map zoom, and omitted from exports. */
+function drawTransformHandles(o){
+ ctx.save();ctx.strokeStyle=color('--accent');ctx.fillStyle=color('--paper');ctx.lineWidth=1.5/view.z;ctx.setLineDash([4/view.z,4/view.z]);
+ if(o.type==='wall'){
+  ctx.beginPath();ctx.moveTo(o.x,o.y);ctx.lineTo(o.x2,o.y2);ctx.stroke();
+  label(ScenicTransforms.center(o),formatLength(Math.hypot(o.x2-o.x,o.y2-o.y)),18/view.z);
+ }else localShape(o,()=>{const pad=6/view.z,w=o.width??60,h=o.height??60;ctx.strokeRect(-w/2-pad,-h/2-pad,w+pad*2,h+pad*2);});
+ ctx.setLineDash([]);
+ const handles=playback?[]:ScenicTransforms.handles(o,view.z);
+ for(const h of handles){
+  if(h.kind==='rotate'){
+   ctx.beginPath();ctx.moveTo(h.base.x,h.base.y);ctx.lineTo(h.x,h.y);ctx.stroke();
+   ctx.beginPath();ctx.arc(h.x,h.y,6/view.z,0,Math.PI*2);ctx.fill();ctx.stroke();
+   // Small turning arc makes the rotation control distinct from resize handles.
+   ctx.beginPath();ctx.arc(h.x,h.y,3/view.z,-Math.PI*.8,Math.PI*.6);ctx.stroke();
+  }else{const half=4/view.z;ctx.fillRect(h.x-half,h.y-half,half*2,half*2);ctx.strokeRect(h.x-half,h.y-half,half*2,half*2);}
+ }
+ ctx.restore();
+}
+function updateTransformReadout(o){
+ for(const key of ['x','y','x2','y2','width','height']){const field=document.querySelector(`[data-prop="${key}"][data-length]`);if(field&&Number.isFinite(o[key]))field.value=formatLength(o[key]);}
+ if(o.type!=='wall'){
+  const field=document.querySelector('[data-prop="rotation"]'),output=$('out-rotation');if(field)field.value=o.rotation||0;if(output)output.textContent=Math.round((o.rotation||0)*10)/10+'°';
+ }
+ const length=document.querySelector('.measurement-readout');if(length&&o.type==='wall')length.textContent='Length: '+formatLength(Math.hypot(o.x2-o.x,o.y2-o.y));
+}
+function cancelDrag(){
+ if(!drag)return;
+ const before=drag.before,id=selected;drag=null;
+ if(before){loadWorkspace(JSON.parse(before));selected=id;refresh();}
+ canvas.style.cursor=tool==='hand'?'grab':tool==='select'?'default':'crosshair';invalidate();
+}

@@ -11,7 +11,7 @@ const project={version:1,name:'Round trip',active:'scene',scenes:[{id:'scene',ti
 const objects=project.scenes[0].objects;
 objects.push({id:'legacy',type:'sofa',name:'Existing sofa',x:448,y:325,width:255,height:95,rotation:0});
 assert(validProject(project));
-for(const item of items)objects.push({id:item.id,type:item.category==='props'?'prop':item.category==='lights'?'light':'set',asset:item.id,name:item.name,x:0,y:0,width:item.width,height:item.height,rotation:45,...(item.category==='lights'?{enabled:true,...require('../dist/catalog.js').lightPresets[item.id]}:{})});
+for(const item of items)objects.push({id:item.id,type:item.category==='props'?'prop':item.category==='lights'?'light':item.category==='walls'?'room':'set',asset:item.id,name:item.name,x:0,y:0,width:item.width,height:item.height,rotation:45,...(item.category==='walls'?{thickness:9,keepProportions:false}:{}),...(item.category==='lights'?{enabled:true,...require('../dist/catalog.js').lightPresets[item.id]}:{})});
 assert(validProject(JSON.parse(JSON.stringify(project))));
 objects.at(-1).asset='missing';assert(!validProject(project));objects.pop();objects.find(o=>o.type==='set').width=0;assert(!validProject(project));
 console.log('Portable project validation verified: legacy layouts, every new catalog piece, and invalid asset/size rejection.');
