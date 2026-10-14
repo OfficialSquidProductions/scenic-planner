@@ -13,5 +13,5 @@
   async exportFile(blob,filename){const base64=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result.split(',')[1]);r.onerror=reject;r.readAsDataURL(blob);});return this.request('exportFile',{filename,base64});}
  };
  document.documentElement.classList.add('desktop-app');
- document.addEventListener('DOMContentLoaded',()=>document.querySelector('.brand').addEventListener('click',e=>e.preventDefault()));
+ document.addEventListener('DOMContentLoaded',()=>document.querySelector('.brand')?.addEventListener('click',e=>e.preventDefault()));
 })();

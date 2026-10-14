@@ -21,6 +21,21 @@ module.exports=async({win,store,flush,report})=>{
  await js("document.getElementById('theme').click()");const theme=await js('document.documentElement.dataset.theme');assert.ok(['light','dark'].includes(theme));await flush();
  await new Promise(resolve=>{win.webContents.once('did-finish-load',resolve);win.reload();});for(let i=0;i<100;i++){if(await js('window.scenicReady===true'))break;await new Promise(r=>setTimeout(r,100));}
  assert.equal(await js("document.getElementById('project-name').value"),'Windows verification');assert.equal(await js('document.documentElement.dataset.theme'),theme);checks.push('Workspace and appearance restored after reload');
+ const {BrowserWindow}=require('electron');
+ const originalScene=await js('doc.active'),originalView=await js('JSON.stringify(view)'),previewScene=await js('doc.scenes[0].id'),productionId=await js('doc.projectId');
+ await js("document.getElementById('browse-scenes').click()");let gallery;
+ for(let i=0;i<100;i++){gallery=BrowserWindow.getAllWindows().find(window=>window!==win);if(gallery&&await gallery.webContents.executeJavaScript("document.querySelectorAll('.scene-card').length>0").catch(()=>false))break;await new Promise(r=>setTimeout(r,100));}
+ assert(gallery,'A separate scene-browser window must open');
+ assert.equal(await gallery.webContents.executeJavaScript("document.querySelectorAll('.scene-card').length"),await js('doc.scenes.length'));
+ const preview=await gallery.webContents.executeJavaScript('window.ScenicDesktop.request("scenePreview",'+JSON.stringify({productionId,sceneId:previewScene})+')');
+ assert.match(preview,/^data:image\/jpeg;base64,/);assert.equal(await js('doc.active'),originalScene);assert.equal(await js('JSON.stringify(view)'),originalView);
+ await gallery.webContents.executeJavaScript("document.querySelector('.scene-card').click()");
+ for(let i=0;i<100;i++){if(await js('doc.active')===previewScene)break;await new Promise(r=>setTimeout(r,100));}
+ assert.equal(await js('doc.active'),previewScene);
+ await assert.rejects(gallery.webContents.executeJavaScript("window.ScenicDesktop.request('readProject')"));
+ const galleryPNG=await gallery.webContents.capturePage();fs.writeFileSync(path.join(path.dirname(report),'windows-scene-browser.png'),galleryPNG.toPNG());
+ gallery.close();await js('activateScene('+JSON.stringify(originalScene)+')');assert.equal(await flush(),true);
+ checks.push('Separate scene browser shows numbered scene cards and renderer previews, preserves editor view during preview, switches scenes, and cannot read workspace files');
  const beforeCrash=fs.readFileSync(store.current,'utf8');
  const reloaded=new Promise(resolve=>win.webContents.once('did-finish-load',resolve));
  win.webContents.forcefullyCrashRenderer();await reloaded;

@@ -10,7 +10,9 @@ for (name, size) in [("icon_16x16",16),("icon_16x16@2x",32),("icon_32x32",32),("
  let mask=NSBezierPath(roundedRect:frame,xRadius:205,yRadius:205)
  mask.addClip()
  NSColor.white.setFill();mask.fill()
- logo.draw(in:frame,from:.zero,operation:.sourceOver,fraction:1)
+ // Match Production Desk's logo scale within the shared 944-point tile.
+ let logoFrame=NSRect(x:85,y:85,width:854,height:854)
+ logo.draw(in:logoFrame,from:.zero,operation:.sourceOver,fraction:1)
  NSGraphicsContext.restoreGraphicsState()
  try bitmap.representation(using:.png,properties:[:])!.write(to:directory.appendingPathComponent(name+".png"))
 }

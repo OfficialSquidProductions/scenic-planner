@@ -16,7 +16,7 @@ const electron={
  dialog:{showMessageBox:async(_win,options)=>{prompts.push(options);return {response:responses.shift()??1};},showErrorBox:()=>{throw Error('Unexpected download failure');}}
 };
 const context=vm.createContext({
- require:name=>name==='electron'?electron:name==='electron-updater'?{autoUpdater}:name==='./updates.cjs'?require('../windows/updates.cjs'):name==='./store.cjs'?{}:name==='./reports.cjs'?require('../windows/reports.cjs'):require(name),
+ require:name=>name==='electron'?electron:name==='electron-updater'?{autoUpdater}:name==='./updates.cjs'?require('../windows/updates.cjs'):name==='./store.cjs'?{}:name==='./reports.cjs'?require('../windows/reports.cjs'):name==='./scene-browser.cjs'?require('../windows/scene-browser.cjs'):require(name),
  process:{argv:[]},setTimeout:()=>({unref(){}}),setInterval:()=>({unref(){}})
 });
 vm.runInContext(fs.readFileSync(require.resolve('../windows/main.cjs'),'utf8'),context);

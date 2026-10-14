@@ -55,10 +55,13 @@ final class ScenicApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
     var releaseNotesWindow: NSWindow?
     lazy var crashes = ScenicReports(root: store.root, version: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Development")
     var reportEmailService: NSSharingService?
+    var sceneBrowserWindow: NSWindow?
+    var sceneBrowserWeb: WKWebView?
+    var sceneBrowserSnapshot: [String: Any]?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         do { try crashes.begin() } catch { showError("Crash reporting could not start: " + error.localizedDescription) }
-        NSApp.applicationIconImage = NSImage(contentsOf: Bundle.main.resourceURL!.appendingPathComponent("ScenicBlue.icns"))
+        // Use the bundle icon so macOS applies the same Dock sizing as Production Desk.
         makeMenu()
         let config = WKWebViewConfiguration()
         config.websiteDataStore = .default()
@@ -172,7 +175,7 @@ final class ScenicApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
         panel.isReleasedWhenClosed = false; panel.contentView = scroll
         panel.center(); releaseNotesWindow = panel; panel.makeKeyAndOrderFront(nil)
     }
-    @objc func closeWindow() { window.performClose(nil) }
+    @objc func closeWindow() { (NSApp.keyWindow ?? window).performClose(nil) }
     @objc func undo() { web.evaluateJavaScript("(['INPUT','TEXTAREA'].includes(document.activeElement.tagName) ? document.execCommand('undo') : undo())", completionHandler: nil) }
     @objc func redo() { web.evaluateJavaScript("(['INPUT','TEXTAREA'].includes(document.activeElement.tagName) ? document.execCommand('redo') : redo())", completionHandler: nil) }
     @objc func saveNow() { flush { _ in } }
@@ -186,16 +189,61 @@ final class ScenicApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
     func showError(_ text: String) {
         let alert = NSAlert(); alert.messageText = "Scenic"; alert.informativeText = text; alert.alertStyle = .warning; alert.addButton(withTitle: "OK"); alert.runModal()
     }
-    func reply(_ id: String, result: Any = NSNull(), error: String? = nil) {
+    func updateSceneBrowser(_ value: Any?, show: Bool) throws {
+        guard let snapshot = value as? [String: Any], let name = snapshot["name"] as? String,
+              snapshot["productionId"] is String, snapshot["active"] is String,
+              let scenes = snapshot["scenes"] as? [[String: Any]],
+              scenes.allSatisfy({ $0["id"] is String && $0["title"] is String && $0["number"] is Int }),
+              let data = try? JSONSerialization.data(withJSONObject: snapshot), data.count <= 2 * 1024 * 1024,
+              let json = String(data: data, encoding: .utf8) else {
+            throw NSError(domain: "Scenic", code: 3, userInfo: [NSLocalizedDescriptionKey: "The scene browser could not read this production."])
+        }
+        sceneBrowserSnapshot = snapshot
+        if show && sceneBrowserWindow == nil {
+            let config = WKWebViewConfiguration(); config.websiteDataStore = .nonPersistent()
+            config.userContentController.add(self, name: "scenic")
+            let browser = WKWebView(frame: .zero, configuration: config)
+            browser.navigationDelegate = self; browser.uiDelegate = self
+            let panel = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1040, height: 740), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
+            panel.minSize = NSSize(width: 600, height: 400); panel.isReleasedWhenClosed = false
+            panel.delegate = self; panel.contentView = browser; panel.setFrameAutosaveName("ScenicSceneBrowserWindow")
+            sceneBrowserWindow = panel; sceneBrowserWeb = browser; panel.center()
+            browser.loadFileURL(webRoot.appendingPathComponent("scene-browser.html"), allowingReadAccessTo: webRoot)
+        }
+        sceneBrowserWindow?.title = name + " · Scenes · Scenic"
+        sceneBrowserWeb?.evaluateJavaScript("window.ScenicSceneBrowserWindow?.render(\(json))", completionHandler: nil)
+        if show { sceneBrowserWindow?.makeKeyAndOrderFront(nil) }
+    }
+    func reply(_ id: String, result: Any = NSNull(), error: String? = nil, target: WKWebView? = nil) {
         let args: [Any] = [id, result, error as Any? ?? NSNull()]
         guard let data = try? JSONSerialization.data(withJSONObject: args, options: [.fragmentsAllowed]), let json = String(data: data, encoding: .utf8) else { return }
-        web.evaluateJavaScript("window.ScenicDesktop.receive(...\(json))", completionHandler: nil)
+        (target ?? web).evaluateJavaScript("window.ScenicDesktop.receive(...\(json))", completionHandler: nil)
     }
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
         guard message.frameInfo.isMainFrame, let url = message.frameInfo.request.url,
               url.isFileURL, url.standardizedFileURL.path.hasPrefix(webRoot.standardizedFileURL.path + "/"),
               let b = message.body as? [String: Any], let id = b["id"] as? String, let action = b["action"] as? String else { return }
+        if let browser = sceneBrowserWeb, message.webView === browser {
+            guard url.standardizedFileURL == webRoot.appendingPathComponent("scene-browser.html").standardizedFileURL else { return }
+            if action == "sceneBrowserReady" { reply(id, result: sceneBrowserSnapshot as Any? ?? NSNull(), target: browser); return }
+            guard ["scenePreview", "selectScene"].contains(action), let productionId = b["productionId"] as? String,
+                  let sceneId = b["sceneId"] as? String else { reply(id, error: "Unsupported scene browser request", target: browser); return }
+            web.callAsyncJavaScript("return await window.ScenicSceneBrowser[action](productionId, sceneId);", arguments: ["action": action == "scenePreview" ? "preview" : "select", "productionId": productionId, "sceneId": sceneId], in: nil, in: .page) { [weak self] result in
+                guard let self = self else { return }
+                switch result {
+                case .success(let value):
+                    if action == "selectScene", value as? Bool == true { self.allowClose = false; self.window.makeKeyAndOrderFront(nil) }
+                    self.reply(id, result: value, target: browser)
+                case .failure(let error): self.reply(id, error: error.localizedDescription, target: browser)
+                }
+            }
+            return
+        }
+        guard message.webView === web else { return }
         switch action {
+        case "openSceneBrowser", "updateSceneBrowser":
+            do { try updateSceneBrowser(b["snapshot"], show: action == "openSceneBrowser"); reply(id, result: true) }
+            catch { reply(id, error: error.localizedDescription) }
         case "showChangelog":
             showChangelog(); reply(id, result: true)
         case "reportBug":
@@ -267,6 +315,7 @@ final class ScenicApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
     }
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) { showError("The bundled editor could not open: " + error.localizedDescription) }
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+        if webView !== web { webView.reload(); return }
         do { try crashes.capture("The WebKit editor process stopped unexpectedly. Scenic reloaded the last autosaved workspace.") }
         catch { showError("Could not save the crash log: " + error.localizedDescription) }
         web.reload()
@@ -284,9 +333,16 @@ final class ScenicApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
         }
     }
     func windowShouldClose(_ sender: NSWindow) -> Bool {
+        if sender === sceneBrowserWindow { return true }
         if allowClose { return true }
         flush { [self] saved in if saved { allowClose = true; window.close() } }
         return false
+    }
+    func windowWillClose(_ notification: Notification) {
+        if let closing = notification.object as? NSWindow, closing === sceneBrowserWindow {
+            sceneBrowserWindow = nil; sceneBrowserWeb = nil; sceneBrowserSnapshot = nil
+            web.evaluateJavaScript("window.ScenicSceneBrowser?.closed()", completionHandler: nil)
+        }
     }
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         if allowClose { return .terminateNow }

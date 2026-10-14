@@ -1,6 +1,6 @@
 {
-  "version": "1.4.14",
-  "build": "19",
+  "version": "1.4.15",
+  "build": "20",
   "feed_url": "https://github.com/OfficialSquidProductions/scenic-planner/releases/latest/download/appcast.xml",
   "public_key": "0TnXZnaPjUXpCDLSJrQxqiM54j1sArblCvg2m9AFPJg=",
   "keychain_account": "scenic-planner",

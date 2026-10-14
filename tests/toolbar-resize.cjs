@@ -1,0 +1,33 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const source=fs.readFileSync('dist/controls.js','utf8');
+function editor(storage=new Map()){
+ const state={height:129,width:800,max:129},attrs={},classes=new Set(),bodyClasses=new Set(),listeners={},observers=[];
+ const heading={parentElement:{},style:{setProperty:(key,value)=>{assert.equal(key,'--scene-heading-height');state.height=parseFloat(value);}},classList:{toggle:(name,on)=>on?classes.add(name):classes.delete(name)},getBoundingClientRect:()=>({height:state.height,width:state.width})};
+ let captured=null;
+ const handle={focus(){},setAttribute:(key,value)=>attrs[key]=Number(value),setPointerCapture:id=>{captured=id;},hasPointerCapture:id=>captured===id,releasePointerCapture:()=>{captured=null;}};
+ const sandbox={$:id=>id==='scene-heading'?heading:handle,document:{body:{classList:{add:name=>bodyClasses.add(name),remove:name=>bodyClasses.delete(name)}}},window:{addEventListener:(name,fn)=>listeners[name]=fn},getComputedStyle:()=>({getPropertyValue:()=>String(state.max)}),localStorage:{getItem:key=>storage.get(key)??null,setItem:(key,value)=>storage.set(key,String(value))},ResizeObserver:class{constructor(fn){observers.push(fn);}observe(){}}};
+ vm.createContext(sandbox);vm.runInContext(source,sandbox);vm.runInContext('setupToolbarResize()',sandbox);
+ const event=(y,extra={})=>({button:0,pointerId:7,clientY:y,preventDefault(){},stopPropagation(){},...extra});
+ return {state,attrs,classes,bodyClasses,handle,storage,event,listeners,observers};
+}
+let e=editor();
+assert.equal(e.state.height,129,'First launch preserves the original toolbar position');
+e.state.max=142;e.listeners.resize();assert.equal(e.state.height,142,'Wide windows preserve their original expanded height');
+e.state.max=129;e.listeners.resize();assert.equal(e.state.height,129);
+e.handle.onpointerdown(e.event(400));e.handle.onpointermove(e.event(350));assert.equal(e.state.height,79);assert(e.classes.has('compact-heading'));assert(e.bodyClasses.has('resizing-toolbar'));
+e.handle.onpointerup(e.event(350));assert(!e.bodyClasses.has('resizing-toolbar'));assert.equal(e.storage.get('scenic-toolbar-heading-height'),'79');
+e=editor(e.storage);assert.equal(e.state.height,79,'Preferred height restores on reload');
+e.handle.onpointerdown(e.event(300));e.handle.onpointermove(e.event(1000));assert.equal(e.state.height,129,'Cannot drag below the original position');
+e.handle.onpointermove(e.event(-1000));assert.equal(e.state.height,64,'Cannot compress the scene controls past their usable minimum');
+e.handle.onpointercancel(e.event(-1000));assert.equal(e.state.height,79,'Cancelled drag restores the previous preference');
+e.handle.onpointerdown(e.event(300));e.handle.onpointermove(e.event(280));e.handle.onkeydown(e.event(280,{key:'Escape'}));assert.equal(e.state.height,79);assert.equal(e.storage.get('scenic-toolbar-heading-height'),'79');
+e.handle.onpointerdown(e.event(300));e.handle.onpointermove(e.event(280));e.handle.onlostpointercapture();assert.equal(e.state.height,79);
+e.handle.onkeydown(e.event(0,{key:'ArrowUp'}));assert.equal(e.state.height,67);
+e.handle.onkeydown(e.event(0,{key:'ArrowDown'}));assert.equal(e.state.height,79);
+e.handle.onkeydown(e.event(0,{key:'Home'}));assert.equal(e.state.height,129);assert(!e.classes.has('compact-heading'));
+e.handle.onkeydown(e.event(0,{key:'End'}));assert.equal(e.state.height,64);
+e.state.width=390;e.state.max=135;e.observers[0]();assert.equal(e.state.height,94);assert.equal(e.attrs['aria-valuemin'],94);assert.equal(e.attrs['aria-valuemax'],135);
+e.state.width=800;e.state.max=129;e.listeners.resize();assert.equal(e.state.height,64,'Temporary responsive limits do not overwrite the preferred height');
+e.handle.ondblclick();assert.equal(e.state.height,129);
+e.handle.onpointerdown(e.event(300,{button:2}));assert(!e.bodyClasses.has('resizing-toolbar'),'Right-click must not start dragging');
+console.log('Toolbar resize passed: live movement, original lower limit, usable minimum, reload persistence, pointer cancellation, Escape, lost capture, keyboard/reset, and responsive limits.');

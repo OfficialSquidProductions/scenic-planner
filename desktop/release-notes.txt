@@ -1,5 +1,6 @@
-Scenic 1.4.14
+Scenic 1.4.15
 
-- Report bugs from Settings by email to alexanderhosier@squidproductions.org.
-- After an editor crash or unexpected shutdown, choose whether to send a crash report with a description of what happened.
-- Review or save crash logs before opening an email draft. Reopen the latest report from Settings; nothing is sent automatically.
+- Browse every scene in a production in a separate window with numbered, titled previews, and click a scene to switch to it.
+- Give the workspace more room by dragging the bottom of the top toolbar upward; Scenic remembers the height you choose.
+- Use a slimmer workspace header and a more compact left sidebar with a larger Scenic title, production credit, and Saved on your computer.
+- Match the blue Scenic logo and Mac Dock icon sizing to Production Desk.
