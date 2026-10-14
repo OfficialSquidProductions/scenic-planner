@@ -109,6 +109,7 @@ final class ScenicApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
         add(file, "Save", #selector(saveNow), "s")
         add(file, "Save Project As…", #selector(saveAs), "s", [.command, .shift])
         file.addItem(.separator()); add(file, "Import Image…", #selector(importImage), "i", [.command, .shift])
+        add(file, "Import Shot List CSV…", #selector(importShotList))
         add(file, "Export Map…", #selector(exportMap), "e")
         file.addItem(.separator()); add(file, "Close Window", #selector(closeWindow), "w")
         let edit = submenu("Edit")
@@ -130,6 +131,7 @@ final class ScenicApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
     @objc func openProject() { click("open-project") }
     @objc func saveAs() { click("save-project") }
     @objc func importImage() { click("import-image") }
+    @objc func importShotList() { click("import-shot-list") }
     @objc func exportMap() { click("export") }
     @objc func duplicate() { web.evaluateJavaScript("duplicate()", completionHandler: nil) }
     @objc func fit() { click("fit") }

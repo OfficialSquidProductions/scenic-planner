@@ -11,7 +11,7 @@ function renderProjects(){
 }
 function deleteScene(id){const target=doc.scenes.find(s=>s.id===id);if(!target)return;snapshot();doc.scenes=doc.scenes.filter(s=>s.id!==id);if(!doc.scenes.length)doc.scenes.push(blankScene());if(doc.active===id)doc.active=doc.scenes[0].id;selected=null;selectedIds.clear();wallMultiSelect=false;stopPlayback();hideContextMenu();setTool('select');fit();commit();toast('Scene deleted · Undo to restore');}
 function renderScenes(){
- $('scenes').innerHTML=doc.scenes.map((s,i)=>`<button class="scene-row ${s.id===doc.active?'active':''}" data-scene="${s.id}" title="Right-click for scene actions"><span class="scene-icon">${String(i+1).padStart(2,'0')}</span><span><strong>${esc(s.subtitle||s.title.replace(/^(INT\.|EXT\.)\s*/,'').split('—')[0].trim())}</strong><small>${s.objects.filter(o=>o.type==='camera').length} shots · ${s.objects.filter(o=>o.type==='light').length} lights</small></span><span class="scene-more">›</span></button>`).join('');
+ $('scenes').innerHTML=doc.scenes.map((s,i)=>`<button class="scene-row ${s.id===doc.active?'active':''}" data-scene="${s.id}" title="Right-click for scene actions"><span class="scene-icon">${String(i+1).padStart(2,'0')}</span><span><strong>${esc(s.subtitle||s.title.replace(/^(INT\.|EXT\.)\s*/,'').split('—')[0].trim())}</strong><small>${s.shotList?.length?`${ScenicShotList.coverage(s).checked}/${ScenicShotList.coverage(s).total} checked · ${s.objects.filter(o=>o.type==='camera').length} cameras`:`${s.objects.filter(o=>o.type==='camera').length} shots · ${s.objects.filter(o=>o.type==='light').length} lights`}</small></span><span class="scene-more">›</span></button>`).join('');
  document.querySelectorAll('[data-scene]').forEach(b=>{b.onclick=()=>activateScene(b.dataset.scene);b.oncontextmenu=e=>{e.preventDefault();contextScene=b.dataset.scene;const menu=$('scene-context');menu.hidden=false;menu.style.left=Math.min(e.clientX,innerWidth-190)+'px';menu.style.top=Math.min(e.clientY,innerHeight-60)+'px';$('context-delete-scene').focus();};b.onkeydown=e=>{if(e.key==='ContextMenu'||e.shiftKey&&e.key==='F10'){e.preventDefault();const r=b.getBoundingClientRect();b.oncontextmenu({preventDefault(){},clientX:r.right,clientY:r.top});}};});
 }
 function activateScene(id){if(!doc.scenes.some(s=>s.id===id))return false;doc.active=id;selected=null;selectedIds.clear();wallMultiSelect=false;stopPlayback();setTool('select');showShots(false);fit();commit();return true;}
@@ -68,6 +68,7 @@ function breakRoom(){
  toast(`Room separated into ${result.walls.length} walls · Undo to restore`);
 }
 function bindExtraInspector(){const o=object();if(!o)return;
+ bindCameraShot();
  if(o.type==='wall'&&$('select-multiple-walls'))$('select-multiple-walls').onclick=beginWallSelection;
  if(o.type==='wallGroup'&&$('ungroup-walls'))$('ungroup-walls').onclick=ungroupSelectedWalls;
  if(o.type==='room'&&$('break-room'))$('break-room').onclick=breakRoom;
@@ -113,6 +114,7 @@ function afterObjectChange(o,prop,previous){if(!o)return;stopPlayback();
 function displayObject(o){if(!playback||!o.marks?.length)return o;if(playback.mode!=='scene'&&playback.id!==o.id)return o;if(playback.mode==='scene'&&o.marks.length<2)return o;return {...o,...ScenicModel.motionPose(o,ScenicModel.playbackElapsed(playback,performance.now()))};}
 function setupWorkflow(){
  setupControls();
+ setupShotImport();
  $('new-project').onclick=newProject;$('library-search').oninput=e=>{libraryQuery=e.target.value;renderLibrary();$('library').scrollTop=0;};
  $('context-delete-scene').onclick=()=>deleteScene(contextScene);document.addEventListener('pointerdown',e=>{if(!e.target.closest('#scene-context'))hideContextMenu();});window.addEventListener('keydown',e=>{if(e.key==='Escape')hideContextMenu();});
  const openSettings=()=>{$('settings-theme').value=doc.theme;$('settings').showModal();};$('settings-button').onclick=openSettings;$('close-settings').onclick=()=>$('settings').close();
@@ -128,5 +130,76 @@ function setupWorkflow(){
   handle.onpointerup=handle.onpointercancel=()=>{start=null;document.body.classList.remove('resizing');};
   handle.onkeydown=e=>{if(['ArrowLeft','ArrowRight','Home'].includes(e.key)){e.preventDefault();e.stopPropagation();const width=(side==='left'?document.querySelector('.sidebar'):document.querySelector('.inspector')).getBoundingClientRect().width;setWidth(e.key==='Home'?(side==='left'?230:268):width+(e.key==='ArrowRight'?24:-24)*(side==='left'?1:-1));}};
  }
+}
+let pendingShotImport=null;
+function shotImportPlan(){const p=pendingShotImport;return ScenicShotList.planImport(doc,p.scenes,p.selected,p.targets);}
+function updateShotImportSummary(){
+ const pending=pendingShotImport;if(!pending)return;
+ const plan=shotImportPlan(),count=plan.entries.filter(e=>e.selected).reduce((n,e)=>n+e.source.shotList.length,0);
+ $('shot-import-summary').textContent=`${plan.selectedCount} selected ${plan.selectedCount===1?'scene':'scenes'} · ${count} ${count===1?'shot':'shots'} from ${pending.filename} into “${doc.name}”.`;
+ $('shot-import-changes').textContent=`${plan.newScenes} new ${plan.newScenes===1?'scene':'scenes'} · ${plan.updatedScenes} existing ${plan.updatedScenes===1?'scene':'scenes'} to update · ${plan.updatedShots} ${plan.updatedShots===1?'shot':'shots'} to update · ${plan.newShots} ${plan.newShots===1?'shot':'shots'} to add · ${plan.retainedShots} previous ${plan.retainedShots===1?'shot':'shots'} to keep`;
+ $('shot-import-error').textContent=!plan.selectedCount?'Select at least one scene to import.':plan.errors.join(' ');
+ $('confirm-shot-import').disabled=!plan.selectedCount||plan.errors.length>0;
+}
+function renderShotImport(){
+ const plan=shotImportPlan();
+ $('shot-import-preview').innerHTML=plan.entries.map(({source,matches,target,selected})=>`<div class="shot-import-row"><label class="shot-import-choice"><input type="checkbox" data-import-scene="${esc(source.id)}" ${selected?'checked':''}><span><strong>${esc(source.title)}</strong><small>${source.shotList.length} incoming ${source.shotList.length===1?'shot':'shots'} · ${matches.length?'Update existing scene':'New blank scene'}</small></span></label>${matches.length>1?`<label class="shot-import-target">Scene to update<select data-import-target="${esc(source.id)}" aria-label="Scene to update for ${esc(source.title)}"><option value="">Choose existing scene…</option>${matches.map(s=>`<option value="${esc(s.id)}" ${target?.id===s.id?'selected':''}>${esc(s.title)} · ${s.objects.filter(o=>o.type==='camera').length} cameras</option>`).join('')}</select></label>`:target?`<span class="shot-import-destination">${esc(target.title)}</span>`:''}</div>`).join('');
+ document.querySelectorAll('[data-import-scene]').forEach(el=>el.onchange=()=>{if(el.checked)pendingShotImport.selected.add(el.dataset.importScene);else pendingShotImport.selected.delete(el.dataset.importScene);updateShotImportSummary();});
+ document.querySelectorAll('[data-import-target]').forEach(el=>el.onchange=()=>{pendingShotImport.targets[el.dataset.importTarget]=el.value;updateShotImportSummary();});
+ updateShotImportSummary();
+}
+function setupShotImport(){
+ $('import-shot-list').onclick=()=>$('shot-list-input').click();
+ $('shot-list-input').onchange=async e=>{
+  const file=e.target.files[0];if(!file)return;
+  try{
+   if(file.size>10*1024*1024)throw Error('Choose a shot list smaller than 10 MB.');
+   const scenes=ScenicShotList.importCSV(await file.text(),uid);
+   pendingShotImport={projectId:doc.projectId,filename:file.name,scenes,selected:new Set(scenes.map(s=>s.id)),targets:{}};
+   renderShotImport();$('shot-import').showModal();
+  }catch(error){pendingShotImport=null;toast(error.message||'Could not read this shot list.');}
+  finally{e.target.value='';}
+ };
+ for(const [id,select] of [['shot-import-all',true],['shot-import-none',false]])$(id).onclick=()=>{
+  if(!pendingShotImport)return;
+  pendingShotImport.selected=new Set(select?pendingShotImport.scenes.map(s=>s.id):[]);
+  document.querySelectorAll('[data-import-scene]').forEach(el=>{el.checked=select;});updateShotImportSummary();
+ };
+ $('cancel-shot-import').onclick=()=>{$('shot-import').close();pendingShotImport=null;};
+ $('shot-import').addEventListener('close',()=>{pendingShotImport=null;});
+ $('confirm-shot-import').onclick=()=>{
+  const pending=pendingShotImport;if(!pending)return;
+  if(doc.projectId!==pending.projectId){toast('The production changed. Import the shot list again.');$('shot-import').close();return;}
+  try{
+   const merged=ScenicShotList.mergeImport(doc,pending.scenes,pending.selected,pending.targets);
+   snapshot();doc.scenes=merged.scenes;doc.active=merged.active;selected=null;selectedIds.clear();wallMultiSelect=false;stopPlayback();setTool('select');showShots(false);fit();commit();$('shot-import').close();pendingShotImport=null;
+   toast(`Shot list imported · ${merged.plan.newScenes} ${merged.plan.newScenes===1?'scene':'scenes'} added · ${merged.plan.updatedScenes} ${merged.plan.updatedScenes===1?'scene':'scenes'} updated`);
+  }catch(error){$('shot-import-error').textContent=error.message;$('confirm-shot-import').disabled=true;}
+ };
+}
+function shotDetails(shot){return `<dl class="source-shot-details">${ScenicShotList.columns.filter(([,key])=>shot[key]!=='').map(([label,key])=>`<div><dt>${esc(label)}</dt><dd>${esc(shot[key])}</dd></div>`).join('')}</dl>`;}
+function cameraShotInspector(camera){
+ const shots=scene().shotList||[];if(!shots.length)return '<p class="empty-hint">Import a Production Desk shot list CSV to link this camera to planned coverage.</p>';
+ const shot=shots.find(s=>s.id===camera.shotId);
+ return `<div class="section-label">PRODUCTION DESK SHOT</div><label class="field">Link to shot<select id="camera-shot-link"><option value="">Unlinked camera</option>${shots.map(s=>`<option value="${esc(s.id)}" ${s.id===camera.shotId?'selected':''}>${esc(s.number+' · '+(s.description||s.size||'Shot')+(s.status.toLowerCase()==='omitted'?' · Omitted':''))}</option>`).join('')}</select></label><p class="empty-hint">Linking applies the shot’s supported lens and framing. Original details stay below; your map position and notes stay yours.</p>${shot?`<label class="toggle-label">Coverage checked<input id="camera-shot-checked" type="checkbox" ${shot.checked?'checked':''}></label><details class="source-shot"><summary>Original shot ${esc(shot.number)} · ${esc(shot.camera?'Camera '+shot.camera:'Camera details')}</summary>${shotDetails(shot)}</details>`:''}`;
+}
+function bindCameraShot(){
+ const camera=object();if(camera?.type!=='camera')return;
+ if($('camera-shot-link'))$('camera-shot-link').onchange=e=>{
+  const shot=(scene().shotList||[]).find(s=>s.id===e.target.value);snapshot();ScenicShotList.linkCamera(camera,shot);camera.fov=ScenicModel.cameraView(camera).fov;commit();
+ };
+ if($('camera-shot-checked'))$('camera-shot-checked').onchange=e=>{const shot=scene().shotList?.find(s=>s.id===camera.shotId);if(!shot)return;snapshot();shot.checked=e.target.checked;commit();};
+}
+function renderShots(){
+ const current=scene(),shots=current.shotList||[];
+ if(!shots.length){renderCameraSetups();return;}
+ const stats=ScenicShotList.coverage(current),cams=current.objects.filter(o=>o.type==='camera');
+ $('shot-list').innerHTML=`<div class="shot-list-intro"><div><h2>Plan every angle.</h2><p>${esc(current.title)} · ${shots.length} imported shots · ${cams.length} camera setups</p></div><button id="export-shots">Export CSV ↗</button></div><div class="coverage-summary" role="status"><strong>${stats.checked} / ${stats.total} coverage checked</strong><span>${stats.linked} linked to cameras · ${stats.total-stats.linked} need a camera</span><progress aria-label="Shot coverage checked" max="${stats.total||1}" value="${stats.checked}"></progress></div><p class="empty-hint">Place a camera on the scene map, then select it and choose Link to shot in Properties. Check coverage as you verify each setup. Omitted shots are excluded from the totals; Production Desk status stays as imported.</p><div class="imported-shots">${shots.map(shot=>{
+  const linked=ScenicShotList.linkedCameras(current,shot);
+  return `<article class="imported-shot ${shot.checked?'coverage-checked':''}"><div class="imported-shot-heading"><label class="shot-coverage-check"><input type="checkbox" data-shot-checked="${esc(shot.id)}" aria-label="Coverage checked for shot ${esc(shot.number)}" ${shot.checked?'checked':''}><strong>${esc(shot.number)}</strong></label><span class="shot-source-status">${esc(shot.status||'Planned')} · ${esc(shot.priority||'No priority')}</span></div><h3>${esc(shot.description||'Untitled shot')}</h3><p class="shot-source-specs">${esc([shot.size,shot.camera&&'Camera '+shot.camera,shot.lens&&shot.lens+' mm',shot.movement,shot.equipment].filter(Boolean).join(' · '))}</p><div class="shot-linked-cameras">${linked.length?linked.map(c=>`<button data-edit-camera="${esc(c.id)}">${esc(c.name)} ↗</button>`).join(''):'<span class="missing-camera">No camera linked</span>'}</div><details class="source-shot"><summary>All original shot details</summary>${shotDetails(shot)}</details></article>`;
+ }).join('')}</div>${cams.some(c=>!c.shotId)?`<div class="section-label">UNLINKED CAMERA SETUPS</div><div class="shot-linked-cameras">${cams.filter(c=>!c.shotId).map(c=>`<button data-edit-camera="${esc(c.id)}">${esc(c.name)} · Link in Properties ↗</button>`).join('')}</div>`:''}`;
+ document.querySelectorAll('[data-edit-camera]').forEach(b=>b.onclick=()=>{showShots(false);choose(b.dataset.editCamera);});
+ document.querySelectorAll('[data-shot-checked]').forEach(el=>el.onchange=()=>{const shot=shots.find(s=>s.id===el.dataset.shotChecked);if(!shot)return;snapshot();shot.checked=el.checked;commit();});
+ $('export-shots').onclick=()=>download(new Blob([ScenicShotList.exportCSV(current)],{type:'text/csv;charset=utf-8'}),'scenic-shot-list.csv');
 }
 init();

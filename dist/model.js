@@ -4,6 +4,7 @@
 const catalog=typeof module==='object'&&module.exports?require('./catalog.js'):root.ScenicCatalog;
 const geometry=typeof module==='object'&&module.exports?require('./engine.js'):root.ScenicGeometry;
 const solar=typeof module==='object'&&module.exports?require('./solar.js'):root.ScenicSolar;
+const shotLists=typeof module==='object'&&module.exports?require('./shot-list.js'):root.ScenicShotList;
 const finite=n=>Number.isFinite(n),coordinate=n=>finite(n)&&Math.abs(n)<100000;
 const openingKind=o=>o.type==='set'&&(o.asset==='door'||o.asset?.startsWith('door-'))?'door':o.type==='set'&&(o.asset==='window'||o.asset?.startsWith('window-'))?'window':null;
 const movable=o=>['actor','camera','light'].includes(o.type)&&o.kind!=='sun';
@@ -184,12 +185,14 @@ function validProject(p){
  const ids=new Set();
  for(const s of p.scenes){
   if(!s||typeof s.id!=='string'||ids.has(s.id)||typeof s.title!=='string'||!Array.isArray(s.objects)||s.objects.length>2000||!finite(s.ambient)||s.ambient<0||s.ambient>100)return false;ids.add(s.id);
+  if(s.shotList!==undefined&&!shotLists.validList(s.shotList))return false;
   const objectIds=new Set();let suns=0;
   for(const o of s.objects){
    if(!o||typeof o.id!=='string'||objectIds.has(o.id)||typeof o.name!=='string'||!['wall','room','wallGroup','camera','light','actor','sofa','table','prop','set','gear','image'].includes(o.type)||![o.x,o.y].every(coordinate))return false;objectIds.add(o.id);
    const nums={wall:['x2','y2','thickness'],room:['width','height','rotation','thickness'],wallGroup:['width','height','rotation'],camera:['rotation','fov','lens'],light:['rotation','power','temperature','beam','radius'],actor:['rotation'],sofa:['width','height','rotation'],table:['width','height','rotation'],prop:['width','height','rotation'],set:['width','height','rotation'],gear:['width','height','rotation'],image:['width','height','rotation','opacity']}[o.type];
    if(!nums.every(k=>finite(o[k])))return false;
    if(o.type==='camera'&&((o.sensorWidth!==undefined&&(!finite(o.sensorWidth)||o.sensorWidth<1||o.sensorWidth>100))||(o.viewDistance!==undefined&&(!finite(o.viewDistance)||o.viewDistance<3||o.viewDistance>5000))))return false;
+   if(o.shotId!==undefined&&(o.type!=='camera'||typeof o.shotId!=='string'||!s.shotList?.some(shot=>shot.id===o.shotId)))return false;
    if(o.type==='wall'&&(!coordinate(o.x2)||!coordinate(o.y2)||o.thickness<=0||o.thickness>100))return false;
    if(['wallGroup','room','image','table','sofa','prop','set','gear'].includes(o.type)&&(!(o.width>0&&o.width<=5000)||!(o.height>0&&o.height<=5000)))return false;
    if(o.type==='wallGroup'&&(!Array.isArray(o.wallIds)||o.wallIds.length<2||o.wallIds.length>1999||new Set(o.wallIds).size!==o.wallIds.length||!o.wallIds.every(id=>typeof id==='string'&&s.objects.some(w=>w.id===id&&w.type==='wall'))))return false;

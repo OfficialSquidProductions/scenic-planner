@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.4.16",
+    "changes": [
+      "Mac distributions are signed with Developer ID, notarized by Apple, and include stapled tickets for Gatekeeper verification.",
+      "Import Production Desk shot-list CSVs, choose scenes, and create empty maps with all original shot and camera details.",
+      "Link cameras to imported shots and track coverage checks; reimport matching scene and shot numbers without duplicates while keeping camera setups, links, and checks."
+    ]
+  },
+  {
     "version": "1.4.15",
     "changes": [
       "Browse every scene in a production in a separate window with numbered, titled previews, and click a scene to switch to it.",
