@@ -21,6 +21,25 @@ module.exports=async({win,store,flush,report})=>{
  await js("document.getElementById('theme').click()");const theme=await js('document.documentElement.dataset.theme');assert.ok(['light','dark'].includes(theme));await flush();
  await new Promise(resolve=>{win.webContents.once('did-finish-load',resolve);win.reload();});for(let i=0;i<100;i++){if(await js('window.scenicReady===true'))break;await new Promise(r=>setTimeout(r,100));}
  assert.equal(await js("document.getElementById('project-name').value"),'Windows verification');assert.equal(await js('document.documentElement.dataset.theme'),theme);checks.push('Workspace and appearance restored after reload');
+ const beforeCrash=fs.readFileSync(store.current,'utf8');
+ const reloaded=new Promise(resolve=>win.webContents.once('did-finish-load',resolve));
+ win.webContents.forcefullyCrashRenderer();await reloaded;
+ for(let i=0;i<100;i++){if(await js("window.scenicReady===true && document.getElementById('crash-report').open"))break;await new Promise(r=>setTimeout(r,100));}
+ assert.equal(await js("document.getElementById('crash-report').open"),true);
+ assert.equal(await js("document.getElementById('project-name').value"),'Windows verification');
+ assert.equal(fs.readFileSync(store.current,'utf8'),beforeCrash);
+ assert.match(await js("document.getElementById('crash-report-log').value"),/Editor process stopped/);
+ assert.equal(await js("document.getElementById('crash-report-description').required"),true);
+ await js("document.getElementById('crash-report-description').value='Synthetic renderer crash verification'");
+ const crashPNG=await win.webContents.capturePage();fs.writeFileSync(path.join(path.dirname(report),'windows-crash-report.png'),crashPNG.toPNG());
+ await js("document.getElementById('close-crash-report').click()");
+ for(let i=0;i<100;i++){if(!(await js("window.ScenicDesktop.request('getCrashReport').then(report=>report.needsPrompt)")))break;await new Promise(r=>setTimeout(r,100));}
+ assert.equal(await js("window.ScenicDesktop.request('getCrashReport').then(report=>report.needsPrompt)"),false);
+ await js("document.getElementById('settings-button').click();document.getElementById('report-crash').click()");
+ for(let i=0;i<100;i++){if(await js("document.getElementById('crash-report').open"))break;await new Promise(r=>setTimeout(r,100));}
+ assert.equal(await js("document.getElementById('crash-report').open"),true);
+ await js("document.getElementById('close-crash-report').click()");
+ checks.push('Actual renderer crash reloads the saved workspace and prompts for description/log review; dismiss and Settings reopen work without sending email');
  await js("window.__originalFlush=window.scenicFlush;window.scenicFlush=async()=>{throw Error('test save failure')};void 0");assert.equal(await flush(),false);await js('window.scenicFlush=window.__originalFlush;void 0');assert.equal(await flush(),true);checks.push('Failed save blocks update/exit gate; retry succeeds');
  const before=fs.readFileSync(store.current,'utf8');await assert.rejects(js("window.ScenicDesktop.request('saveProject',{project:'invalid'})"));assert.equal(fs.readFileSync(store.current,'utf8'),before);checks.push('Invalid native save rejected without modifying workspace');
  assert.equal(await js("typeof window.require"),'undefined');assert.equal(win.webContents.getLastWebPreferences().contextIsolation,true);assert.equal(win.webContents.getLastWebPreferences().sandbox,true);checks.push('Renderer has no Node access, runs in sandbox and isolated context');

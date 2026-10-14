@@ -26,13 +26,21 @@ Scenic → Check for Updates checks the official GitHub release channel. Daily a
 
 Update prompts show what changed before downloading or installing. Settings → What’s New and Scenic → What’s New reopen the installed release's notes and recent history offline. On Windows, Scenic → View Update Details also reopens notes for an available or downloaded update after choosing Later. Enabling automatic installation keeps the existing unattended behavior.
 
-Maintain release changes in `desktop/changelog.json`, newest first, with the latest version matching `desktop/release.json`. Both build scripts run `tools/release_notes.py` to generate the bundled changelog and `desktop/release-notes.html` / `.txt`. Mac update packaging embeds the HTML in the Sparkle prompt and rejects feeds without notes; Windows packaging embeds the text in `latest.yml` and uses it for new GitHub release descriptions. Missing or mismatched notes block a build. Run `python3 tools/release_notes.py` after editing notes to refresh the buildless browser version. Release 1.4.13 / build 18 includes the changelog display and is published for Mac and Windows.
+Maintain release changes in `desktop/changelog.json`, newest first, with the latest version matching `desktop/release.json`. Both build scripts run `tools/release_notes.py` to generate the bundled changelog and `desktop/release-notes.html` / `.txt`. Mac update packaging embeds the HTML in the Sparkle prompt and rejects feeds without notes; Windows packaging embeds the text in `latest.yml` and uses it for new GitHub release descriptions. Missing or mismatched notes block a build. Run `python3 tools/release_notes.py` after editing notes to refresh the buildless browser version. Release 1.4.14 / build 19 adds bug-report email links and crash reports with descriptions and reviewable logs.
 
 Mac uses Sparkle 2.10.0 and Ed25519-signed archives, verified before extraction. Windows uses Electron Updater with HTTPS and SHA-512 validation. The builds are not Developer ID notarized or Authenticode signed; the download page describes first-launch prompts.
 
 Release metadata is in `desktop/release.json`. Increase both version and build before publishing a new release. `python3 tools/fetch_sparkle.py` downloads the pinned framework and validates its checksum. Create a publisher key once with Sparkle's `generate_keys --account scenic-planner`; put only the public key in release.json. Never commit or upload the private key. `python3 tools/build_macos.py --update-release` produces the universal app, DMG, signed ZIP, and appcast. `python3 tools/check_macos_updates.py` tests save blocking/retry and verifies archive signatures, tamper rejection, and unrelated-key rejection. Upload the Mac archive before its matching appcast to the same versioned GitHub release as Windows. Published archives are immutable.
 
 The website source is `website/`. The Pages workflow deploys only that directory and the two branding assets. Custom DNS is a CNAME for `scenic` pointing to `officialsquidproductions.github.io`; preserve other DNS records.
+
+## Bug and crash reports
+
+Settings → Report a bug opens an email to alexanderhosier@squidproductions.org. Settings → Crash reports lets you describe an issue, review the diagnostic log, save a copy, and open an email draft to the same address. Nothing is sent automatically.
+
+When the editor process crashes, Scenic reloads the last autosave and offers a report. If the whole app stops unexpectedly, the prompt appears on the next launch. A force quit or power loss can also trigger this prompt. Closing the prompt keeps the latest report available in Settings without repeatedly prompting. Normal quits do not trigger a report.
+
+Reports include the app version, OS, crash/exit details, and recent JavaScript errors, without deliberately including workspace contents. On Mac, a matching macOS crash diagnostic is included when available; system diagnostics can contain file paths and other private details, so review the log before sharing. Mac attaches the report through the system email service. Windows includes the full report in the email body when it fits; longer reports are saved as `Scenic-crash-report.txt` and revealed for manual attachment. If no email app is configured, save the log and email it manually. The browser version can record JavaScript errors, but cannot detect a browser process crash.
 
 ## Browser version (optional)
 
@@ -77,6 +85,8 @@ Uses the supplied blue SP icon for the Mac app, the transparent red SP logo and 
 ## Verification
 
 Release 1.4.13 passed [Windows build, installation, and reinstall checks](https://github.com/OfficialSquidProductions/scenic-planner/actions/runs/38460632448) on a Windows runner. Packaged and installed app checks passed, including the offline changelog display, release-note metadata, failed-save protection, and saved-workspace preservation on reinstall. The universal Mac build, native storage, DMG integrity, updater save blocking/retry, and signed-archive tamper rejection were verified. Published downloads include SHA-256 checksums; Windows updater metadata also provides SHA-512 validation. The public download site serves HTTPS.
+
+Run `node tests/reports.cjs` for crash-report lifecycle and consent checks. On Mac, compile `macos/Reports.swift` with `tests/ReportsCheck.swift` and run the resulting test executable.
 
 Run `node tests/solar.cjs`, `node tests/camera.cjs`, `node tests/scale.cjs`, `node tests/selection.cjs`, `node tests/groups.cjs`, `node tests/transforms.cjs`, `node tests/rooms.cjs`, `node tests/room-editor.cjs`, `node tests/geometry.cjs`, `node tests/catalog.cjs`, `node tests/model.cjs`, and `node tests/windows-store.cjs` to verify measurements, catalog validation, occlusion, wall attachments, door/window behavior, movement, sunlight, and multi-production storage migration. Source is buildless HTML/CSS/JavaScript in `dist/`.
 

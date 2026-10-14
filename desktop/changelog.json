@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.4.14",
+    "changes": [
+      "Report bugs from Settings by email to alexanderhosier@squidproductions.org.",
+      "After an editor crash or unexpected shutdown, choose whether to send a crash report with a description of what happened.",
+      "Review or save crash logs before opening an email draft. Reopen the latest report from Settings; nothing is sent automatically."
+    ]
+  },
+  {
     "version": "1.4.13",
     "changes": [
       "See what is new before updating: Mac and Windows update prompts now include the release's changes.",

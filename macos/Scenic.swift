@@ -53,8 +53,11 @@ final class ScenicApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
     var pendingOpen: URL?
     let updates = ScenicUpdates()
     var releaseNotesWindow: NSWindow?
+    lazy var crashes = ScenicReports(root: store.root, version: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Development")
+    var reportEmailService: NSSharingService?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        do { try crashes.begin() } catch { showError("Crash reporting could not start: " + error.localizedDescription) }
         NSApp.applicationIconImage = NSImage(contentsOf: Bundle.main.resourceURL!.appendingPathComponent("ScenicBlue.icns"))
         makeMenu()
         let config = WKWebViewConfiguration()
@@ -199,6 +202,32 @@ final class ScenicApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
             let mailURL = URL(string: "mailto:alexanderhosier@squidproductions.org?subject=Scenic%20bug%20report")!
             if NSWorkspace.shared.open(mailURL) { reply(id, result: true) }
             else { reply(id, error: "Could not open email") }
+        case "getCrashReport":
+            let report = crashes.get()
+            reply(id, result: ["id": report.id as Any? ?? NSNull(), "needsPrompt": report.needsPrompt, "log": report.log])
+        case "dismissCrashReport":
+            do { try crashes.dismiss(b["id"] as? String); reply(id, result: true) }
+            catch { reply(id, error: error.localizedDescription) }
+        case "logError":
+            guard let text = b["message"] as? String, text.count <= 4000 else { reply(id, error: "Invalid error log"); return }
+            do { try crashes.log(text); reply(id, result: true) }
+            catch { reply(id, error: error.localizedDescription) }
+        case "sendCrashReport":
+            guard let description = b["description"] as? String, !description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                  description.utf16.count <= 600 else { reply(id, error: "Describe what happened in 600 characters or fewer."); return }
+            do {
+                let report = crashes.get()
+                let file = store.root.appendingPathComponent("Scenic-crash-report.txt")
+                try ("What happened:\n" + description + "\n\n" + report.log).write(to: file, atomically: true, encoding: .utf8)
+                guard let service = NSSharingService(named: .composeEmail) else { reply(id, error: "Set up an email app or save the crash log to email manually."); return }
+                let items: [Any] = ["What happened:\n" + description, file]
+                guard service.canPerform(withItems: items) else { reply(id, error: "Your email app could not create a report. Save the crash log to email manually."); return }
+                service.recipients = ["alexanderhosier@squidproductions.org"]; service.subject = "Scenic crash report"
+                reportEmailService = service
+                service.perform(withItems: items)
+                try crashes.dismiss(report.id)
+                reply(id, result: ["attachmentRequired": false])
+            } catch { reply(id, error: error.localizedDescription) }
         case "readProject":
             queue.async { [self] in
                 do { let (text, recovered) = try store.read(); DispatchQueue.main.async { self.reply(id, result: ["project": text as Any? ?? NSNull(), "recovered": recovered]) } }
@@ -216,7 +245,7 @@ final class ScenicApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
             let panel = NSSavePanel()
             panel.canCreateDirectories = true
             let ext = URL(fileURLWithPath: filename).pathExtension
-            if ["png", "csv", "json"].contains(ext), let type = UTType(filenameExtension: ext) { panel.allowedContentTypes = [type] }
+            if ["png", "csv", "json", "txt"].contains(ext), let type = UTType(filenameExtension: ext) { panel.allowedContentTypes = [type] }
             panel.nameFieldStringValue = URL(fileURLWithPath: filename).lastPathComponent
             panel.beginSheetModal(for: window) { [self] response in
                 guard response == .OK, let destination = panel.url else { reply(id, result: false); return }
@@ -238,8 +267,11 @@ final class ScenicApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
     }
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) { showError("The bundled editor could not open: " + error.localizedDescription) }
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
-        showError("The editor stopped unexpectedly. Scenic will reload the last autosaved workspace."); web.reload()
+        do { try crashes.capture("The WebKit editor process stopped unexpectedly. Scenic reloaded the last autosaved workspace.") }
+        catch { showError("Could not save the crash log: " + error.localizedDescription) }
+        web.reload()
     }
+    func applicationWillTerminate(_ notification: Notification) { crashes.end() }
     func flush(_ completion: @escaping (Bool) -> Void) {
         if flushing { completion(false); return }
         flushing = true

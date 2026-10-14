@@ -27,7 +27,7 @@ def build(dmg, update=False):
     shutil.copy2(ROOT/'LICENSE',res/'Scenic-LICENSE.txt')
     shutil.copy2(ROOT/'desktop/changelog.json',res/'Scenic-Changelog.json')
     for arch in ['arm64','x86_64']:
-        run('swiftc','-O','-module-cache-path',CACHE/'swift','-target',arch+'-apple-macos13.3','-F',frameworks,'-framework','Sparkle','-Xlinker','-rpath','-Xlinker','@executable_path/../Frameworks',ROOT/'macos/Scenic.swift',ROOT/'macos/Updates.swift','-o',CACHE/('Scenic-'+arch))
+        run('swiftc','-O','-module-cache-path',CACHE/'swift','-target',arch+'-apple-macos13.3','-F',frameworks,'-framework','Sparkle','-Xlinker','-rpath','-Xlinker','@executable_path/../Frameworks',ROOT/'macos/Scenic.swift',ROOT/'macos/Updates.swift',ROOT/'macos/Reports.swift','-o',CACHE/('Scenic-'+arch))
     run('lipo','-create',CACHE/'Scenic-arm64',CACHE/'Scenic-x86_64','-output',mac/'Scenic')
     shutil.copytree(ROOT/'dist',res/'web')
     run('swiftc','-module-cache-path',CACHE/'swift',ROOT/'macos/Icon.swift','-o',CACHE/'render-icon')
