@@ -42,7 +42,7 @@ struct WorkspaceStore {
     }
 }
 
-final class ScenicApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler {
+final class ScenicApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler, NSSharingServicePickerDelegate, NSSharingServiceDelegate {
     var window: NSWindow!
     var web: WKWebView!
     let queue = DispatchQueue(label: "org.squidproductions.scenic.storage")
@@ -51,6 +51,9 @@ final class ScenicApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
     var allowClose = false
     var flushing = false
     var pendingOpen: URL?
+    var projectSharePicker: NSSharingServicePicker?
+    var projectShareFile: URL?
+    var projectShareReply: String?
     let updates = ScenicUpdates()
     var releaseNotesWindow: NSWindow?
     lazy var crashes = ScenicReports(root: store.root, version: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Development")
@@ -108,6 +111,7 @@ final class ScenicApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
         add(file, "Open Project…", #selector(openProject), "o")
         add(file, "Save", #selector(saveNow), "s")
         add(file, "Save Project As…", #selector(saveAs), "s", [.command, .shift])
+        add(file, "Share Project Copy…", #selector(shareProject))
         file.addItem(.separator()); add(file, "Import Image…", #selector(importImage), "i", [.command, .shift])
         add(file, "Import Shot List CSV…", #selector(importShotList))
         add(file, "Export Map…", #selector(exportMap), "e")
@@ -130,6 +134,7 @@ final class ScenicApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
     @objc func newScene() { click("add-scene") }
     @objc func openProject() { click("open-project") }
     @objc func saveAs() { click("save-project") }
+    @objc func shareProject() { click("share-project") }
     @objc func importImage() { click("import-image") }
     @objc func importShotList() { click("import-shot-list") }
     @objc func exportMap() { click("export") }
@@ -289,12 +294,31 @@ final class ScenicApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
                 do { try store.write(text); DispatchQueue.main.async { self.reply(id, result: true) } }
                 catch { DispatchQueue.main.async { self.reply(id, error: error.localizedDescription) } }
             }
-        case "exportFile":
+        case "exportFile", "shareFile":
             guard let filename = b["filename"] as? String, let encoded = b["base64"] as? String,
                   encoded.count < 120 * 1024 * 1024, let data = Data(base64Encoded: encoded) else { reply(id, error: "Invalid or oversized export"); return }
+            guard window.attachedSheet == nil, projectShareFile == nil else { reply(id, error: "Finish the current save or share dialog first."); return }
+            if action == "shareFile" {
+                do {
+                    let directory = FileManager.default.temporaryDirectory.appendingPathComponent("Scenic-" + UUID().uuidString)
+                    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+                    let file = directory.appendingPathComponent(URL(fileURLWithPath: filename).lastPathComponent)
+                    try data.write(to: file, options: .atomic)
+                    projectShareFile = file; projectShareReply = id
+                    let picker = NSSharingServicePicker(items: [file]); picker.delegate = self; projectSharePicker = picker
+                    var anchor = NSRect(x: web.bounds.maxX - 100, y: web.bounds.maxY - 55, width: 60, height: 44)
+                    if let rect = b["anchor"] as? [String: Double], let x = rect["x"], let y = rect["y"], let width = rect["width"], let height = rect["height"], [x,y,width,height].allSatisfy({ $0.isFinite }), width > 0, height > 0 {
+                        let candidate = NSRect(x: x,y: web.bounds.maxY - y - height,width: width,height: height).intersection(web.bounds)
+                        if !candidate.isNull && !candidate.isEmpty { anchor = candidate }
+                    }
+                    picker.show(relativeTo: anchor, of: web, preferredEdge: .minY)
+                } catch { reply(id, error: error.localizedDescription) }
+                return
+            }
             let panel = NSSavePanel()
             panel.canCreateDirectories = true
             let ext = URL(fileURLWithPath: filename).pathExtension
+            if ext == "scenic" { panel.allowedContentTypes = [UTType(exportedAs: "org.squidproductions.scenic.project", conformingTo: .json)] }
             if ["png", "csv", "json", "txt"].contains(ext), let type = UTType(filenameExtension: ext) { panel.allowedContentTypes = [type] }
             panel.nameFieldStringValue = URL(fileURLWithPath: filename).lastPathComponent
             panel.beginSheetModal(for: window) { [self] response in
@@ -305,6 +329,43 @@ final class ScenicApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
                 }
             }
         default: reply(id, error: "Unsupported request")
+        }
+    }
+    func sharingServicePicker(_ sharingServicePicker: NSSharingServicePicker, didChoose service: NSSharingService?) {
+        if service == nil { finishProjectShare(false) }
+    }
+    func sharingServicePicker(_ sharingServicePicker: NSSharingServicePicker, delegateFor sharingService: NSSharingService) -> NSSharingServiceDelegate? { self }
+    func sharingService(_ sharingService: NSSharingService, didShareItems items: [Any]) { finishProjectShare(true) }
+    func sharingService(_ sharingService: NSSharingService, didFailToShareItems items: [Any], error: Error) { finishProjectShare(false, error: error.localizedDescription) }
+    private func finishProjectShare(_ completed: Bool, error: String? = nil) {
+        if let file = projectShareFile { try? FileManager.default.removeItem(at: file.deletingLastPathComponent()) }
+        if let id = projectShareReply { reply(id, result: completed, error: error) }
+        projectSharePicker = nil; projectShareFile = nil; projectShareReply = nil
+    }
+    func application(_ sender: NSApplication, openFiles filenames: [String]) {
+        guard filenames.count == 1, let filename = filenames.first else { sender.reply(toOpenOrPrint: .failure); return }
+        pendingOpen = URL(fileURLWithPath: filename)
+        if web != nil { receivePendingProject() }
+        sender.reply(toOpenOrPrint: .success)
+    }
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        if webView === web { receivePendingProject() }
+    }
+    private func receivePendingProject() {
+        guard pendingOpen != nil else { return }
+        web.evaluateJavaScript("window.scenicLoaded===true") { [weak self] value, _ in
+            guard let self, let url = self.pendingOpen else { return }
+            guard value as? Bool == true else { DispatchQueue.main.asyncAfter(deadline: .now()+0.2) { [weak self] in self?.receivePendingProject() }; return }
+            self.pendingOpen = nil
+            do {
+                let values = try url.resourceValues(forKeys: [.fileSizeKey,.isRegularFileKey,.isSymbolicLinkKey])
+                guard values.isRegularFile == true, values.isSymbolicLink != true, (values.fileSize ?? 0) <= 60 * 1024 * 1024 else { throw NSError(domain: "Scenic", code: 2, userInfo: [NSLocalizedDescriptionKey: "Choose a regular Scenic file of 60 MB or less."]) }
+                let data = try Data(contentsOf: url)
+                guard data.count <= 60 * 1024 * 1024, let text = String(data: data, encoding: .utf8) else { throw NSError(domain: "Scenic", code: 2) }
+                self.web.callAsyncJavaScript("await importPortableProject(text); return true", arguments: ["text":text], in: nil, in: .page) { [weak self] result in
+                    if case .failure(let error) = result { self?.showError(error.localizedDescription) }
+                }
+            } catch { self.showError(error.localizedDescription) }
         }
     }
     func webView(_ webView: WKWebView, runOpenPanelWith parameters: WKOpenPanelParameters, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping ([URL]?) -> Void) {

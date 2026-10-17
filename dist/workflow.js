@@ -1,13 +1,14 @@
 /* Workspace, library, movement, and architectural controls. */
 let workspace=ScenicModel.workspaceFrom(doc,uid()),playback=null,contextScene=null,libraryQuery='',pendingDelete=null;
 doc=workspace.projects[0];
-function workspaceData(){const index=workspace.projects.findIndex(p=>p.projectId===doc.projectId);if(index>=0)workspace.projects[index]=doc;workspace.activeProject=doc.projectId;return workspace;}
-function loadWorkspace(data){workspace=ScenicModel.workspaceFrom(data,uid());doc=workspace.projects.find(p=>p.projectId===workspace.activeProject);selected=null;selectedIds.clear();wallMultiSelect=false;stopPlayback();wallStart=null;images.clear();}
+function workspaceData(){doc.editorSettings={grid,snap,simulation};const index=workspace.projects.findIndex(p=>p.projectId===doc.projectId);if(index>=0)workspace.projects[index]=doc;workspace.activeProject=doc.projectId;return workspace;}
+function loadWorkspace(data){workspace=ScenicModel.workspaceFrom(data,uid());doc=workspace.projects.find(p=>p.projectId===workspace.activeProject);applyEditorSettings();selected=null;selectedIds.clear();wallMultiSelect=false;stopPlayback();wallStart=null;images.clear();}
+function applyEditorSettings(){if(doc.editorSettings){({grid,snap,simulation}=doc.editorSettings);$('simulation').checked=simulation;$('snap').checked=snap;$('canvas-mode').textContent=simulation?'LIGHTING PREVIEW':'SCENE LAYOUT';}}
 function blankScene(){return {id:uid(),title:'UNTITLED SCENE',subtitle:'New scene',notes:'',ambient:30,objects:[]};}
 function newProject(){snapshot();const first=blankScene();const p={version:1,projectId:uid(),name:'Untitled production',theme:doc.theme,active:first.id,scenes:[first]};workspaceData().projects.push(p);doc=p;selected=null;selectedIds.clear();wallMultiSelect=false;stopPlayback();setTool('select');showShots(false);fit();commit();$('project-name').focus();$('project-name').select();}
 function renderProjects(){
  const select=$('production-select');select.innerHTML=workspaceData().projects.map(p=>`<option value="${esc(p.projectId)}">${esc(p.name)} · ${p.scenes.length} ${p.scenes.length===1?'scene':'scenes'}</option>`).join('');select.value=doc.projectId;
- select.onchange=()=>{workspaceData();const next=workspace.projects.find(p=>p.projectId===select.value);if(!next||next===doc)return;doc=next;selected=null;selectedIds.clear();wallMultiSelect=false;stopPlayback();setTool('select');showShots(false);applyTheme();fit();commit();};
+ select.onchange=()=>{workspaceData();const next=workspace.projects.find(p=>p.projectId===select.value);if(!next||next===doc)return;doc=next;applyEditorSettings();selected=null;selectedIds.clear();wallMultiSelect=false;stopPlayback();setTool('select');showShots(false);applyTheme();fit();commit();};
 }
 function deleteScene(id){const target=doc.scenes.find(s=>s.id===id);if(!target)return;snapshot();doc.scenes=doc.scenes.filter(s=>s.id!==id);if(!doc.scenes.length)doc.scenes.push(blankScene());if(doc.active===id)doc.active=doc.scenes[0].id;selected=null;selectedIds.clear();wallMultiSelect=false;stopPlayback();hideContextMenu();setTool('select');fit();commit();toast('Scene deleted · Undo to restore');}
 function renderScenes(){

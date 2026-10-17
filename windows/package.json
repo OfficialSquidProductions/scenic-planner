@@ -1,6 +1,6 @@
 {
   "name": "scenic-planner",
-  "version": "1.4.16",
+  "version": "1.4.17",
   "description": "Offline scene, shot and lighting planning",
   "author": "Squid Productions",
   "license": "MIT",
@@ -57,6 +57,14 @@
       "createStartMenuShortcut": true,
       "deleteAppDataOnUninstall": false,
       "runAfterFinish": false
-    }
+    },
+    "fileAssociations": [
+      {
+        "ext": "scenic",
+        "name": "Scenic Project",
+        "description": "Editable Scenic production with embedded references",
+        "role": "Editor"
+      }
+    ]
   }
 }

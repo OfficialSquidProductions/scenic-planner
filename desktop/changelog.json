@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.4.17",
+    "changes": [
+      "Save and share complete editable Scenic projects with all scenes, reference images, camera links, motion, shot lists and settings.",
+      "Import project files as separate editable productions, with safe duplicate naming and validation that preserves current work.",
+      "Exchange files with the iPhone and iPad apps; iPhone controls now adapt to compact screens."
+    ]
+  },
+  {
     "version": "1.4.16",
     "changes": [
       "Mac distributions are signed with Developer ID, notarized by Apple, and include stapled tickets for Gatekeeper verification.",

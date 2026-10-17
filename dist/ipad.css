@@ -1,0 +1,127 @@
+/* Loaded only by the iPad bundle. Desktop source remains unchanged. */
+html.ipad-app,html.ipad-app body{height:100%;overflow:hidden;-webkit-text-size-adjust:100%}
+.ipad-app body{font-family:Futura,-apple-system,sans-serif}
+.ipad-app button,.ipad-app select{min-height:44px;touch-action:manipulation}
+.ipad-app input:not([type=checkbox]):not([type=range]),.ipad-app textarea,.ipad-app select{font-size:16px}
+.ipad-app .icon-button{min-width:44px;min-height:44px}
+.ipad-app #scene-canvas{touch-action:none;-webkit-user-select:none;user-select:none}
+.ipad-app .tools{overflow-x:auto;flex-shrink:1;overscroll-behavior:contain;padding-bottom:4px}
+.ipad-app .tools button{min-width:44px;flex-shrink:0}
+.ipad-app .canvas-toolbar{height:64px;flex-shrink:0;min-width:0}
+.ipad-app .toolbar-resizer{height:12px}
+.ipad-app .scene-heading{--scene-heading-expanded-height:110px}
+.ipad-app .scene-heading input{font-size:21px!important}
+.ipad-app .topbar .project-crumb input{font-size:15px;max-width:260px}
+.ipad-app .workspace>.topbar{padding:0 14px;gap:8px}
+.ipad-app #save-state{display:none}
+.ipad-app .top-actions{gap:4px}
+.ipad-app #ipad-properties,.ipad-app #workspace-menu{display:inline-flex}
+.ipad-app #workspace-menu{font-size:12px;white-space:nowrap}
+.ipad-app .workspace{grid-template-rows:64px minmax(0,1fr)}
+.ipad-app .workspace>.topbar{height:64px;grid-column:3 / -1}
+.ipad-app .library button,.ipad-app .scene-row{min-height:44px}
+.ipad-app .sidebar-brand .brand{margin-bottom:10px}
+.ipad-app .sidebar-brand .brand .logo{height:60px}
+.ipad-app .sidebar-brand .brand .logo img{top:-15px}
+.ipad-app .sidebar-save-note{font-size:10px}
+.ipad-app #sidebar-panel{padding-top:14px}
+.ipad-app #sidebar-panel .side-heading{min-height:44px;margin-bottom:0}
+.ipad-app #sidebar-panel .side-heading>button{width:44px;height:44px}
+.ipad-app #sidebar-panel .open-project{font-size:12px;min-height:44px}
+.ipad-app #sidebar-panel{grid-template-rows:auto auto minmax(60px,var(--scenes-height,100px)) 12px minmax(0,1fr) auto auto}
+.ipad-app .zoom-controls button{min-width:44px;min-height:44px}
+.ipad-app .zoom-controls{bottom:46px}
+.ipad-app .canvas-hint{max-width:calc(100% - 28px);font-size:10px;white-space:normal;bottom:10px}
+.ipad-app #properties-sidebar .inspector-heading{padding:6px}
+.ipad-app .inspector-tabs button{font-size:12px}
+.ipad-app .ipad-selection-tools{display:flex;gap:6px;margin:0 0 12px}
+.ipad-app .ipad-selection-tools button{font-size:12px}
+.ipad-app #ipad-selection.active{background:var(--accent-soft);color:var(--accent-ink)}
+.ipad-app dialog{max-width:calc(100vw - 32px);max-height:calc(100dvh - 32px);overflow:auto}
+.ipad-app dialog button{min-height:44px}
+.ipad-app #toast{max-width:90vw;white-space:normal;z-index:50}
+.ipad-app .mobile-save-note{display:block}
+.ipad-app .topbar .project-crumb>.muted,.ipad-app .topbar .project-crumb>.slash{display:none}
+.ipad-app #ipad-close-panel{display:none}
+@media(max-width:1199px){
+ .ipad-app .workspace{grid-template-columns:minmax(0,1fr)!important}
+ .ipad-app .workspace>.topbar{grid-column:1;grid-row:1}
+ .ipad-app .workspace>main{grid-column:1;grid-row:2;min-width:0}
+ .ipad-app .panel-resizer{display:none}
+ .ipad-app #sidebar-panel,.ipad-app #properties-sidebar{position:fixed;top:64px;bottom:0;z-index:20;width:min(370px,85vw);box-shadow:0 10px 40px #0004;background:var(--paper);grid-row:auto;grid-column:auto;display:none}
+ .ipad-app #sidebar-panel{left:0}
+ .ipad-app #sidebar-panel.mobile-open{display:grid}
+ .ipad-app #properties-sidebar{right:0;border-left:1px solid var(--line)}
+ .ipad-app #properties-sidebar.ipad-open{display:flex}
+ .ipad-app #ipad-close-panel{display:block;position:fixed;inset:64px 0 0;z-index:19;background:#0004;border:0;border-radius:0}
+ .ipad-app #ipad-close-panel[hidden]{display:none}
+ .ipad-app #sidebar-panel .scene-builder{height:auto;min-height:0}
+ .ipad-app .canvas-toolbar{padding-left:12px;padding-right:12px}
+ .ipad-app .simulation{font-size:11px}
+}
+@media(max-width:740px){
+ .ipad-app .topbar .project-crumb{display:none}
+ .ipad-app #save-project{font-size:0}
+ .ipad-app #save-project::after{content:'Save as…';font-size:12px}
+ .ipad-app .top-actions{margin-left:auto}
+ .ipad-app #export{font-size:12px;padding:8px}
+ .ipad-app .scene-heading{padding:12px;--scene-heading-expanded-height:110px}
+ .ipad-app .view-tabs button{padding:8px;font-size:12px}
+ .ipad-app .toolbar-right .simulation{font-size:0}
+ .ipad-app .map-legend{display:none}
+}
+
+@media(max-width:600px){.ipad-app #help,.ipad-app #theme{display:none}.ipad-app #share-project{font-size:12px}.ipad-app .workspace>.topbar{padding:0 6px;gap:4px}}
+
+/* Phone layout uses the same editor and touch engine, with full-width drawers.
+   Keep the canvas usable in landscape and every project action reachable. */
+.phone-app .workspace{grid-template-rows:56px minmax(0,1fr);height:100dvh;min-height:0}
+.phone-app .workspace>.topbar{height:56px;padding:0 6px;gap:4px}
+.phone-app #workspace-menu,.phone-app #ipad-properties{font-size:12px;padding:6px 8px;flex-shrink:0}
+.phone-app #save-project{display:inline-flex;align-items:center;font-size:12px;padding:6px 10px}
+.phone-app #save-project::after{content:none}
+.phone-app #share-project{font-size:12px;padding:6px 10px}
+.phone-app .top-actions{margin-left:auto;gap:4px}
+.phone-app #help,.phone-app #theme{display:none}
+.phone-app #sidebar-panel,.phone-app #properties-sidebar{top:56px;width:100%;max-width:none;bottom:0;overflow-y:auto;overscroll-behavior:contain}
+.phone-app #sidebar-panel{padding:8px 14px 16px;display:none;flex-direction:column;gap:12px}
+.phone-app #sidebar-panel.mobile-open{display:flex}
+.phone-app #sidebar-panel .sidebar-brand{display:none}
+.phone-app .phone-panel-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-shrink:0}
+.phone-app .phone-panel-heading strong{font-size:16px;font-weight:500}
+.phone-app .phone-panel-heading button,.phone-app #phone-close-properties{min-width:60px}
+.phone-app #phone-close-properties{margin-left:auto}
+.phone-app .production-picker .project-crumb{display:block;flex:none;margin:0 0 12px}
+.phone-app .production-picker .project-crumb .muted{display:block;font-size:12px;margin-bottom:5px}
+.phone-app .production-picker .project-crumb .slash{display:none}
+.phone-app .production-picker .project-crumb input{display:block;width:100%;max-width:none;border:1px solid var(--line);padding:8px 10px;font-size:16px}
+.phone-app .phone-project-actions{margin-top:8px}
+.phone-app .phone-project-actions button{width:100%;font-size:12px}
+.phone-app #sidebar-panel #scene-browser{flex-shrink:0;max-height:180px;overflow-y:auto}
+.phone-app #sidebar-panel .scene-builder,.phone-app #sidebar-panel:has(.catalog-menu) .scene-builder{flex:1 0 180px;height:auto;min-height:180px}
+.phone-app #sidebar-panel .catalog-menu{max-height:260px;min-height:160px}
+.phone-app #scene-resizer,.phone-app #ipad-close-panel{display:none}
+.phone-app #properties-sidebar .inspector-heading{position:sticky;top:0;background:var(--paper);z-index:1}
+.phone-app .scene-heading,.phone-app .scene-heading.compact-heading{height:72px;min-height:72px;padding:6px 10px;gap:6px;align-items:center;flex-wrap:nowrap}
+.phone-app .scene-heading .eyebrow,.phone-app .scene-heading p{display:none}
+.phone-app #scene-title{font-size:16px!important;min-width:0;width:100%}
+.phone-app .view-tabs{margin:0;padding:2px}
+.phone-app .view-tabs button{font-size:11px;padding:6px;min-width:44px}
+.phone-app .canvas-toolbar{height:56px;min-height:56px;padding:0 6px;gap:4px}
+.phone-app .tools{min-width:0;gap:0;overflow-x:auto;padding-bottom:0}
+.phone-app .tools button{padding:8px}
+.phone-app .toolbar-right{gap:0;flex-shrink:0}
+.phone-app .toolbar-right .simulation{min-height:44px;min-width:44px;justify-content:center;font-size:0}
+.phone-app .toolbar-resizer{display:none}
+.phone-app .canvas-wrap{min-height:100px}
+.phone-app .statusbar{min-height:32px;height:32px;padding:0 8px}
+.phone-app .statusbar>span:nth-child(2){display:none}
+.phone-app .zoom-controls{bottom:14px;right:8px}
+.phone-app .canvas-hint{display:none}
+.phone-app dialog{padding:18px;max-height:calc(100dvh - 20px);max-width:calc(100vw - 20px)}
+.phone-app .guide-grid{grid-template-columns:1fr 1fr}
+.phone-app .shot-list-view{overflow:auto}
+@media(max-height:440px){
+ .phone-app .scene-heading,.phone-app .scene-heading.compact-heading{height:48px;min-height:48px}
+ .phone-app .statusbar{display:none}
+}

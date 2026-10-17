@@ -2,7 +2,7 @@
 (() => {
  const handler=window.webkit?.messageHandlers?.scenic;
  if(window.ScenicWindows){
-  window.ScenicDesktop={request:window.ScenicWindows.request,async exportFile(blob,filename){const base64=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result.split(',')[1]);r.onerror=reject;r.readAsDataURL(blob);});return this.request('exportFile',{filename,base64});}};
+  window.ScenicDesktop={request:window.ScenicWindows.request,async exportFile(blob,filename,action='exportFile'){const base64=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result.split(',')[1]);r.onerror=reject;r.readAsDataURL(blob);});const rect=document.getElementById('share-project')?.getBoundingClientRect();return this.request(action,{filename,base64,...(rect?{anchor:{x:rect.x,y:rect.y,width:rect.width,height:rect.height}}:{})});}};
   document.documentElement.classList.add('desktop-app');return;
  }
  if(!handler)return;
@@ -10,7 +10,7 @@
  window.ScenicDesktop={
   receive(id,result,error){const p=pending.get(id);if(!p)return;pending.delete(id);error?p.reject(new Error(error)):p.resolve(result);},
   request(action,payload={}){return new Promise((resolve,reject)=>{const id=String(++next);pending.set(id,{resolve,reject});handler.postMessage({id,action,...payload});});},
-  async exportFile(blob,filename){const base64=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result.split(',')[1]);r.onerror=reject;r.readAsDataURL(blob);});return this.request('exportFile',{filename,base64});}
+  async exportFile(blob,filename,action='exportFile'){const base64=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result.split(',')[1]);r.onerror=reject;r.readAsDataURL(blob);});const rect=document.getElementById('share-project')?.getBoundingClientRect();return this.request(action,{filename,base64,...(rect?{anchor:{x:rect.x,y:rect.y,width:rect.width,height:rect.height}}:{})});}
  };
  document.documentElement.classList.add('desktop-app');
  document.addEventListener('DOMContentLoaded',()=>document.querySelector('.brand')?.addEventListener('click',e=>e.preventDefault()));

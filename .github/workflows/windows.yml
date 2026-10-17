@@ -53,6 +53,15 @@ jobs:
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           node tests/windows-store.cjs
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Portable project and file dialog checks
+        shell: pwsh
+        run: |
+          node tests/project-file.cjs
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          node tests/project-exchange.cjs
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          node tests/windows-files.cjs
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
       - run: python -m pip install Pillow==11.3.0
       - name: Release notes and update prompts
         run: |

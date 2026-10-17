@@ -13,3 +13,14 @@ scenic-preview.jpg
 *.pem
 *.p12
 .env*
+
+# Native iOS build products
+ios/build/
+ios/archive-build/
+ios/build-*/
+ios/*.xcresult/
+ios/*.xcarchive/
+
+# Synthetic portable-exchange fixtures
+!tests/assets/*.scenic
+!ios/Resources/*.scenic

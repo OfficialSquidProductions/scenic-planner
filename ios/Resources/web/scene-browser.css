@@ -1,0 +1,16 @@
+.scene-browser-window{height:100dvh;display:flex;flex-direction:column;overflow:hidden;background:var(--bg)}
+.scene-browser-heading{display:flex;justify-content:space-between;align-items:center;gap:24px;padding:28px 30px 22px;border-bottom:1px solid var(--line);background:var(--paper)}
+.scene-browser-heading h1{font:28px/1.2 "SP Headings",Futura,sans-serif;overflow-wrap:anywhere}
+.scene-browser-heading p{margin-top:10px;font-size:11px;color:var(--muted)}
+#browser-count{white-space:nowrap;color:var(--muted);font-size:11px}
+#browser-status{padding:12px 30px 0;color:var(--accent-ink);font-size:11px}#browser-status:empty{display:none}
+#scene-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:20px;align-content:start;flex:1;min-height:0;overflow:auto;padding:26px 30px;margin:0;container-type:normal}
+.scene-card{display:flex;flex-direction:column;gap:0;text-align:left;padding:0;overflow:hidden;border:1px solid var(--line);border-radius:10px;background:var(--paper);min-width:0}
+.scene-card:hover{border-color:var(--accent);background:var(--paper)}
+.scene-card[aria-current=true]{border:2px solid var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.scene-preview{display:grid;place-items:center;aspect-ratio:3/2;position:relative;width:100%;background:var(--map);color:var(--muted);font-size:11px;overflow:hidden}
+.scene-preview img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.scene-preview img[hidden]{display:none}
+.scene-card-caption{display:flex;gap:12px;align-items:baseline;width:100%;padding:16px}
+.scene-card-number{font-size:12px;color:var(--accent-ink);font-variant-numeric:tabular-nums}
+.scene-card-title{font-size:13px;line-height:1.5;overflow-wrap:anywhere}
+@media(max-width:560px){.scene-browser-heading{padding:22px 18px}#scene-grid{padding:18px;gap:14px;grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}}
