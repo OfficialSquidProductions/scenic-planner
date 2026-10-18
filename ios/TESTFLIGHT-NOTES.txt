@@ -1,0 +1,9 @@
+Scenic 1.4.18 (23) — iPhone and iPad beta
+
+On iPad, Scenes now sits immediately left of Scene map and Shot list. Scenes, Items and Properties use clear filled/checkmarked open states and outlined available states.
+
+Settings includes “Keep Scenes and Items on the left in landscape”, enabled by default. Try hiding either panel, opening Properties while editing the map, switching scenes, rotating the iPad and relaunching with the setting both on and off. Portrait and iPhone keep their drawers.
+
+Load Demo under Productions opens “DEMO · The Last Cue”, an offline fictional rehearsal with an original script in Scene notes, adult characters Maya and Leo, props, lighting, movement and four linked shots. Edit it and use Load Demo again: your edits should remain. The demo is separate from your productions and is temporary during TestFlight.
+
+Please check camera/item placement, Properties, map/shot navigation, and Save as / Share / Import project with editable .scenic files. Existing productions must remain intact.

@@ -35,6 +35,8 @@ jobs:
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           node tests/model.cjs
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          node tests/demo.cjs
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
           node tests/shot-list.cjs
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           node tests/shot-reimport.cjs
