@@ -24,7 +24,7 @@ function renderLibrary(mode=libraryMode){
  if(!['walls','props','set','lights'].includes(mode))mode=null;
  const previousMode=libraryMode;libraryMode=mode;const panel=$('library'),oldScroll=panel.scrollTop,query=normalizeLibrarySearch(libraryQuery.trim()),browsing=!!mode||!!query;
  panel.classList.toggle('catalog-menu',browsing);
- $('library-heading').innerHTML=mode?`<button id="library-back" class="library-back" aria-label="Back to Build your scene">←</button><h2>${({walls:'Walls',props:'Props',set:'Set',lights:'Lights',gear:'Gear'})[mode]}</h2><span class="tiny">CLICK TO PLACE</span>`:'<h2>Build your scene</h2><span class="tiny">CLICK TO PLACE</span>';
+ $('library-heading').innerHTML=mode?`<button id="library-back" class="library-back" aria-label="Back to Build your scene">←</button><h2>${({walls:'Walls',props:'Props',set:'Set',lights:'Lights',gear:'Gear'})[mode]}</h2><span class="tiny">CLICK OR DRAG</span>`:'<h2>Build your scene</h2><span class="tiny">CLICK OR DRAG</span>';
  if(!browsing){panel.innerHTML=[['camera','Camera'],['actor','Talent']].map(([n,label])=>`<button data-tool="${n}" aria-label="Place ${label}">${svg(n)}<span>${label}</span></button>`).join('')+[['walls','Walls','room-square'],['props','Props','laptop'],['set','Set','sofa'],['lights','Lights','led-panel']].map(([category,label,asset])=>`<button data-category="${category}" aria-label="Open ${label} library">${assetIcon(ScenicCatalog.get(asset))}<span>${label} <b>↗</b></span></button>`).join('');
  }else{
   const items=ScenicCatalog.items.filter(i=>i.category!=='gear').filter(i=>query?normalizeLibrarySearch(`${i.name} ${i.group==='Doors & windows'?'':i.group} ${i.category}`).includes(query):i.category===mode),groups=[...new Set(items.map(i=>query?({walls:'Walls',props:'Props',set:'Set',lights:'Lights',gear:'Gear'})[i.category]+' · '+i.group:i.group))];
@@ -32,8 +32,8 @@ function renderLibrary(mode=libraryMode){
  }
  panel.querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>{showShots(false);setTool(b.dataset.tool);});
  panel.querySelectorAll('[data-asset]').forEach(b=>b.onclick=()=>{showShots(false);setTool('asset:'+b.dataset.asset);});
- panel.querySelectorAll('[data-category]').forEach(b=>b.onclick=()=>{setTool('select');renderLibrary(b.dataset.category);});
- if($('library-back'))$('library-back').onclick=()=>{libraryQuery='';$('library-search').value='';renderLibrary(null);setTool('select');};
+ panel.querySelectorAll('[data-category]').forEach(b=>b.onclick=()=>{setTool('select',{keepLibrary:true});renderLibrary(b.dataset.category);});
+ if($('library-back'))$('library-back').onclick=()=>{libraryQuery='';$('library-search').value='';renderLibrary(null);setTool('select',{keepLibrary:true});};
  panel.scrollTop=previousMode===mode?oldScroll:0;
 }
 function toggleField(label,prop,value){return `<label class="toggle-label">${label}<input aria-label="${label}" data-prop="${prop}" type="checkbox" ${value?'checked':''}></label>`;}

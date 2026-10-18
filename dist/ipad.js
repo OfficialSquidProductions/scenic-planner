@@ -67,7 +67,7 @@
   dismiss.onclick=()=>{propertiesOpen=false;if(!docked)scenesOpen=itemsOpen=false;panels();};
   // Tool and scene changes close temporary drawers; docked panels stay available.
   const originalSetTool=setTool;
-  setTool=function(tool){originalSetTool(tool);if(!docked)scenesOpen=itemsOpen=false;panels();};
+  setTool=function(tool,options){originalSetTool(tool,options);if(!docked&&!options?.keepLibrary)scenesOpen=itemsOpen=false;panels();};
   checkbox.onchange=()=>{keepLibrary=checkbox.checked;try{localStorage.setItem(key,String(keepLibrary));}catch{}layout();};
   window.addEventListener('resize',layout);layout();
  }

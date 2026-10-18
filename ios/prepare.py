@@ -37,7 +37,7 @@ def ident(n):return f'{n:024X}'
 sources=[];children=[];resource_builds=[]
 for index,name in enumerate(['ScenicIPad.swift','WorkspaceStore.swift','Diagnostics.swift']):
  f=ident(10+index);b=ident(20+index);obj(f,f'isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = {name}; sourceTree = "<group>";');obj(b,f'isa = PBXBuildFile; fileRef = {f};');sources.append(b);children.append(f)
-for index,(name,typ) in enumerate([('web','folder'),('PrivacyInfo.xcprivacy','text.xml'),('LICENSE.txt','text'),('smoke.js','sourcecode.javascript'),('portable-smoke.js','sourcecode.javascript'),('desktop-fixture.scenic','text.json'),('Assets.xcassets','folder.assetcatalog')]):
+for index,(name,typ) in enumerate([('web','folder'),('PrivacyInfo.xcprivacy','text.xml'),('LICENSE.txt','text'),('smoke.js','sourcecode.javascript'),('portable-smoke.js','sourcecode.javascript'),('palette-smoke.js','sourcecode.javascript'),('desktop-fixture.scenic','text.json'),('Assets.xcassets','folder.assetcatalog')]):
  f=ident(30+index);b=ident(40+index);obj(f,f'isa = PBXFileReference; lastKnownFileType = {typ}; path = Resources/{name}; sourceTree = "<group>";');obj(b,f'isa = PBXBuildFile; fileRef = {f};');children.append(f);resource_builds.append(b)
 product=ident(50);group=ident(51);products=ident(52);target=ident(53);proj=ident(54);source_phase=ident(55);res_phase=ident(56);framework_phase=ident(57)
 obj(product,'isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Scenic.app; sourceTree = BUILT_PRODUCTS_DIR;')

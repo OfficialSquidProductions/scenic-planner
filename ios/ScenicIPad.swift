@@ -270,9 +270,9 @@ final class ScenicViewController: UIViewController, WKScriptMessageHandler, WKNa
     private func runSmokeIfRequested() {
         #if DEBUG
         let args = ProcessInfo.processInfo.arguments
-        guard !smokeStarted, args.contains("--smoke-test") || args.contains("--verify-persistence") || args.contains("--portable-smoke-test") else { return }
+        guard !smokeStarted, args.contains("--smoke-test") || args.contains("--verify-persistence") || args.contains("--portable-smoke-test") || args.contains("--palette-smoke-test") else { return }
         smokeStarted = true
-        guard let url = Bundle.main.url(forResource: args.contains("--portable-smoke-test") ? "portable-smoke" : "smoke", withExtension: "js"), let script = try? String(contentsOf: url, encoding: .utf8) else { return }
+        guard let url = Bundle.main.url(forResource: args.contains("--palette-smoke-test") ? "palette-smoke" : args.contains("--portable-smoke-test") ? "portable-smoke" : "smoke", withExtension: "js"), let script = try? String(contentsOf: url, encoding: .utf8) else { return }
         let fixture = (try? String(contentsOf: Bundle.main.url(forResource: "desktop-fixture", withExtension: "scenic")!, encoding: .utf8)) ?? ""
         web.callAsyncJavaScript(script, arguments: ["verifyOnly":args.contains("--verify-persistence"),"fixture":fixture], in: nil, in: .page) { [weak self] result in
             guard let self else { return }
@@ -281,7 +281,7 @@ final class ScenicViewController: UIViewController, WKScriptMessageHandler, WKNa
             case .success(let value): output = ["passed":true,"result":value,"editorErrors":self.errorLog]
             case .failure(let error): output = ["passed":false,"error":error.localizedDescription,"details":String(describing: (error as NSError).userInfo),"editorErrors":self.errorLog]
             }
-            let file = self.store.root.appendingPathComponent(args.contains("--portable-smoke-test") ? "portable-results.json" : args.contains("--verify-persistence") ? "persistence-results.json" : "smoke-results.json")
+            let file = self.store.root.appendingPathComponent(args.contains("--palette-smoke-test") ? "palette-results.json" : args.contains("--portable-smoke-test") ? "portable-results.json" : args.contains("--verify-persistence") ? "persistence-results.json" : "smoke-results.json")
             if let data = try? JSONSerialization.data(withJSONObject: output, options: [.prettyPrinted,.sortedKeys]) { try? data.write(to: file, options: .atomic) }
         }
         #endif

@@ -27,6 +27,124 @@ final class ScenicUITests: XCTestCase {
         let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot()); attachment.name = name
         attachment.lifetime = .keepAlways; add(attachment)
     }
+    func paletteSource(_ label: String) -> XCUIElement {
+        app.webViews.descendants(matching:.any).matching(NSPredicate(format:"label == %@",label)).firstMatch
+    }
+    func objectCount() -> Int {
+        let value=app.webViews.staticTexts.matching(NSPredicate(format:"label MATCHES %@","[0-9]+ objects")).firstMatch.label
+        return Int(value.split(separator:" ").first ?? "") ?? -1
+    }
+    func expectObjectCount(_ count: Int) {
+        let done=XCTNSPredicateExpectation(predicate:NSPredicate { _,_ in self.objectCount()==count },object:app)
+        XCTAssertEqual(XCTWaiter.wait(for:[done],timeout:5),.completed,"Expected \(count) objects; got \(objectCount())")
+    }
+    func openItems() {
+        let menu=app.webViews.buttons[phone ? "Scenes and items" : "Items"]
+        if !app.webViews.searchFields["Search all scene items"].exists { menu.tap() }
+        if app.webViews.buttons["Back to Build your scene"].exists { app.webViews.buttons["Back to Build your scene"].tap() }
+        if phone && app.webViews.buttons["New scene"].isHittable { app.webViews.buttons["New scene"].swipeUp() }
+        XCTAssertTrue(paletteSource("Place Camera").exists)
+    }
+    func palettePoint(_ label: String) -> XCUICoordinate {
+        let source=paletteSource(label),reference=app.webViews.buttons.matching(NSPredicate(format:"label CONTAINS %@","Bring in a reference")).firstMatch
+        let top=app.webViews.buttons[phone ? "Scenes and items" : "Items"].frame.maxY+12
+        let paddingX=app.webViews.firstMatch.frame.minX+8
+        for _ in 0..<6 {
+            let bottom=reference.isHittable ? min(reference.frame.minY-12,app.frame.maxY-35) : app.frame.maxY-35
+            if source.frame.minY < bottom-12 && source.frame.maxY > top+12 { break }
+            let back=app.webViews.buttons["Back to Build your scene"]
+            if phone && back.isHittable && source.frame.minY>=bottom-12 { back.swipeUp() }
+            else {let from=app.coordinate(withNormalizedOffset:.zero).withOffset(CGVector(dx:phone ? paddingX : source.frame.midX,dy:source.frame.minY>=bottom-12 ? bottom-15 : top+15));from.press(forDuration:0.01,thenDragTo:from.withOffset(CGVector(dx:0,dy:source.frame.minY>=bottom-12 ? -150 : 150)))}
+        }
+        let bottom=reference.isHittable ? min(reference.frame.minY-12,app.frame.maxY-35) : app.frame.maxY-35
+        let y=max(top+8,min(source.frame.midY,bottom-8))
+        XCTAssertGreaterThan(y,source.frame.minY,"Palette source needs a visible drag handle")
+        XCTAssertLessThan(y,source.frame.maxY,"Palette source must not be above the visible drawer")
+        return app.coordinate(withNormalizedOffset:.zero).withOffset(CGVector(dx:source.frame.midX,dy:y))
+    }
+    func dragPalette(_ label: String, dx: CGFloat=0.62,dy: CGFloat=0.52) {
+        let map=app.webViews.otherElements.matching(NSPredicate(format:"label BEGINSWITH %@","Interactive scene map.")).firstMatch
+        palettePoint(label).press(forDuration:0.5,thenDragTo:map.coordinate(withNormalizedOffset:CGVector(dx:dx,dy:dy)))
+    }
+    func testPaletteTouchDragPortraitAndLandscape() throws {
+        app.webViews.buttons["Scene map"].tap()
+        for orientation in [UIDeviceOrientation.portrait,.landscapeLeft] {
+            XCUIDevice.shared.orientation=orientation
+            openItems();let n=objectCount();XCTAssertGreaterThanOrEqual(n,0)
+            dragPalette("Place Camera");expectObjectCount(n+1)
+            shot(phone ? "iPhone palette camera drop \(orientation.rawValue)" : "iPad palette camera drop \(orientation.rawValue)")
+            if phone { app.webViews.switches["Select (V)"].swipeLeft() }
+            app.webViews.buttons["Undo"].tap();expectObjectCount(n)
+            app.webViews.buttons["Redo"].tap();expectObjectCount(n+1)
+            openItems()
+            paletteSource("Place Talent").coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.5)).press(forDuration:0.5,thenDragTo:app.webViews.buttons["Share"].coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.5)))
+            expectObjectCount(n+1)
+            XCTAssertTrue(paletteSource("Place Camera").isHittable,"Cancelled drag restores the Items panel")
+            app.webViews.buttons["Open Lights library"].tap()
+            XCTAssertTrue(app.webViews.buttons["Back to Build your scene"].exists,"Category navigation keeps the palette available")
+
+            dragPalette("Place LED panel",dx:0.7,dy:0.63);expectObjectCount(n+2)
+            shot(phone ? "iPhone light dragged onto scene \(orientation.rawValue)" : "iPad light dragged onto scene \(orientation.rawValue)")
+            app.webViews.buttons["Properties"].firstMatch.tap()
+            XCTAssertTrue(app.webViews.textFields["Name"].waitForExistence(timeout:5))
+            shot(phone ? "iPhone dropped light properties" : "iPad dropped light properties")
+            closePanelIfTemporary()
+            app.terminate();app.launch()
+            XCTAssertTrue(app.webViews.buttons["Properties"].firstMatch.waitForExistence(timeout:15));expectObjectCount(n+2)
+        }
+    }
+    func closePanelIfTemporary() {
+        if app.webViews.buttons["Close scenes and items"].isHittable || app.webViews.buttons["Close properties"].isHittable || app.webViews.buttons["Close panel"].isHittable { closePanel() }
+        else if app.webViews.buttons["Properties"].firstMatch.value as? String == "1" { app.webViews.buttons["Properties"].firstMatch.tap() }
+    }
+    func testPaletteCategoriesAndScrolling() throws {
+        app.webViews.buttons["Scene map"].tap();openItems()
+        app.webViews.buttons["Open Props library"].tap()
+        let n=objectCount()
+        let scrollStart=palettePoint("Place Laptop")
+        scrollStart.press(forDuration:0.01,thenDragTo:scrollStart.withOffset(CGVector(dx:0,dy:-100)));expectObjectCount(n)
+        shot(phone ? "iPhone palette native scrolling" : "iPad palette native scrolling")
+        let search=app.webViews.searchFields["Search all scene items"]
+        search.tap();search.typeText("Mug")
+        let menu=app.webViews.buttons[phone ? "Scenes and items" : "Items"]
+        menu.tap();menu.tap() // Hide the search keyboard and reopen its results.
+        XCTAssertTrue(paletteSource("Place Mug").isHittable)
+        shot(phone ? "iPhone searched Mug source" : "iPad searched Mug source")
+        dragPalette("Place Mug");expectObjectCount(n+1)
+        openItems();app.webViews.buttons["Open Walls library"].tap()
+        let room=app.webViews.descendants(matching:.any).matching(NSPredicate(format:"label BEGINSWITH %@","Place Square room")).firstMatch
+        XCTAssertTrue(room.isHittable,app.debugDescription)
+        let map=app.webViews.otherElements.matching(NSPredicate(format:"label BEGINSWITH %@","Interactive scene map.")).firstMatch
+        palettePoint("Place Square room").press(forDuration:0.5,thenDragTo:map.coordinate(withNormalizedOffset:CGVector(dx:0.72,dy:0.65)))
+        expectObjectCount(n+2)
+        openItems();app.webViews.buttons["Open Set library"].tap()
+        dragPalette("Place Car",dx:0.45,dy:0.4);expectObjectCount(n+3)
+        shot(phone ? "iPhone dragged props room and set" : "iPad dragged props room and set")
+    }
+    func testPaletteLandscapeOverlayAndStraightWall() throws {
+        guard !phone else { throw XCTSkip("iPad landscape overlay preference") }
+        XCUIDevice.shared.orientation = .landscapeLeft
+        if !app.webViews.buttons["Settings"].isHittable { app.webViews.buttons["Scenes"].tap() }
+        app.webViews.buttons["Settings"].tap()
+        let preference=app.webViews.switches["Keep Scenes and Items on the left in landscape"]
+        if preference.value as? String == "1" { preference.tap() }
+        app.webViews.buttons["Close settings"].tap()
+        let map=app.webViews.otherElements.matching(NSPredicate(format:"label BEGINSWITH %@","Interactive scene map.")).firstMatch
+        XCTAssertLessThan(map.frame.minX,10)
+        let n=objectCount()
+        for i in 1...2 { openItems();dragPalette("Place Camera",dx:0.55,dy:0.4);expectObjectCount(n+i) }
+        openItems();app.webViews.buttons["Open Walls library"].tap()
+        let wall=app.webViews.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","Draw a straight wall")).firstMatch
+        XCTAssertTrue(wall.isHittable)
+        wall.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.5)).press(forDuration:0.5,thenDragTo:map.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.5)))
+        expectObjectCount(n+2)
+        map.coordinate(withNormalizedOffset:CGVector(dx:0.65,dy:0.6)).tap();expectObjectCount(n+3)
+        shot("iPad landscape overlay drag and completed straight wall")
+        app.webViews.switches["Select (V)"].tap()
+        app.webViews.buttons["Scenes"].tap();app.webViews.buttons["Settings"].tap()
+        preference.tap();app.webViews.buttons["Close settings"].tap()
+        XCTAssertGreaterThan(map.frame.minX,200)
+    }
     func testPortraitLandscapeAndDrawers() throws {
         for label in ["Save as…","Share"] {
             let frame = app.webViews.buttons[label].frame

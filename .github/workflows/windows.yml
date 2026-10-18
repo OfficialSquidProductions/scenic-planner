@@ -37,6 +37,8 @@ jobs:
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           node tests/demo.cjs
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          node tests/palette-drag.cjs
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
           node tests/shot-list.cjs
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           node tests/shot-reimport.cjs
