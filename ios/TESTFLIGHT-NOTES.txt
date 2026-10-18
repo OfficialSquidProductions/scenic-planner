@@ -1,9 +1,9 @@
-Scenic 1.4.18 (23) — iPhone and iPad beta
+Scenic 1.4.19 (24) — iPhone and iPad beta
 
-On iPad, Scenes now sits immediately left of Scene map and Shot list. Scenes, Items and Properties use clear filled/checkmarked open states and outlined available states.
+Drag cameras, talent, lights, props, set items and room shapes from Items onto Scene map. On touch screens, hold briefly, then drag; swipe without holding to scroll. Click/tap an item and then the map still works. A straight-wall drag places its start; choose its endpoint to finish.
 
-Settings includes “Keep Scenes and Items on the left in landscape”, enabled by default. Try hiding either panel, opening Properties while editing the map, switching scenes, rotating the iPad and relaunching with the setting both on and off. Portrait and iPhone keep their drawers.
+Check placement after zooming and panning, inch snapping, repeated drops, Undo/Redo, cancelled drops outside the map, rotation and relaunch. On iPad, check portrait drawers and landscape with Keep Scenes and Items on the left both enabled and disabled. Category navigation should keep Items available, and Properties should edit the dropped object.
 
-Load Demo under Productions opens “DEMO · The Last Cue”, an offline fictional rehearsal with an original script in Scene notes, adult characters Maya and Leo, props, lighting, movement and four linked shots. Edit it and use Load Demo again: your edits should remain. The demo is separate from your productions and is temporary during TestFlight.
+The selected panel states, scene selector position and default landscape setting remain included. Load Demo opens The Last Cue as a separate fictional offline production. Repeat Load Demo after editing to confirm your changes remain.
 
-Please check camera/item placement, Properties, map/shot navigation, and Save as / Share / Import project with editable .scenic files. Existing productions must remain intact.
+Please verify existing productions, map/shot navigation, Save as, Share and Import project with portable .scenic files. No account or network is required to edit.

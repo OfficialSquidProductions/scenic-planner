@@ -1,5 +1,8 @@
-Scenic 1.4.17
+Scenic 1.4.19
 
-- Save and share complete editable Scenic projects with all scenes, reference images, camera links, motion, shot lists and settings.
-- Import project files as separate editable productions, with safe duplicate naming and validation that preserves current work.
-- Exchange files with the iPhone and iPad apps; iPhone controls now adapt to compact screens.
+- Drag cameras, talent, lights, room shapes and catalog items directly from the library or toolbar onto the scene map. Click or tap, then place, remains available.
+- On touch screens, hold briefly before dragging; swipe normally to scroll. Clear placement feedback follows the current pan, zoom and snapping, and cancelled drops add nothing.
+- On iPad, Scenes, Items and Properties have clear checked open states. Scenes sits beside Scene map and Shot list, and a saved Settings option keeps Scenes and Items on the left in landscape by default.
+- Load Demo opens The Last Cue as a separate offline fictional production with editable blocking, lighting, movement and four linked shots. Reopening the demo preserves your edits.
+- Keep item categories available while browsing and give iPhone catalog cards enough room for touch placement.
+- Continue editing and exchanging complete portable .scenic files across Mac, Windows, iPhone and iPad.
