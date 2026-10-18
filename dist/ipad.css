@@ -125,3 +125,74 @@ html.ipad-app,html.ipad-app body{height:100%;overflow:hidden;-webkit-text-size-a
  .phone-app .scene-heading,.phone-app .scene-heading.compact-heading{height:48px;min-height:48px}
  .phone-app .statusbar{display:none}
 }
+
+/* Disclosures stay visibly available; a fill and check identify an open panel. */
+.ipad-app .ipad-panel-toggle{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-width:44px;min-height:44px;border:1px solid var(--ink);background:var(--paper);color:var(--ink);font-size:12px;white-space:nowrap;padding:8px 10px}
+.ipad-app .ipad-panel-toggle::before{content:'';width:13px;height:13px;border:1px solid currentColor;border-radius:3px;flex-shrink:0;font:12px/13px -apple-system,sans-serif}
+.ipad-app .ipad-panel-toggle[aria-expanded=true]{background:#173f54;color:#fff;border-color:#173f54}
+.ipad-app .ipad-panel-toggle[aria-expanded=true]::before{content:'✓'}
+.ipad-app[data-theme=dark] .ipad-panel-toggle[aria-expanded=true]{background:#d9edf4;color:#173f54;border-color:#d9edf4}
+.ipad-app .ipad-panel-toggle:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+.ipad-scene-navigation{display:flex;align-items:center;gap:8px;flex-shrink:0;position:relative;z-index:21}
+.ipad-app:not(.phone-app) #scene-title{min-width:0}
+.ipad-landscape-option{display:flex;gap:10px;align-items:flex-start;font-size:14px;line-height:1.5;margin:0 0 22px}
+.ipad-landscape-option input{min-width:22px;min-height:22px;margin:0;flex-shrink:0}
+.ipad-landscape-option small{display:block;font-size:12px;line-height:1.5;margin-top:6px}
+
+/* Apply one panel model at every iPad width, including mini and split windows. */
+.ipad-app:not(.phone-app) .workspace{grid-template-columns:minmax(0,1fr)!important}
+.ipad-app:not(.phone-app) .workspace>.topbar{grid-column:1;grid-row:1}
+.ipad-app:not(.phone-app) .workspace>main{grid-column:1;grid-row:2}
+.ipad-app:not(.phone-app) .panel-resizer{display:none}
+.ipad-app:not(.phone-app) #sidebar-panel,.ipad-app:not(.phone-app) #properties-sidebar{display:none;position:fixed;top:64px;bottom:0;z-index:20;width:min(370px,85vw);grid-column:auto;grid-row:auto;background:var(--paper);box-shadow:0 10px 40px #0004}
+.ipad-app:not(.phone-app) #sidebar-panel{left:0;flex-direction:column;gap:10px;overflow-y:auto;padding:12px}
+.ipad-app:not(.phone-app) #sidebar-panel.mobile-open{display:flex}
+.ipad-app:not(.phone-app) #properties-sidebar{right:0;border-left:1px solid var(--line)}
+.ipad-app:not(.phone-app) #properties-sidebar.ipad-open{display:flex}
+.ipad-app:not(.phone-app) #ipad-close-panel{display:block;position:fixed;inset:64px 0 0;z-index:19;background:#0004;border:0;border-radius:0}
+.ipad-app:not(.phone-app) #ipad-close-panel[hidden]{display:none}
+.ipad-app:not(.phone-app) #sidebar-panel .sidebar-brand{flex-shrink:0}
+.ipad-app:not(.phone-app) #sidebar-panel .brand{margin:0}
+.ipad-app:not(.phone-app) #sidebar-panel .production-picker{flex-shrink:0}
+.ipad-app:not(.phone-app) #sidebar-panel #scene-browser{flex:0 1 var(--scenes-height,140px);min-height:88px;overflow:auto}
+.ipad-app:not(.phone-app) #sidebar-panel .scene-builder{flex:1;min-height:140px;height:auto}
+.ipad-app:not(.phone-app) #sidebar-panel .sidebar-bottom{flex-shrink:0;margin:0;padding:0 8px}
+.ipad-app:not(.phone-app) #sidebar-panel .import-card{flex-shrink:0;min-height:44px;margin:0;padding:6px;flex-direction:row;justify-content:center}
+.ipad-app:not(.phone-app) #sidebar-panel .import-symbol{margin:0}
+.ipad-app:not(.phone-app) #sidebar-panel:not(.ipad-scenes-visible) .production-picker,
+.ipad-app:not(.phone-app) #sidebar-panel:not(.ipad-scenes-visible) #scene-browser,
+.ipad-app:not(.phone-app) #sidebar-panel:not(.ipad-items-visible) .scene-builder,
+.ipad-app:not(.phone-app) #sidebar-panel:not(.ipad-items-visible) .import-card,
+.ipad-app:not(.phone-app) #sidebar-panel:not(.ipad-scenes-visible) #scene-resizer,
+.ipad-app:not(.phone-app) #sidebar-panel:not(.ipad-items-visible) #scene-resizer{display:none}
+.ipad-app:not(.phone-app) #sidebar-panel #scene-resizer{flex-shrink:0}
+.ipad-app:not(.phone-app) #sidebar-panel:not(.ipad-items-visible) #scene-browser{flex:1}
+.ipad-app.ipad-library-docked .workspace{grid-template-columns:clamp(240px,25vw,310px) minmax(0,1fr)!important}
+.ipad-app.ipad-library-docked .workspace>.topbar{grid-column:2}
+.ipad-app.ipad-library-docked .workspace>main{grid-column:2}
+.ipad-app.ipad-library-docked #sidebar-panel.mobile-open{position:static;grid-column:1;grid-row:1 / -1;width:auto;box-shadow:none;z-index:auto}
+.ipad-app.ipad-properties-docked .workspace{grid-template-columns:minmax(0,1fr) min(320px,30vw)!important}
+.ipad-app.ipad-properties-docked.ipad-library-docked .workspace{grid-template-columns:clamp(240px,25vw,310px) minmax(0,1fr) min(320px,30vw)!important}
+.ipad-app.ipad-properties-docked .workspace>.topbar{grid-column:1 / -1}
+.ipad-app.ipad-properties-docked.ipad-library-docked .workspace>.topbar{grid-column:2 / -1}
+.ipad-app.ipad-properties-docked #properties-sidebar.ipad-open{position:static;grid-column:-2;grid-row:2;width:auto;box-shadow:none;z-index:auto}
+.ipad-app.ipad-library-docked .scene-heading{padding-left:16px;padding-right:16px;gap:8px}
+.ipad-app:not(.phone-app) #sidebar-panel #settings-button{min-height:44px;color:var(--ink);font-size:12px}
+
+.ipad-app:not(.phone-app) #sidebar-panel #scenes{align-content:start}
+.ipad-app:not(.phone-app) #sidebar-panel .library{align-content:start}
+.ipad-app.ipad-library-docked #sidebar-panel{gap:6px}
+.ipad-app.ipad-library-docked #sidebar-panel .brand .logo{height:40px}
+.ipad-app.ipad-library-docked #sidebar-panel .brand .logo img{height:60px;width:60px;left:-4px;top:-8px}
+.ipad-app.ipad-library-docked #sidebar-panel .brand-title{font-size:22px}
+.ipad-app.ipad-library-docked #sidebar-panel .brand-caption{font-size:7px;margin-top:3px}
+.ipad-app.ipad-library-docked #sidebar-panel .sidebar-save-note{display:none}
+.ipad-app.ipad-library-docked #sidebar-panel .production-picker{grid-template-columns:1fr 1fr;gap:4px}
+.ipad-app.ipad-library-docked #sidebar-panel .production-picker>.project-heading,
+.ipad-app.ipad-library-docked #production-select,
+.ipad-app.ipad-library-docked #load-demo{grid-column:1 / -1}
+.ipad-app.ipad-library-docked #sidebar-panel .open-project{font-size:12px;padding:4px}
+.ipad-app.ipad-library-docked #sidebar-panel .open-project span{font-size:10px;margin-left:3px}
+.ipad-app.ipad-library-docked #sidebar-panel .scene-builder{min-height:110px}
+
+@media(prefers-reduced-motion:reduce){.ipad-app .ipad-panel-toggle{transition:none}}

@@ -1,0 +1,26 @@
+const assert=require('node:assert/strict');
+const demo=require('../dist/demo.js'),file=require('../dist/project-file.js'),model=require('../dist/model.js'),shots=require('../dist/shot-list.js');
+const project=demo.project();
+assert.equal(typeof demo.enabled,'boolean');assert(model.validProject(project));
+assert.match(project.name,/DEMO/);assert.match(project.scenes[0].notes,/FICTIONAL DEMO/);
+assert.match(project.scenes[0].notes,/MAYA:/);assert.match(project.scenes[0].notes,/LEO:/);
+assert(project.scenes[0].objects.some(o=>o.asset==='desk'));
+assert(project.scenes[0].objects.some(o=>o.asset==='chair'));
+assert(project.scenes[0].objects.some(o=>o.asset==='book'));
+assert(project.scenes[0].objects.some(o=>o.asset==='practical'));
+const floor=project.scenes[0].objects.find(o=>o.type==='room');
+for(const camera of project.scenes[0].objects.filter(o=>o.type==='camera')){assert(Math.abs(camera.x-floor.x)<floor.width/2&&Math.abs(camera.y-floor.y)<floor.height/2,'Demo cameras are inside the rehearsal floor');}
+assert.equal(shots.coverage(project.scenes[0]).linked,4);
+assert.equal(project.scenes[0].objects.filter(o=>o.type==='actor').length,2);
+const personal={...demo.project(),projectId:'personal',name:'Personal work'};delete personal.demoKey;
+const workspace={version:2,activeProject:personal.projectId,projects:[personal]};
+const before=JSON.stringify(workspace.projects);
+const imported=file.prepareImport(file.parse(file.serialize(project)),workspace,()=> 'demo-copy');
+assert.equal(JSON.stringify(imported.workspace.projects.slice(0,1)),before,'Loading demo must preserve existing work');
+assert.equal(imported.project.demoKey,demo.key,'Demo identity survives portable import');
+imported.project.scenes[0].objects[1].name='Edited rehearsal desk';
+const edited=file.parse(file.serialize(imported.project));
+assert.equal(edited.scenes[0].objects[1].name,'Edited rehearsal desk');
+assert.equal(edited.scenes[0].notes,project.scenes[0].notes);
+assert.notEqual(demo.project().scenes[0].objects[1].name,edited.scenes[0].objects[1].name,'Fixture factory does not share mutable scene objects');
+console.log('PASS: offline fictional demo, valid geometry, four linked shots, original script, separate import, editable round-trip, independent copies');

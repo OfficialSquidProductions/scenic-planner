@@ -9,7 +9,7 @@ check(doc.active===expected.active&&doc.theme===expected.theme,'Active scene and
 check(grid===false&&snap===false&&simulation===true,'Editor settings match');
 const count=workspace.projects.length;
 await importPortableProject(fixture);
-check(workspace.projects.length===count+1&&doc.name.endsWith('(imported)'),'Name collision creates a separate copy');
+check(workspace.projects.length===count+1&&doc.name!==expected.name&&doc.name.startsWith(expected.name+' (imported'),'Name collision creates a separate copy');
 const before=JSON.stringify(workspaceData());
 for(const text of ['{invalid',JSON.stringify({...expected,version:99}),JSON.stringify({...expected,portable:{format:ScenicProjectFile.FORMAT,version:99}})]){
  let failed=false;try{await importPortableProject(text);}catch{failed=true;}check(failed,'Malformed and newer versions rejected');
@@ -49,6 +49,45 @@ if(ScenicIPad.isPhone){
  loadWorkspace(JSON.parse(saved));history=savedHistory;future=savedFuture;applyTheme();refresh();fit();canvas.setPointerCapture=capture;
  phoneChecks.push('phone action bounds and 44-point controls','phone camera touch placement/drag','phone editable lens properties','phone full-width drawers and project naming','phone two-finger zoom/pan preserves geometry');
 }
+const panelChecks=[];
+const controls=ScenicIPad.isPhone?['workspace-menu','ipad-properties']:['ipad-scenes','workspace-menu','ipad-properties'];
+const panelAppearance={};
+for(const id of controls){
+ const control=$(id),r=control.getBoundingClientRect();
+ check(r.width>=44&&r.height>=44&&r.left>=0&&r.right<=innerWidth+1,'Panel control has a visible 44-point target: '+id);
+ check(['true','false'].includes(control.getAttribute('aria-expanded')),'Panel disclosure exposes state: '+id);
+ const before=control.getAttribute('aria-expanded');
+ control.click();check(control.getAttribute('aria-expanded')!==before,'Panel disclosure toggles: '+id);
+ await new Promise(resolve=>setTimeout(resolve,200));
+ const style=getComputedStyle(control);panelAppearance[id]={expanded:control.getAttribute('aria-expanded'),color:style.color,background:style.backgroundColor,border:style.borderColor};
+ control.click();check(control.getAttribute('aria-expanded')===before,'Repeated disclosure restores state: '+id);
+}
+if(!ScenicIPad.isPhone){
+ const scenes=$('ipad-scenes').getBoundingClientRect(),map=$('map-tab').getBoundingClientRect();
+ check(scenes.right<=map.left&&map.left-scenes.right<24,'Scenes immediately precedes Scene map');
+ check($('ipad-keep-library').type==='checkbox','Landscape preference is a native checkbox');
+ panelChecks.push('iPad Scenes immediately left of map/shot navigation','landscape preference checkbox available');
+}
+check(document.documentElement.scrollWidth<=innerWidth+1,'Editor does not horizontally overflow');
+panelChecks.push('all panel controls visible and at least 44 points','disclosure states and repeated toggle restoration','no page overflow');
+const beforeDemo=structuredClone(workspaceData());
+const existingDemo=beforeDemo.projects.some(p=>p.demoKey===ScenicDemo.key);
+await loadDemoProduction();
+check(workspace.projects.length===beforeDemo.projects.length+(existingDemo?0:1),'Demo opens once as separate production');
+check(JSON.stringify(workspace.projects.filter(p=>p.demoKey!==ScenicDemo.key))===JSON.stringify(beforeDemo.projects.filter(p=>p.demoKey!==ScenicDemo.key)),'Demo preserves every personal production and scene');
+check(doc.demoKey===ScenicDemo.key&&scene().objects.filter(o=>o.type==='actor').length===2,'Demo includes Maya and Leo');
+check(ScenicShotList.coverage(scene()).linked===4,'Demo has four linked camera shots');
+check(scene().notes.includes('MAYA:')&&scene().notes.includes('LEO:'),'Original demo script stored in portable scene notes');
+const demoCount=workspace.projects.length,demoId=doc.projectId;
+scene().notes+='\nEdited in native iOS demo verification.';save();
+await loadDemoProduction();
+check(workspace.projects.length===demoCount&&doc.projectId===demoId&&scene().notes.includes('Edited in native'),'Repeated Load Demo preserves edits and avoids duplicates');
+const demoText=ScenicProjectFile.serialize(doc);
+await importPortableProject(demoText);
+check(doc.projectId!==demoId&&scene().notes.includes('Edited in native'),'Demo export/import produces separate editable copy');
+await ScenicDesktop.exportFile(new Blob([ScenicProjectFile.serialize(doc)],{type:'application/json'}),'the-last-cue-demo.scenic');
+loadWorkspace(beforeDemo);applyEditorSettings();applyTheme();refresh();fit();
+panelChecks.push('offline demo loaded as separate production','all prior productions preserved','four linked shots and original script','repeat Load Demo preserves edits without duplicate','edited demo portable export and distinct-copy import');
 await ScenicDesktop.exportFile(new Blob([ScenicProjectFile.serialize(doc)],{type:'application/json'}),'ipad-to-desktop.scenic');
 await scenicFlush();
-return {checks:['desktop-to-iOS native WKWebView import','embedded PNG, JPG, and WebP decoded','all geometry and object fields preserved','motion and camera links preserved','theme and editor settings preserved','prior production preserved','duplicate name and ID isolation','malformed/newer/damaged rejection without mutation','iOS-to-desktop native file export',...phoneChecks],name:doc.name,viewport:{width:innerWidth,height:innerHeight}};
+return {panelAppearance,checks:[...panelChecks,'desktop-to-iOS native WKWebView import','embedded PNG, JPG, and WebP decoded','all geometry and object fields preserved','motion and camera links preserved','theme and editor settings preserved','prior production preserved','duplicate name and ID isolation','malformed/newer/damaged rejection without mutation','iOS-to-desktop native file export',...phoneChecks],name:doc.name,viewport:{width:innerWidth,height:innerHeight}};

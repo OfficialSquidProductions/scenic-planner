@@ -279,7 +279,7 @@ final class ScenicViewController: UIViewController, WKScriptMessageHandler, WKNa
             let output: [String: Any]
             switch result {
             case .success(let value): output = ["passed":true,"result":value,"editorErrors":self.errorLog]
-            case .failure(let error): output = ["passed":false,"error":error.localizedDescription,"editorErrors":self.errorLog]
+            case .failure(let error): output = ["passed":false,"error":error.localizedDescription,"details":String(describing: (error as NSError).userInfo),"editorErrors":self.errorLog]
             }
             let file = self.store.root.appendingPathComponent(args.contains("--portable-smoke-test") ? "portable-results.json" : args.contains("--verify-persistence") ? "persistence-results.json" : "smoke-results.json")
             if let data = try? JSONSerialization.data(withJSONObject: output, options: [.prettyPrinted,.sortedKeys]) { try? data.write(to: file, options: .atomic) }
