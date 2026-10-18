@@ -166,7 +166,11 @@ final class ScenicApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
             for change in entry.changes { append("• " + change, size: 14) }
             append("", size: 6)
         }
+        #if APP_STORE
+        append("Get beta updates in TestFlight and released updates in the App Store.", size: 12, color: .secondaryLabelColor)
+        #else
         append("Choose Scenic → Check for Updates to review the next release before installing.", size: 12, color: .secondaryLabelColor)
+        #endif
         let scroll = NSScrollView(frame: NSRect(x: 0, y: 0, width: 640, height: 560))
         scroll.hasVerticalScroller = true; scroll.autoresizingMask = [.width, .height]
         let text = NSTextView(frame: scroll.contentView.bounds)
@@ -357,6 +361,8 @@ final class ScenicApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
             guard let self, let url = self.pendingOpen else { return }
             guard value as? Bool == true else { DispatchQueue.main.asyncAfter(deadline: .now()+0.2) { [weak self] in self?.receivePendingProject() }; return }
             self.pendingOpen = nil
+            let scoped = url.startAccessingSecurityScopedResource()
+            defer { if scoped { url.stopAccessingSecurityScopedResource() } }
             do {
                 let values = try url.resourceValues(forKeys: [.fileSizeKey,.isRegularFileKey,.isSymbolicLinkKey])
                 guard values.isRegularFile == true, values.isSymbolicLink != true, (values.fileSize ?? 0) <= 60 * 1024 * 1024 else { throw NSError(domain: "Scenic", code: 2, userInfo: [NSLocalizedDescriptionKey: "Choose a regular Scenic file of 60 MB or less."]) }
