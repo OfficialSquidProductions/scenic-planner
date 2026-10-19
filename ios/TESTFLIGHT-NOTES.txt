@@ -1,5 +1,5 @@
-Scenic 1.4.20 (25) — iPhone and iPad beta
+Scenic 1.4.21 (26) — iPhone and iPad beta
 
-The top-left Scenic brand shows iOS on iPhone and iPad on iPad using native device identity. Check the label and app name in portrait and landscape, narrow and wide layouts, and after relaunch.
+Open Shot List to find Import shot list CSV beside Export Shot List CSV. Verify both actions in portrait and landscape, then check import preview/cancel/confirm, CSV export, and portable .scenic exchange. The former shot-list import under Productions has moved.
 
-Please verify existing productions, palette drag/drop, map/shot navigation, Save as, Share and Import project with portable .scenic files. The Last Cue demo remains separate and preserves edits. No account or network is required to edit.
+Camera, light, person and sun Properties panels have less helper text. Controls, defaults, calculations and validation remain unchanged. Check every setting and readout, existing productions, palette drag/drop, Undo/Redo and the editable Last Cue demo.

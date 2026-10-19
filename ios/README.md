@@ -1,6 +1,6 @@
 # Scenic for iPhone and iPad
 
-The iOS beta version 1.4.20 (25) supports iPhone and iPad on iOS/iPadOS 17+. Open `ios/Scenic.xcodeproj` from the repository root, scheme **Scenic iPad**. The scheme name and bundle ID `org.squidproductions.scenic.ipad` preserve the existing beta identity and workspaces.
+The iOS beta version 1.4.21 (26) supports iPhone and iPad on iOS/iPadOS 17+. Open `ios/Scenic.xcodeproj` from the repository root, scheme **Scenic iPad**. The scheme name and bundle ID `org.squidproductions.scenic.ipad` preserve the existing beta identity and workspaces.
 
 Run `python3 ios/prepare.py` after shared editor changes. It regenerates the self-contained project, Info.plist, privacy manifest, and bundled web resources from `dist`. Build outputs are ignored. The UIKit/WKWebView shell uses system frameworks and offline resources. Native storage preserves current/previous workspace recovery.
 

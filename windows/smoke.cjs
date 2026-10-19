@@ -9,6 +9,15 @@ module.exports=async({win,store,flush,report})=>{
  assert.equal(await js("[...document.querySelectorAll('[data-platform-label]')].every(node=>node.textContent==='Desktop')"),true);
  assert.ok((await js("document.querySelector('.brand').textContent")).includes('SCENIC'));
  checks.push('Packaged Scenic native platform branding is Desktop and preserves the Scenic name');
+ await js("document.getElementById('shots-tab').click()");
+ assert.equal(await js("document.querySelectorAll('#import-shot-list').length"),1);
+ assert.equal(await js("document.querySelectorAll('#export-shots').length"),1);
+ assert.equal(await js("document.getElementById('export-shots').textContent"),'Export Shot List CSV');
+ assert.equal(await js("document.getElementById('import-shot-list').closest('#shot-list')!==null && document.getElementById('import-shot-list').parentElement===document.getElementById('export-shots').parentElement"),true);
+ assert.equal(await js("document.querySelector('.production-picker #import-shot-list')===null"),true);
+ await js("document.getElementById('map-tab').click()");
+ checks.push('Packaged Shot List pairs the unique CSV actions with the exact Export Shot List CSV label');
+
 
  await js("document.getElementById('settings-button').click();document.getElementById('show-changelog').click()");
  assert.equal(await js("document.getElementById('changelog').open"),true);
