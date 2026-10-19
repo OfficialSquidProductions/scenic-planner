@@ -29,7 +29,7 @@
   const crumb=document.querySelector('.project-crumb');crumb.querySelector('.muted').textContent='Production name';
   document.querySelector('.production-picker').prepend(crumb);
   const extra=document.createElement('div');extra.className='phone-project-actions';extra.append($('export'));
-  $('import-shot-list').after(extra);
+  $('open-project').after(extra);
  }else{
   const scenes=button('ipad-scenes','Scenes');scenes.className='ipad-panel-toggle';
   scenes.setAttribute('aria-controls','scene-browser');

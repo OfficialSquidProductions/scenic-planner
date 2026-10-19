@@ -170,6 +170,37 @@ final class ScenicUITests: XCTestCase {
         app.terminate(); app.launch()
         XCTAssertTrue(app.webViews.buttons["Properties"].firstMatch.waitForExistence(timeout: 10))
     }
+    func testShotListCSVToolbarFilesAndRotation() throws {
+        for orientation in [UIDeviceOrientation.portrait,.landscapeLeft] {
+            XCUIDevice.shared.orientation=orientation
+            app.webViews.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","Shot list")).firstMatch.tap()
+            let importCSV=app.webViews.buttons["Import shot list CSV"]
+            let exportCSV=app.webViews.buttons["Export Shot List CSV"]
+            XCTAssertTrue(importCSV.waitForExistence(timeout:5))
+            XCTAssertEqual(app.webViews.buttons.matching(identifier:"Import shot list CSV").count,1)
+            XCTAssertEqual(app.webViews.buttons.matching(identifier:"Export Shot List CSV").count,1)
+            for action in [importCSV,exportCSV] {
+                XCTAssertTrue(action.isHittable,"CSV action must stay reachable after rotation")
+                XCTAssertGreaterThanOrEqual(action.frame.height,44)
+                XCTAssertGreaterThanOrEqual(action.frame.minX,app.frame.minX)
+                XCTAssertLessThanOrEqual(action.frame.maxX,app.frame.maxX)
+            }
+            shot(phone ? "iPhone Shot List paired CSV toolbar \(orientation.rawValue)" : "iPad Shot List paired CSV toolbar \(orientation.rawValue)")
+            importCSV.tap()
+            let cancel=app.descendants(matching:.any).matching(NSPredicate(format:"label == %@","Cancel")).firstMatch
+            XCTAssertTrue(cancel.waitForExistence(timeout:8),app.debugDescription)
+            shot(phone ? "iPhone toolbar native CSV import" : "iPad toolbar native CSV import")
+            cancelFiles()
+            let back=XCTNSPredicateExpectation(predicate:NSPredicate(format:"hittable == true"),object:exportCSV)
+            XCTAssertEqual(XCTWaiter.wait(for:[back],timeout:8),.completed)
+            exportCSV.tap()
+            XCTAssertTrue(cancel.waitForExistence(timeout:8),app.debugDescription)
+            shot(phone ? "iPhone toolbar native CSV export" : "iPad toolbar native CSV export")
+            cancelFiles()
+            let returned=XCTNSPredicateExpectation(predicate:NSPredicate(format:"hittable == true"),object:importCSV)
+            XCTAssertEqual(XCTWaiter.wait(for:[returned],timeout:8),.completed)
+        }
+    }
     func testNativeFilesExportAndImportCancel() throws {
         app.webViews.buttons["Save as…"].tap()
         let cancel = app.descendants(matching:.any).matching(NSPredicate(format:"label == %@","Cancel")).firstMatch
