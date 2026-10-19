@@ -346,26 +346,26 @@ final class ScenicUITests: XCTestCase {
     func testZDemoLoadEditAndReload() throws {
         let menu=app.webViews.buttons[phone ? "Scenes and items" : "Scenes"]
         menu.tap()
-        let demo=app.webViews.buttons["Load Demo"]
+        let demo=app.webViews.buttons["Load The Last Light demo"]
         XCTAssertTrue(demo.waitForExistence(timeout:5));demo.tap()
         let storyScene=app.webViews.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","01 ")).firstMatch
         // Reopening an existing production closes a temporary drawer through normal navigation.
         if !storyScene.waitForExistence(timeout:2) { menu.tap() }
         XCTAssertTrue(storyScene.waitForExistence(timeout:10));storyScene.tap()
         let title=app.webViews.textFields["Scene title"]
-        let loaded=XCTNSPredicateExpectation(predicate:NSPredicate { _,_ in (title.value as? String)?.contains("BLACK-BOX THEATRE")==true },object:title)
+        let loaded=XCTNSPredicateExpectation(predicate:NSPredicate { _,_ in (title.value as? String)?.contains("COASTAL ROAD")==true },object:title)
         XCTAssertEqual(XCTWaiter.wait(for:[loaded],timeout:10),.completed)
         if app.webViews.buttons[phone ? "Close scenes and items" : "Close panel"].exists { closePanel() }
-        shot("The Last Cue loaded demo map")
+        shot("The Last Light loaded demo map")
         title.tap();title.typeText(" Demo edit")
         app.webViews.buttons["Scene map"].tap()
         menu.tap();demo.tap()
         if app.webViews.buttons[phone ? "Close scenes and items" : "Close panel"].exists { closePanel() }
         XCTAssertTrue((title.value as? String)?.contains("Demo edit")==true,"Load Demo must reopen the existing edited demo")
-        shot("The Last Cue editable fictional demo")
+        shot("The Last Light editable fictional demo")
         app.webViews.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","Shot list")).firstMatch.tap()
         XCTAssertTrue(app.webViews.switches["Coverage checked for shot 1A"].waitForExistence(timeout:5))
-        shot("The Last Cue four linked demo shots")
+        shot("The Last Light sixteen linked demo shots")
         app.terminate();app.launch()
         XCTAssertTrue(title.waitForExistence(timeout:15));XCTAssertTrue((title.value as? String)?.contains("Demo edit")==true)
     }

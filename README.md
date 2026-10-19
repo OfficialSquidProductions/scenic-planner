@@ -125,3 +125,13 @@ Camera guides use the rectilinear relation `horizontal angle = 2 × atan(active 
 ## Scenic 1.4.17 portable files
 
 Save and share complete editable productions, including embedded assets. Imports create distinct productions while preserving current work. See [portable format](PORTABLE-PROJECTS.md) and [iPhone/iPad sources](ios/README.md).
+
+## Temporary shared demo
+
+Choose **Load The Last Light demo** under Productions to explore the original
+eight-scene Production Desk screenplay, with matching cast, props, locations and
+16 linked camera setups. **Demo guide / reset** explains scene-map exercises,
+CSV exchange and explicit reset. Reopening preserves edits. Reset ownership is
+workspace-local; real projects, older Last Cue samples and imported copies remain
+intact. The demo is temporary for testing/reference. Entry points can be disabled
+later without deleting saved projects; see [demo details](ios/README.md).

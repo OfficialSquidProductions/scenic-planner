@@ -113,23 +113,34 @@ function afterObjectChange(o,prop,previous){if(!o)return;stopPlayback();
  }
 }
 function displayObject(o){if(!playback||!o.marks?.length)return o;if(playback.mode!=='scene'&&playback.id!==o.id)return o;if(playback.mode==='scene'&&o.marks.length<2)return o;return {...o,...ScenicModel.motionPose(o,ScenicModel.playbackElapsed(playback,performance.now()))};}
-async function loadDemoProduction(){
+async function loadDemoProduction(resetID){
  if(!window.ScenicDemo?.enabled||projectExchangeBusy)return;
  if(window.ScenicDesktop?!window.scenicReady:!db){toast('Wait for your workspace to finish loading');return;}
- const existing=workspaceData().projects.find(p=>p.demoKey===ScenicDemo.key);
- if(existing){
-  const select=$('production-select');select.value=existing.projectId;select.dispatchEvent(new Event('change'));
-  toast('Demo opened · your edits are preserved');return;
- }
- await importPortableProject(ScenicProjectFile.serialize(ScenicDemo.project()));
- toast('Demo loaded · fictional production, separate from your work');
+ projectExchangeBusy=true;
+ try{
+  endDrag();
+  const plan=ScenicDemo.plan(workspaceData(),uid,resetID);
+  await activatePreparedWorkspace(plan);
+  toast(plan.reset?'Only The Last Light demo was reset · Undo restores edits':plan.created?'The Last Light loaded separately · existing work preserved':'Demo opened · your edits are preserved');
+ }finally{projectExchangeBusy=false;}
+}
+let pendingDemoReset=null;
+function showDemoGuide(){
+ $('demo-reset').disabled=!ScenicDemo.managed(workspaceData());
+ $('demo-guide-dialog').showModal();
 }
 function setupWorkflow(){
  if(window.ScenicDemo?.enabled){
-  const demo=$('load-demo');demo.hidden=false;
-  demo.onclick=async()=>{demo.disabled=true;try{await loadDemoProduction();}catch(error){toast('Could not load demo: '+error.message);}finally{demo.disabled=false;}};
+  const demo=$('load-demo');demo.hidden=false;$('demo-guide-button').hidden=false;
+  const open=async resetID=>{demo.disabled=true;try{await loadDemoProduction(resetID);}catch(error){toast('Could not load demo: '+error.message);}finally{demo.disabled=false;}};
+  demo.onclick=()=>open();
+  $('demo-guide-button').onclick=showDemoGuide;
+  $('demo-guide-close').onclick=()=>$('demo-guide-dialog').close();
+  $('demo-open').onclick=()=>{$('demo-guide-dialog').close();open();};
+  $('demo-reset').onclick=()=>{const owned=ScenicDemo.managed(workspaceData());if(!owned)return;pendingDemoReset=owned.projectId;$('demo-guide-dialog').close();$('demo-reset-dialog').showModal();};
+  $('demo-reset-cancel').onclick=()=>{pendingDemoReset=null;$('demo-reset-dialog').close();};
+  $('demo-reset-confirm').onclick=()=>{const id=pendingDemoReset;pendingDemoReset=null;$('demo-reset-dialog').close();if(id)open(id);};
  }
-
  setupControls();
  setupShotImport();
  $('new-project').onclick=newProject;$('library-search').oninput=e=>{libraryQuery=e.target.value;renderLibrary();$('library').scrollTop=0;};

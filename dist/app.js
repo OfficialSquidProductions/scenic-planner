@@ -171,6 +171,23 @@ async function savePortableProject(share=false){
  }catch(error){if(error.name!=='AbortError')toast('Could not '+(share?'share':'save')+' project: '+error.message);}
  finally{projectExchangeBusy=false;}
 }
+// Stage a complete validated workspace on disk before changing the visible project.
+// Used by ordinary imports and the workspace-owned demo/reset path.
+async function activatePreparedWorkspace(incoming){
+ const before=JSON.stringify(workspaceData());
+ const wasInert=document.body.inert;document.body.inert=true;clearTimeout(saveTimer);
+ try{
+  if(window.ScenicDesktop)await ScenicDesktop.request('saveProject',{project:JSON.stringify(incoming.workspace)});
+  else{
+   if(!db)throw Error('Device storage is unavailable. Existing work is unchanged.');
+   const tx=db.transaction('projects','readwrite');tx.objectStore('projects').put(structuredClone(incoming.workspace),'current');
+   await new Promise((resolve,reject)=>{tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||Error('Import was canceled.'));});
+  }
+ }catch(error){save();throw error;}finally{document.body.inert=wasInert;}
+ history.push(before);if(history.length>60)history.shift();future=[];
+ loadWorkspace(incoming.workspace);if(window.ScenicDesktop)window.scenicReady=true;
+ applyEditorSettings();applyTheme();showShots(false);fit();commit();
+}
 async function importPortableProject(text){
  if(projectExchangeBusy)throw Error('Finish the current project action first.');
  projectExchangeBusy=true;
@@ -178,22 +195,8 @@ async function importPortableProject(text){
   const project=ScenicProjectFile.parse(text);await ScenicProjectFile.checkImages(project);
   endDrag();
   const incoming=ScenicProjectFile.prepareImport(project,workspaceData(),uid);
-  // Persist the complete staged workspace before activating the imported copy.
-  // Existing productions and the source file are never replaced by an import.
-  const before=JSON.stringify(workspaceData());
-  const wasInert=document.body.inert;document.body.inert=true;clearTimeout(saveTimer);
-  try{
-   if(window.ScenicDesktop)await ScenicDesktop.request('saveProject',{project:JSON.stringify(incoming.workspace)});
-   else{
-    if(!db)throw Error('Device storage is unavailable. Existing work is unchanged.');
-    const tx=db.transaction('projects','readwrite');tx.objectStore('projects').put(structuredClone(incoming.workspace),'current');
-    await new Promise((resolve,reject)=>{tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||Error('Import was canceled.'));});
-   }
-  }catch(error){save();throw error;}finally{document.body.inert=wasInert;}
-  history.push(before);if(history.length>60)history.shift();future=[];
-  loadWorkspace(incoming.workspace);if(window.ScenicDesktop)window.scenicReady=true;
-  applyEditorSettings();
-  applyTheme();showShots(false);fit();commit();toast('Imported '+doc.name+' as a separate production');
+  await activatePreparedWorkspace(incoming);
+  toast('Imported '+doc.name+' as a separate production');
  }finally{projectExchangeBusy=false;}
 }
 

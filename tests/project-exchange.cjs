@@ -4,7 +4,7 @@ function element(id){if(!elements.has(id))elements.set(id,{id,style:{setProperty
 const document={body:{inert:false},getElementById:element,createElement:()=>element('offscreen'),querySelector:selector=>selector==='dialog[open]'?null:element(selector),querySelectorAll:()=>[],documentElement:element('root'),addEventListener(){}};
 const sandbox={Image:class{constructor(){this.complete=false;this.naturalWidth=0;}},document,window:{addEventListener(){},devicePixelRatio:1},TextEncoder,atob,btoa,localStorage:{getItem:()=>null,setItem(){}},console,structuredClone,performance:{now:()=>0},setTimeout:()=>1,clearTimeout(){},getComputedStyle:()=>({getPropertyValue:()=>''}),requestAnimationFrame(){},ResizeObserver:class{observe(){}},Path2D:class{},Blob,URL,crypto:require('node:crypto').webcrypto,innerWidth:1440};
 sandbox.addEventListener=sandbox.window.addEventListener;sandbox.devicePixelRatio=1;sandbox.window=sandbox;
-vm.createContext(sandbox);for(const name of ['engine','catalog','solar','shot-list','model','project-file','transforms','app','drawing','controls','selection','groups','workflow'])vm.runInContext(fs.readFileSync('dist/'+name+'.js','utf8').replace(/\ninit\(\);\s*$/,'\n'),sandbox,{filename:name+'.js'});
+vm.createContext(sandbox);for(const name of ['engine','catalog','solar','shot-list','model','project-file','transforms','demo','app','drawing','controls','selection','groups','workflow'])vm.runInContext(fs.readFileSync('dist/'+name+'.js','utf8').replace(/\ninit\(\);\s*$/,'\n'),sandbox,{filename:name+'.js'});
 const run=code=>vm.runInContext(code,sandbox);
 sandbox.ScenicProjectFile.checkImages=async()=>{}; // Actual decoding is covered in native WKWebView smoke.
 let saved=[],deny=false,cancel=false;
@@ -26,5 +26,18 @@ const fixture=fs.readFileSync('tests/assets/desktop-exchange.scenic','utf8');san
  await element('project-input').onchange({target:{files:[],value:''}});assert.equal(run('JSON.stringify(workspaceData())'),after);
  await element('project-input').onchange({target:{files:[{size:5,text:async()=>'{bad'}],value:'fake'}});assert.equal(run('JSON.stringify(workspaceData())'),after);
  run('undo()');assert.equal(run('JSON.stringify(workspaceData())'),before);
+ const originalDemoState=run('JSON.stringify(workspaceData())');
+ await run('loadDemoProduction()');
+ assert.equal(run('doc.scenes.length'),8);assert.equal(run('doc.scenes.flatMap(s=>s.shotList).length'),16);
+ const demoID=run('doc.projectId');run("doc.scenes[0].notes='Edited demo that must survive';");
+ await run('loadDemoProduction()');assert.equal(run('doc.projectId'),demoID);assert.equal(run('doc.scenes[0].notes'),'Edited demo that must survive');
+ const beforeReset=run('JSON.stringify(workspaceData())');deny=true;
+ await assert.rejects(run(`loadDemoProduction(${JSON.stringify(demoID)})`),/Disk full/);
+ assert.equal(run('JSON.stringify(workspaceData())'),beforeReset);deny=false;
+ await run(`loadDemoProduction(${JSON.stringify(demoID)})`);assert.match(run('doc.scenes[0].notes'),/FICTIONAL DEMO/);
+ run('undo()');assert.equal(run('JSON.stringify(workspaceData())'),beforeReset);
+ const real=JSON.parse(originalDemoState).projects;
+ for(const project of real)assert.equal(run(`JSON.stringify(workspace.projects.find(p=>p.projectId===${JSON.stringify(project.projectId)}))`),JSON.stringify(project));
+ console.log('PASS: demo staged load/reopen/reset, disk failure rollback, undo and real production preservation.');
  console.log('PASS: staged import persists before activation; local edits retained; disk failure/malformed input/canceled Save As/canceled Import preserve workspace; settings and undo restore.');
 })().catch(error=>{console.error(error);process.exitCode=1;});

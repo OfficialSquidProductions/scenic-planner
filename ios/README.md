@@ -13,8 +13,29 @@ See [portable format and verification](../PORTABLE-PROJECTS.md). Physical sharin
 
 ## Temporary TestFlight demo and iPad panels
 
-Load Demo appears under Productions and works offline on every bundled editor. It creates a separate **DEMO · The Last Cue** production with a fictional original script in Scene notes, two adult characters with blocking marks, a 24 × 20 ft rehearsal floor, a desk, chair, notebook, practical lamp, stage wash and four cameras linked to four shots. Repeating Load Demo reopens the existing demo and retains edits; deleting it permits a fresh copy. Normal undo, editing and `.scenic` import/export remain available.
+**Load The Last Light demo** appears under Productions and works offline on every
+bundled editor. It creates a separate eight-scene production from Production Desk's
+original screenplay, with Maya/Eli/Jonah, the same locations/props and 16 linked
+shots. Scene-specific illustrative maps include coastal road, vehicle, lighthouse,
+stairwell, lantern room and seawall. Scene notes preserve the original script.
+**Demo guide / reset** explains the file handoff and safe reset. Repeating Load
+Demo reopens the locally managed production and retains edits; reset requires
+confirmation, affects only that workspace-owned sample, and can be undone. Saved
+Last Cue/older demos and portable imports are preserved. An imported marker alone
+does not grant reset ownership.
 
-Before public launch, set `enabled=false` in `dist/demo.js` and run `python3 ios/prepare.py` (and normal desktop packaging). This hides the Load Demo action without deleting any user-created demo edits. The standalone demo factory and Load Demo UI can then be removed together. It never loads automatically or replaces personal productions.
+Production Desk shot-list CSV updates matching scene/shot numbers through Scenic's
+existing import preview, preserving map geometry, camera links and coverage checks.
+There is no cloud or silent sync. Scripts, schedules and map layouts are not carried
+by CSV; Scenic CSV does not import back into Production Desk. Save complete .scenic
+and .productiondesk files for full backups. For a matching starting copy, Production
+Desk's Demo guide also exports the original .scenic demo.
+
+Temporary entry removal: set `enabled=false` in `tools/demo-controller.js`, regenerate
+with Production Desk `windows-src/tools/build_demo.py --scenic-root <Scenic root>`,
+and run `python3 ios/prepare.py`. Hide/disable entry points without deleting any saved
+productions. Keep the template, generated `dist/demo.js` and iOS copy consistent.
+The original source and portable reference spec are in Production Desk's
+`windows-src/web/demo/the-last-light-spec.json`.
 
 On iPad, Scenes immediately precedes Scene map and Shot list. Scenes, Items and Properties expose their expanded state and use a checked fill when visible, with an outlined available state when hidden. The device-local Settings checkbox **Keep Scenes and Items on the left in landscape** defaults on and persists separately from portable project settings. It applies to landscape iPad windows; portrait iPad and iPhone retain temporary drawers. Selecting tools keeps docked panels visible. Each docked section can be hidden independently; rotating back to landscape restores both when the preference is on.
