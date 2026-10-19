@@ -65,6 +65,8 @@ final class ScenicViewController: UIViewController, WKScriptMessageHandler, WKNa
         let config = WKWebViewConfiguration()
         config.websiteDataStore = .default()
         config.userContentController.add(self, name: "scenic")
+        let platform = UIDevice.current.userInterfaceIdiom == .pad ? "iPad" : "iOS"
+        config.userContentController.addUserScript(WKUserScript(source: "window.SquidPlatform='\(platform)';", injectionTime: .atDocumentStart, forMainFrameOnly: true))
         config.userContentController.addUserScript(WKUserScript(source: "window.ScenicIPad={addSelection:false,isPhone:\(UIDevice.current.userInterfaceIdiom == .phone ? "true" : "false")};", injectionTime: .atDocumentStart, forMainFrameOnly: true))
         let result = WKWebView(frame: .zero, configuration: config)
         result.navigationDelegate = self; result.uiDelegate = self

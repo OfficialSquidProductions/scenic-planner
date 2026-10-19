@@ -68,6 +68,7 @@ final class ScenicApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
         makeMenu()
         let config = WKWebViewConfiguration()
         config.websiteDataStore = .default()
+        config.userContentController.addUserScript(WKUserScript(source: "window.SquidPlatform='MacBook';", injectionTime: .atDocumentStart, forMainFrameOnly: true))
         config.userContentController.add(self, name: "scenic")
         web = WKWebView(frame: .zero, configuration: config)
         web.uiDelegate = self
