@@ -4,6 +4,12 @@ module.exports=async({win,store,flush,report})=>{
  for(let i=0;i<100;i++){if(await js('window.scenicReady===true'))break;await new Promise(r=>setTimeout(r,100));}
  assert.equal(await js('window.scenicReady'),true);assert.equal(await js('!!window.ScenicWindows && !!window.ScenicDesktop'),true);checks.push('Bundled offline editor and isolated native storage bridge load');
  assert.equal(await js("document.querySelector('#scene-canvas').width>0"),true);
+ assert.equal(await js('window.SquidPlatform'),'Desktop');
+ assert.equal(await js('document.documentElement.dataset.brandPlatform'),'Desktop');
+ assert.equal(await js("[...document.querySelectorAll('[data-platform-label]')].every(node=>node.textContent==='Desktop')"),true);
+ assert.ok((await js("document.querySelector('.brand').textContent")).includes('SCENIC'));
+ checks.push('Packaged Scenic native platform branding is Desktop and preserves the Scenic name');
+
  await js("document.getElementById('settings-button').click();document.getElementById('show-changelog').click()");
  assert.equal(await js("document.getElementById('changelog').open"),true);
  assert.equal(await js('window.ScenicChangelog.version'),require('./package.json').version);

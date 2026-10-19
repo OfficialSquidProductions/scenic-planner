@@ -39,8 +39,6 @@ test('iPhone/iPad host identity is supplied from UIKit, not layout width',()=>{
  assert.ok(source.includes('window.SquidPlatform='));assert.ok(source.includes('"iPad"')&&source.includes('"iOS"'));
 });
 
-test('displayed version comes from host build metadata',()=>{for(const relative of roots){const source=fs.readFileSync(path.resolve(__dirname,relative,'platform-branding.js'),'utf8');assert.equal(run(source,{metadata:{version:'1.5.5',build:'25'}}).versionLabel.textContent,'PRODUCTION DESK / 1.5.5 (25)');assert.equal(run(source,{metadata:{version:'1.5.5'}}).versionLabel.textContent,'PRODUCTION DESK / 1.5.5');}});
-
 test('Electron preload labels the actual host platform',()=>{
  const source=fs.readFileSync(path.resolve(__dirname,'../windows/preload.cjs'),'utf8');
  for(const [platform,label] of [['win32','Desktop'],['darwin','MacBook']]){

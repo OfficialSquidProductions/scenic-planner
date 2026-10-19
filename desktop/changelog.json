@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.4.20",
+    "changes": [
+      "The top-left Scenic brand now identifies the native device: iOS on iPhone, iPad on iPad, MacBook on Mac, and Desktop on Windows.",
+      "Platform labels remain correct when resizing or rotating, with the Scenic name visible in the compact phone header.",
+      "Existing productions, palette drag placement, portable .scenic exchange, and desktop updates remain available."
+    ]
+  },
+  {
     "version": "1.4.19",
     "changes": [
       "Drag cameras, talent, lights, room shapes and catalog items directly from the library or toolbar onto the scene map. Click or tap, then place, remains available.",

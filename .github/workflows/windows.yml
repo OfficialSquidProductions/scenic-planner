@@ -23,6 +23,8 @@ jobs:
       - name: Shared model and geometry checks
         shell: pwsh
         run: |
+          node tests/platform-branding.cjs
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
           node tests/geometry.cjs
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           node tests/catalog.cjs

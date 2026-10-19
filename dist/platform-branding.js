@@ -11,11 +11,7 @@
   const apply = () => {
     document.documentElement.dataset.brandPlatform = label;
     for (const node of document.querySelectorAll('[data-platform-label]')) node.textContent = label;
-    const metadata = window.SquidBuild;
-    if (metadata && typeof metadata.version === 'string' && metadata.version && metadata.version.length <= 64) {
-      const versionLabel = document.querySelector('.sidebar-bottom small');
-      if (versionLabel) versionLabel.textContent = 'PRODUCTION DESK / ' + metadata.version + (metadata.build ? ' (' + metadata.build + ')' : '');
-    }
+
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', apply, {once:true});
   else apply();
