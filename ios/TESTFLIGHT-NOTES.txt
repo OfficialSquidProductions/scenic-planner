@@ -1,5 +1,5 @@
-Scenic 1.4.21 (26) — iPhone and iPad beta
+Scenic 1.4.23 (29)
 
-Open Shot List to find Import shot list CSV beside Export Shot List CSV. Verify both actions in portrait and landscape, then check import preview/cancel/confirm, CSV export, and portable .scenic exchange. The former shot-list import under Productions has moved.
-
-Camera, light, person and sun Properties panels have less helper text. Controls, defaults, calculations and validation remain unchanged. Check every setting and readout, existing productions, palette drag/drop, Undo/Redo and the editable Last Cue demo.
+Add scalable floor tiles from Walls/Floor. Change their color or upload an image that stretches with width and height; floors stay beneath foreground objects.
+New productions start empty. Bundled demo, guide and demo reset entry points are removed; existing productions are preserved.
+Import Production Desk Shot list → Export shots CSV, including Script coverage. Matching-number reimports keep map objects, camera links and coverage checks. Save portable .scenic backups with embedded floor images.

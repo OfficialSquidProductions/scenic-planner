@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.4.23",
+    "changes": [
+      "Create scalable floor tiles in Walls/Floor, with editable colors and embedded images that stretch to the tile bounds. Floors stay beneath every foreground object in editing, previews and exported maps.",
+      "Start new productions with empty scenes. Bundled demos, demo guide and demo reset controls are removed; saved and imported productions remain intact.",
+      "Import Production Desk shot-list CSVs with all supported source fields, including Script coverage. Reimport matching scene and shot numbers without duplicating them, retaining map objects, camera links, coverage checks and absent shots.",
+      "Preserve floor images through portable project save/import and native save/reopen, and keep floor controls usable in compact layouts."
+    ]
+  },
+  {
     "version": "1.4.22",
     "changes": [
       "Load The Last Light to explore eight screenplay scenes and sixteen linked shots shared with Production Desk.",

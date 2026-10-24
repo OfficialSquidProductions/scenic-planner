@@ -2,7 +2,7 @@
 (function(root){
 'use strict';
 const model=typeof module==='object'&&module.exports?require('./model.js'):root.ScenicModel;
-const boxTypes=new Set(['wallGroup','room','image','sofa','table','prop','set','gear']);
+const boxTypes=new Set(['floor','wallGroup','room','image','sofa','table','prop','set','gear']);
 const angle=o=>o.type==='wall'?Math.atan2(o.y2-o.y,o.x2-o.x):(o.rotation||0)*Math.PI/180;
 const center=o=>o.type==='wall'?{x:(o.x+o.x2)/2,y:(o.y+o.y2)/2}:{x:o.x,y:o.y};
 const rotate=(p,a)=>({x:p.x*Math.cos(a)-p.y*Math.sin(a),y:p.x*Math.sin(a)+p.y*Math.cos(a)});

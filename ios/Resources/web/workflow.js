@@ -22,13 +22,13 @@ function deleteProject(){if(pendingDelete!==doc.projectId)return;snapshot();work
 const normalizeLibrarySearch=text=>String(text).toLowerCase().replace(/[’']/g,'');
 function renderLibrary(mode=libraryMode){
  if(!['walls','props','set','lights'].includes(mode))mode=null;
- const previousMode=libraryMode;libraryMode=mode;const panel=$('library'),oldScroll=panel.scrollTop,query=normalizeLibrarySearch(libraryQuery.trim()),browsing=!!mode||!!query;
+ const previousMode=libraryMode;libraryMode=mode;const panel=$('library'),oldScroll=panel.scrollTop,query=normalizeLibrarySearch(libraryQuery.trim()),browsing=!!mode||!!query,showFloor=mode==='walls'&&!query||!!query&&normalizeLibrarySearch('floor tile road carpet').includes(query);
  panel.classList.toggle('catalog-menu',browsing);
- $('library-heading').innerHTML=mode?`<button id="library-back" class="library-back" aria-label="Back to Build your scene">←</button><h2>${({walls:'Walls',props:'Props',set:'Set',lights:'Lights',gear:'Gear'})[mode]}</h2><span class="tiny">CLICK OR DRAG</span>`:'<h2>Build your scene</h2><span class="tiny">CLICK OR DRAG</span>';
- if(!browsing){panel.innerHTML=[['camera','Camera'],['actor','Talent']].map(([n,label])=>`<button data-tool="${n}" aria-label="Place ${label}">${svg(n)}<span>${label}</span></button>`).join('')+[['walls','Walls','room-square'],['props','Props','laptop'],['set','Set','sofa'],['lights','Lights','led-panel']].map(([category,label,asset])=>`<button data-category="${category}" aria-label="Open ${label} library">${assetIcon(ScenicCatalog.get(asset))}<span>${label} <b>↗</b></span></button>`).join('');
+ $('library-heading').innerHTML=mode?`<button id="library-back" class="library-back" aria-label="Back to Build your scene">←</button><h2>${({walls:'Walls/Floor',props:'Props',set:'Set',lights:'Lights',gear:'Gear'})[mode]}</h2><span class="tiny">CLICK OR DRAG</span>`:'<h2>Build your scene</h2><span class="tiny">CLICK OR DRAG</span>';
+ if(!browsing){panel.innerHTML=[['camera','Camera'],['actor','Talent']].map(([n,label])=>`<button data-tool="${n}" aria-label="Place ${label}">${svg(n)}<span>${label}</span></button>`).join('')+[['walls','Walls/Floor','room-square'],['props','Props','laptop'],['set','Set','sofa'],['lights','Lights','led-panel']].map(([category,label,asset])=>`<button data-category="${category}" aria-label="Open ${label} library">${assetIcon(ScenicCatalog.get(asset))}<span>${label} <b>↗</b></span></button>`).join('');
  }else{
-  const items=ScenicCatalog.items.filter(i=>i.category!=='gear').filter(i=>query?normalizeLibrarySearch(`${i.name} ${i.group==='Doors & windows'?'':i.group} ${i.category}`).includes(query):i.category===mode),groups=[...new Set(items.map(i=>query?({walls:'Walls',props:'Props',set:'Set',lights:'Lights',gear:'Gear'})[i.category]+' · '+i.group:i.group))];
-  panel.innerHTML=`<div class="catalog-tabs">${['walls','props','set','lights'].map(c=>`<button data-category="${c}" aria-pressed="${mode===c}">${({walls:'Walls',props:'Props',set:'Set',lights:'Lights',gear:'Gear'})[c]}</button>`).join('')}</div><p class="catalog-hint">${query?`${items.length} ${items.length===1?'result':'results'} across Walls, Props, Set & Lights.`:mode==='walls'?'Place a room, then drag its corners to resize.':'Choose an item, then click the map.'}</p>`+(mode==='walls'&&!query?`<button class="draw-wall" data-tool="wall">${svg('wall')}<span>Draw a straight wall</span><small>Click a start and end point · W</small></button>`:'')+groups.map(group=>`<section class="catalog-group"><h3>${esc(group)}</h3><div class="catalog-grid">${items.filter(i=>(query?({walls:'Walls',props:'Props',set:'Set',lights:'Lights',gear:'Gear'})[i.category]+' · '+i.group:i.group)===group).map(i=>{const unavailable=i.id==='sun'&&scene().objects.some(o=>o.kind==='sun');return `<button data-asset="${i.id}" aria-label="Place ${i.name}" ${unavailable?'disabled':''}>${assetIcon(i)}<span>${i.name}</span><small>${i.id==='sun'?unavailable?'Already in this scene':'One per scene · time of day':i.category==='lights'?'Lighting preset':formatLength(i.width)+' × '+formatLength(i.height)}</small></button>`;}).join('')}</div></section>`).join('')+(items.length?'':'<p class="catalog-empty">No items found. Try “door”, “lamp”, or “laptop”.</p>');
+  const items=ScenicCatalog.items.filter(i=>i.category!=='gear').filter(i=>query?normalizeLibrarySearch(`${i.name} ${i.group==='Doors & windows'?'':i.group} ${i.category}`).includes(query):i.category===mode),groups=[...new Set(items.map(i=>query?({walls:'Walls/Floor',props:'Props',set:'Set',lights:'Lights',gear:'Gear'})[i.category]+' · '+i.group:i.group))];
+  panel.innerHTML=`<div class="catalog-tabs">${['walls','props','set','lights'].map(c=>`<button data-category="${c}" aria-pressed="${mode===c}">${({walls:'Walls/Floor',props:'Props',set:'Set',lights:'Lights',gear:'Gear'})[c]}</button>`).join('')}</div><p class="catalog-hint">${query?`${items.length+Number(showFloor)} ${items.length+Number(showFloor)===1?'result':'results'} across Walls/Floor, Props, Set & Lights.`:mode==='walls'?'Place a floor tile or room, then drag its handles to resize.':'Choose an item, then click the map.'}</p>`+(mode==='walls'&&!query?`<button class="draw-wall" data-tool="wall">${svg('wall')}<span>Draw a straight wall</span><small>Click a start and end point · W</small></button>`:'')+(showFloor?`<button class="draw-wall" data-tool="floor">${svg('floor')}<span>Floor tile</span><small>Scalable color or image · always beneath other objects</small></button>`:'')+groups.map(group=>`<section class="catalog-group"><h3>${esc(group)}</h3><div class="catalog-grid">${items.filter(i=>(query?({walls:'Walls/Floor',props:'Props',set:'Set',lights:'Lights',gear:'Gear'})[i.category]+' · '+i.group:i.group)===group).map(i=>{const unavailable=i.id==='sun'&&scene().objects.some(o=>o.kind==='sun');return `<button data-asset="${i.id}" aria-label="Place ${i.name}" ${unavailable?'disabled':''}>${assetIcon(i)}<span>${i.name}</span><small>${i.id==='sun'?unavailable?'Already in this scene':'One per scene · time of day':i.category==='lights'?'Lighting preset':formatLength(i.width)+' × '+formatLength(i.height)}</small></button>`;}).join('')}</div></section>`).join('')+(items.length||showFloor?'':'<p class="catalog-empty">No items found. Try “door”, “lamp”, or “laptop”.</p>');
  }
  panel.querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>{showShots(false);setTool(b.dataset.tool);});
  panel.querySelectorAll('[data-asset]').forEach(b=>b.onclick=()=>{showShots(false);setTool('asset:'+b.dataset.asset);});
@@ -70,6 +70,10 @@ function breakRoom(){
 }
 function bindExtraInspector(){const o=object();if(!o)return;
  bindCameraShot();
+ if(o.type==='floor'){
+  $('upload-floor-image').onclick=()=>{floorImageTarget=o;$('floor-image-input').value='';$('floor-image-input').click();};
+  if(o.src)$('remove-floor-image').onclick=()=>{floorImageRequest++;snapshot();delete o.src;commit();};
+ }
  if(o.type==='wall'&&$('select-multiple-walls'))$('select-multiple-walls').onclick=beginWallSelection;
  if(o.type==='wallGroup'&&$('ungroup-walls'))$('ungroup-walls').onclick=ungroupSelectedWalls;
  if(o.type==='room'&&$('break-room'))$('break-room').onclick=breakRoom;
@@ -113,34 +117,7 @@ function afterObjectChange(o,prop,previous){if(!o)return;stopPlayback();
  }
 }
 function displayObject(o){if(!playback||!o.marks?.length)return o;if(playback.mode!=='scene'&&playback.id!==o.id)return o;if(playback.mode==='scene'&&o.marks.length<2)return o;return {...o,...ScenicModel.motionPose(o,ScenicModel.playbackElapsed(playback,performance.now()))};}
-async function loadDemoProduction(resetID){
- if(!window.ScenicDemo?.enabled||projectExchangeBusy)return;
- if(window.ScenicDesktop?!window.scenicReady:!db){toast('Wait for your workspace to finish loading');return;}
- projectExchangeBusy=true;
- try{
-  endDrag();
-  const plan=ScenicDemo.plan(workspaceData(),uid,resetID);
-  await activatePreparedWorkspace(plan);
-  toast(plan.reset?'Only The Last Light demo was reset · Undo restores edits':plan.created?'The Last Light loaded separately · existing work preserved':'Demo opened · your edits are preserved');
- }finally{projectExchangeBusy=false;}
-}
-let pendingDemoReset=null;
-function showDemoGuide(){
- $('demo-reset').disabled=!ScenicDemo.managed(workspaceData());
- $('demo-guide-dialog').showModal();
-}
 function setupWorkflow(){
- if(window.ScenicDemo?.enabled){
-  const demo=$('load-demo');demo.hidden=false;$('demo-guide-button').hidden=false;
-  const open=async resetID=>{demo.disabled=true;try{await loadDemoProduction(resetID);}catch(error){toast('Could not load demo: '+error.message);}finally{demo.disabled=false;}};
-  demo.onclick=()=>open();
-  $('demo-guide-button').onclick=showDemoGuide;
-  $('demo-guide-close').onclick=()=>$('demo-guide-dialog').close();
-  $('demo-open').onclick=()=>{$('demo-guide-dialog').close();open();};
-  $('demo-reset').onclick=()=>{const owned=ScenicDemo.managed(workspaceData());if(!owned)return;pendingDemoReset=owned.projectId;$('demo-guide-dialog').close();$('demo-reset-dialog').showModal();};
-  $('demo-reset-cancel').onclick=()=>{pendingDemoReset=null;$('demo-reset-dialog').close();};
-  $('demo-reset-confirm').onclick=()=>{const id=pendingDemoReset;pendingDemoReset=null;$('demo-reset-dialog').close();if(id)open(id);};
- }
  setupControls();
  setupShotImport();
  $('new-project').onclick=newProject;$('library-search').oninput=e=>{libraryQuery=e.target.value;renderLibrary();$('library').scrollTop=0;};
@@ -205,7 +182,7 @@ function setupShotImport(){
   }catch(error){$('shot-import-error').textContent=error.message;$('confirm-shot-import').disabled=true;}
  };
 }
-function shotDetails(shot){return `<dl class="source-shot-details">${ScenicShotList.columns.filter(([,key])=>shot[key]!=='').map(([label,key])=>`<div><dt>${esc(label)}</dt><dd>${esc(shot[key])}</dd></div>`).join('')}</dl>`;}
+function shotDetails(shot){return `<dl class="source-shot-details">${ScenicShotList.columns.filter(([,key])=>typeof shot[key]==='string'&&shot[key]!=='').map(([label,key])=>`<div><dt>${esc(label)}</dt><dd>${esc(shot[key])}</dd></div>`).join('')}</dl>`;}
 function cameraShotInspector(camera){
  const shots=scene().shotList||[];if(!shots.length)return '<p class="empty-hint">Import a Production Desk shot list CSV to link this camera to planned coverage.</p>';
  const shot=shots.find(s=>s.id===camera.shotId);

@@ -189,8 +189,7 @@ html.ipad-app,html.ipad-app body{height:100%;overflow:hidden;-webkit-text-size-a
 .ipad-app.ipad-library-docked #sidebar-panel .sidebar-save-note{display:none}
 .ipad-app.ipad-library-docked #sidebar-panel .production-picker{grid-template-columns:1fr 1fr;gap:4px}
 .ipad-app.ipad-library-docked #sidebar-panel .production-picker>.project-heading,
-.ipad-app.ipad-library-docked #production-select,
-.ipad-app.ipad-library-docked #load-demo{grid-column:1 / -1}
+.ipad-app.ipad-library-docked #production-select{grid-column:1 / -1}
 .ipad-app.ipad-library-docked #sidebar-panel .open-project{font-size:12px;padding:4px}
 .ipad-app.ipad-library-docked #sidebar-panel .open-project span{font-size:10px;margin-left:3px}
 .ipad-app.ipad-library-docked #sidebar-panel .scene-builder{min-height:110px}

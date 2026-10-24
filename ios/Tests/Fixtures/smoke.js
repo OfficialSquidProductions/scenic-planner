@@ -2,11 +2,12 @@ window.__smokeStage="begin";
 return await Promise.race([(async()=>{
 const check=(value,message)=>{if(!value)throw Error(message);};
 if(verifyOnly){
- check(doc.name==='IPAD BETA SMOKE','Persisted production name');
+ check(doc.name.startsWith('IPAD BETA SMOKE'),'Persisted production name');
  check(scene().objects.some(o=>o.type==='camera'),'Persisted camera');
  check(scene().shotList?.[0]?.checked===true,'Persisted coverage check');
+ const floor=scene().objects.find(o=>o.type==='floor');check(floor?.width===576&&floor.height===288&&floor.color==='#34ab67'&&floor.src?.startsWith('data:image/png;base64,'),'Persisted floor dimensions, color and embedded image');
  check(ScenicModel.validWorkspace(workspaceData()),'Persisted model validity');
- return {name:doc.name,checks:['cold-launch workspace','camera state','shot import and coverage','valid model'],viewport:{width:innerWidth,height:innerHeight}};
+ return {name:doc.name,checks:['cold-launch workspace','camera state','shot import and coverage','floor color, dimensions and embedded image','valid model'],viewport:{width:innerWidth,height:innerHeight}};
 }
 newProject();doc.name='IPAD BETA SMOKE';scene().title='iPad test scene';scene().objects=[];history=[];future=[];refresh();
 check(document.documentElement.classList.contains('ipad-app'),'iPad adapter loaded');
@@ -37,6 +38,20 @@ window.__smokeStage='import';await window.ScenicIPad.receiveFile({name:'Shots.cs
 check($('shot-import').open,'CSV scene preview');$('confirm-shot-import').click();check(scene().shotList.length===1,'Shot CSV import');
 addObject('camera',{x:200,y:200});const linked=object();$('camera-shot-link').onchange({target:{value:scene().shotList[0].id}});$('camera-shot-checked').onchange({target:{checked:true}});
 check(linked.shotId===scene().shotList[0].id&&scene().shotList[0].checked,'Camera link and coverage');
+check(!document.querySelector('[id*=demo]')&&typeof ScenicDemo==='undefined','No bundled demo');
+renderLibrary('walls');check(document.querySelector('[data-tool="floor"]'),'Walls/Floor includes floor tile');
+addObject('floor',{x:700,y:700});const floor=object(),floorId=floor.id;
+for(const [prop,value] of [['width','16 ft'],['height','8 ft']]){const field=document.querySelector('[data-prop="'+prop+'"][data-length]');check(field,'Exact floor '+prop+' field');field.dispatchEvent(new Event('focus'));field.value=value;field.dispatchEvent(new Event('change',{bubbles:true}));}
+check(floor.width===576&&floor.height===288,'Independent floor dimensions');
+const colorField=document.querySelector('[data-prop="color"]');colorField.dispatchEvent(new Event('focus'));colorField.value='#34ab67';colorField.dispatchEvent(new Event('input',{bubbles:true}));check(floor.color==='#34ab67','Editable floor color');
+const texture=document.createElement('canvas');texture.width=40;texture.height=20;const tc=texture.getContext('2d');for(const [color,x,y] of [['#ff0000',0,0],['#00ff00',20,0],['#0000ff',0,10],['#ffff00',20,10]]){tc.fillStyle=color;tc.fillRect(x,y,20,10);}
+const data=texture.toDataURL(),blob=await(await fetch(data)).blob();await importFloorImage(new File([blob],'synthetic-floor.png',{type:'image/png'}),floor);check(floor.src===data,'Floor image bytes embedded');
+const stable=JSON.stringify(workspaceData());await importFloorImage(undefined,floor);await importFloorImage(new File(['broken'],'bad.png',{type:'image/png'}),floor);check(JSON.stringify(workspaceData())===stable,'Cancelled and invalid floor images preserve project');
+$('remove-floor-image').click();check(!floor.src,'Remove floor image');undo();choose(floorId);check(object().src===data,'Undo restores floor image');
+await importFloorImage(new File([blob],'replacement.png',{type:'image/png'}),object());
+addObject('asset:mug',{x:700,y:700});const mugId=object().id;scene().objects.reverse();choose(floorId);check(hit({x:700,y:700}).id===mugId,'Covered floor selection leaves foreground reachable');
+const roundtrip=ScenicProjectFile.parse(ScenicProjectFile.serialize(doc));check(roundtrip.scenes.find(s=>s.id===doc.active).objects.find(o=>o.id===floorId).src===data,'Portable floor image survives save/reopen');
+check(scene().objects.find(o=>o.id===floorId).width===576,'Image replacement keeps scaled bounds');
 window.__smokeStage='export';await window.ScenicDesktop.exportFile(new Blob([JSON.stringify(doc)],{type:'application/json'}),'Smoke.scenic');
 window.__smokeStage='export';await window.ScenicDesktop.exportFile(new Blob([csv],{type:'text/csv'}),'Smoke.csv');
 window.__smokeStage='preview';await window.ScenicSceneBrowser.preview(doc.projectId,scene().id).then(image=>check(image?.startsWith('data:image/jpeg'),'Scene thumbnail'));
@@ -44,6 +59,6 @@ exportMap();await new Promise(resolve=>setTimeout(resolve,500));
 canvas.setPointerCapture=originalCapture;
 check(ScenicModel.validWorkspace(workspaceData()),'Valid workspace');window.__smokeStage='flush';await window.scenicFlush();
 const body=document.querySelector('.workspace').getBoundingClientRect();check(body.width<=innerWidth+1,'Workspace fits viewport');
-return {name:doc.name,checks:['portable .scenic import copy','touch placement and drag','undo/redo','two-finger pan/zoom','scene preservation','properties and library drawers','Production Desk CSV import','camera links and coverage','native .scenic/CSV/PNG export','scene thumbnails','native autosave'],viewport:{width:innerWidth,height:innerHeight}};
+return {name:doc.name,checks:['portable .scenic import copy','touch placement and drag','undo/redo','two-finger pan/zoom','scene preservation','properties and library drawers','Production Desk CSV import','camera links and coverage','native .scenic/CSV/PNG export','scene thumbnails','native autosave','no bundled demo','floor dimensions and color','embedded floor image replacement/removal/cancel/invalid','foreground selection above floors','portable floor image save/reopen'],viewport:{width:innerWidth,height:innerHeight}};
 
 })(),new Promise((_,reject)=>setTimeout(()=>reject(Error("Smoke timed out at "+window.__smokeStage)),20000))]);

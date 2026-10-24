@@ -106,7 +106,7 @@ Release 1.4.15 passed [Windows build, installation, scene-browser, crash-recover
 
 Run `node tests/reports.cjs` for crash-report lifecycle and consent checks. On Mac, compile `macos/Reports.swift` with `tests/ReportsCheck.swift` and run the resulting test executable.
 
-Run `node tests/solar.cjs`, `node tests/camera.cjs`, `node tests/scale.cjs`, `node tests/selection.cjs`, `node tests/groups.cjs`, `node tests/transforms.cjs`, `node tests/rooms.cjs`, `node tests/room-editor.cjs`, `node tests/geometry.cjs`, `node tests/catalog.cjs`, `node tests/model.cjs`, and `node tests/windows-store.cjs` to verify measurements, catalog validation, occlusion, wall attachments, door/window behavior, movement, sunlight, and multi-production storage migration. Source is buildless HTML/CSS/JavaScript in `dist/`.
+Run `node tests/floors.cjs` and `node tests/production-desk-interchange.cjs` for floors and the audited Production Desk shot-list CSV fixture. Pass the current Production Desk `web/shots.js` path to the interchange test to execute its actual modular exporter with synthetic data. Script coverage text is retained as optional source metadata; legacy shot-list projects remain valid. Run `node tests/solar.cjs`, `node tests/camera.cjs`, `node tests/scale.cjs`, `node tests/selection.cjs`, `node tests/groups.cjs`, `node tests/transforms.cjs`, `node tests/rooms.cjs`, `node tests/room-editor.cjs`, `node tests/geometry.cjs`, `node tests/catalog.cjs`, `node tests/model.cjs`, and `node tests/windows-store.cjs` to verify measurements, catalog validation, occlusion, wall attachments, door/window behavior, movement, sunlight, and multi-production storage migration. Source is buildless HTML/CSS/JavaScript in `dist/`.
 
 ## Mapping scale
 
@@ -126,12 +126,6 @@ Camera guides use the rectilinear relation `horizontal angle = 2 × atan(active 
 
 Save and share complete editable productions, including embedded assets. Imports create distinct productions while preserving current work. See [portable format](PORTABLE-PROJECTS.md) and [iPhone/iPad sources](ios/README.md).
 
-## Temporary shared demo
+## Empty productions and existing files
 
-Choose **Load The Last Light demo** under Productions to explore the original
-eight-scene Production Desk screenplay, with matching cast, props, locations and
-16 linked camera setups. **Demo guide / reset** explains scene-map exercises,
-CSV exchange and explicit reset. Reopening preserves edits. Reset ownership is
-workspace-local; real projects, older Last Cue samples and imported copies remain
-intact. The demo is temporary for testing/reference. Entry points can be disabled
-later without deleting saved projects; see [demo details](ios/README.md).
+New productions start with an empty scene. The bundled sample project and its Load Demo, guide and reset entry points have been removed. Existing saved or imported productions, including older demo copies, remain editable and portable. User scene/production management stays available.

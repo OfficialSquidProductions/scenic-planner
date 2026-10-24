@@ -70,24 +70,8 @@ if(!ScenicIPad.isPhone){
 }
 check(document.documentElement.scrollWidth<=innerWidth+1,'Editor does not horizontally overflow');
 panelChecks.push('all panel controls visible and at least 44 points','disclosure states and repeated toggle restoration','no page overflow');
-const beforeDemo=structuredClone(workspaceData());
-const existingDemo=beforeDemo.projects.some(p=>p.demoKey===ScenicDemo.key);
-await loadDemoProduction();
-check(workspace.projects.length===beforeDemo.projects.length+(existingDemo?0:1),'Demo opens once as separate production');
-check(JSON.stringify(workspace.projects.filter(p=>p.demoKey!==ScenicDemo.key))===JSON.stringify(beforeDemo.projects.filter(p=>p.demoKey!==ScenicDemo.key)),'Demo preserves every personal production and scene');
-check(doc.demoKey===ScenicDemo.key&&scene().objects.filter(o=>o.type==='actor').length===2,'Demo includes Maya and Leo');
-check(ScenicShotList.coverage(scene()).linked===4,'Demo has four linked camera shots');
-check(scene().notes.includes('MAYA:')&&scene().notes.includes('LEO:'),'Original demo script stored in portable scene notes');
-const demoCount=workspace.projects.length,demoId=doc.projectId;
-scene().notes+='\nEdited in native iOS demo verification.';save();
-await loadDemoProduction();
-check(workspace.projects.length===demoCount&&doc.projectId===demoId&&scene().notes.includes('Edited in native'),'Repeated Load Demo preserves edits and avoids duplicates');
-const demoText=ScenicProjectFile.serialize(doc);
-await importPortableProject(demoText);
-check(doc.projectId!==demoId&&scene().notes.includes('Edited in native'),'Demo export/import produces separate editable copy');
-await ScenicDesktop.exportFile(new Blob([ScenicProjectFile.serialize(doc)],{type:'application/json'}),'the-last-cue-demo.scenic');
-loadWorkspace(beforeDemo);applyEditorSettings();applyTheme();refresh();fit();
-panelChecks.push('offline demo loaded as separate production','all prior productions preserved','four linked shots and original script','repeat Load Demo preserves edits without duplicate','edited demo portable export and distinct-copy import');
+check(!document.querySelector('[id*=demo]')&&typeof ScenicDemo==='undefined','No shipping demo controls or data');
+panelChecks.push('no bundled demo entry points; existing imported projects preserved');
 await ScenicDesktop.exportFile(new Blob([ScenicProjectFile.serialize(doc)],{type:'application/json'}),'ipad-to-desktop.scenic');
 await scenicFlush();
 return {panelAppearance,checks:[...panelChecks,'desktop-to-iOS native WKWebView import','embedded PNG, JPG, and WebP decoded','all geometry and object fields preserved','motion and camera links preserved','theme and editor settings preserved','prior production preserved','duplicate name and ID isolation','malformed/newer/damaged rejection without mutation','iOS-to-desktop native file export',...phoneChecks],name:doc.name,viewport:{width:innerWidth,height:innerHeight}};

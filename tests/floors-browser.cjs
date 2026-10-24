@@ -1,0 +1,70 @@
+/* Optional real-browser QA. Uses an isolated temporary profile and synthetic data.
+   SCENIC_PLAYWRIGHT=/path/to/playwright SCENIC_BROWSER=/path/to/chromium node tests/floors-browser.cjs
+   No browser/runtime is installed or replaced by this script. */
+const assert=require('node:assert/strict'),fs=require('node:fs/promises'),path=require('node:path'),http=require('node:http');
+const {chromium}=require(process.env.SCENIC_PLAYWRIGHT||'playwright');
+const root=path.resolve(__dirname,'../dist'),out=path.resolve(__dirname,'../.cache/floor-feature');
+(async()=>{
+ await fs.mkdir(out,{recursive:true});
+ const server=http.createServer(async(req,res)=>{try{const pathname=new URL(req.url,'http://localhost').pathname;const file=path.resolve(root,'.'+(pathname==='/'?'/index.html':pathname));if(!file.startsWith(root+path.sep))throw Error();const data=await fs.readFile(file);res.setHeader('Content-Type',({'.html':'text/html','.js':'text/javascript','.css':'text/css','.png':'image/png'})[path.extname(file)]||'application/octet-stream');res.end(data);}catch{res.writeHead(404);res.end();}});
+ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));let browser;
+ try{
+  browser=await chromium.launch({headless:true,...(process.env.SCENIC_BROWSER?{executablePath:process.env.SCENIC_BROWSER}:{})});
+  const context=await browser.newContext({viewport:{width:1440,height:1000},acceptDownloads:true});const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.goto(`http://127.0.0.1:${server.address().port}`);await page.waitForFunction(()=>typeof workspace!=='undefined'&&!!db);assert.equal(await page.evaluate(()=>scene().objects.length),0);assert.equal(await page.locator('[id*=demo]').count(),0);assert.equal(await page.evaluate(()=>typeof ScenicDemo),'undefined');await page.evaluate(()=>{doc={version:1,projectId:'floor-qa',name:'Synthetic Floor QA',theme:'light',active:'s',scenes:[{id:'s',title:'Floor tile · synthetic stage',ambient:100,objects:[]}]};workspace={version:2,activeProject:doc.projectId,projects:[doc]};history=[];future=[];grid=false;simulation=false;refresh();view={x:0,y:0,z:1};renderLibrary(null);});
+  await page.getByRole('button',{name:'Open Walls/Floor library',exact:true}).click();await page.locator('[data-tool="floor"]').click();await page.locator('#scene-canvas').click({position:{x:220,y:220}});const floorId=await page.evaluate(()=>selected);
+  assert.equal(await page.evaluate(()=>object().type),'floor');
+  async function size(label,value){await page.getByRole('textbox',{name:label,exact:true}).fill(value);await page.getByRole('textbox',{name:label,exact:true}).press('Tab');}
+  await size('Width','16 ft');await size('Height','8 ft');assert.equal(await page.evaluate(()=>object().width),576);assert.equal(await page.evaluate(()=>object().height),288);
+  await page.locator('[data-prop="color"]').fill('#34ab67');assert.equal(await page.evaluate(()=>object().color),'#34ab67');
+  // Four synthetic quadrants prove stretching rather than contain/cover/cropping.
+  const png=await page.evaluate(()=>{const c=document.createElement('canvas');c.width=40;c.height=20;const cx=c.getContext('2d');for(const [color,x,y] of [['#ff0000',0,0],['#00ff00',20,0],['#0000ff',0,10],['#ffff00',20,10]]){cx.fillStyle=color;cx.fillRect(x,y,20,10);}return c.toDataURL();});
+  const upload={name:'synthetic-quadrants.png',mimeType:'image/png',buffer:Buffer.from(png.split(',')[1],'base64')};
+  await page.locator('#floor-image-input').setInputFiles([]);
+  await page.getByRole('button',{name:'Upload image',exact:true}).click();await page.locator('#floor-image-input').setInputFiles(upload);await page.waitForFunction(()=>!!object().src);assert.equal(await page.evaluate(()=>object().src),png);
+  async function pixel(x,y){return page.evaluate(({x,y})=>{draw(true);return Array.from(ctx.getImageData(x,y,1,1).data).slice(0,3);},{x,y});}
+  // Normalize the viewport; 576 x 288 bounds centered at (400,300).
+  await page.evaluate(()=>{object().x=400;object().y=300;view={x:0,y:0,z:1};draw();});
+  const nearPixel=(actual,expected)=>assert(actual.every((n,i)=>Math.abs(n-expected[i])<=2),`${actual} != ${expected}`);
+  nearPixel(await pixel(150,180),[255,0,0]);nearPixel(await pixel(650,180),[0,255,0]);nearPixel(await pixel(150,420),[0,0,255]);nearPixel(await pixel(650,420),[255,255,0]);
+  await size('Width','20 ft');await size('Height','4 ft');nearPixel(await pixel(150,250),[255,0,0]);nearPixel(await pixel(650,250),[0,255,0]);nearPixel(await pixel(150,350),[0,0,255]);nearPixel(await pixel(650,350),[255,255,0]);
+  await size('Width','16 ft');await size('Height','8 ft');
+  const webp=await page.evaluate(()=>{const c=document.createElement('canvas');c.width=c.height=8;c.getContext('2d').fillRect(0,0,8,8);return c.toDataURL('image/webp');});
+  await page.getByRole('button',{name:'Replace image',exact:true}).click();await page.locator('#floor-image-input').setInputFiles({name:'replacement.webp',mimeType:'image/webp',buffer:Buffer.from(webp.split(',')[1],'base64')});await page.waitForFunction(src=>object().src===src,webp);
+  const dimensions=await page.evaluate(()=>[object().width,object().height]);
+  const jpeg=await page.evaluate(()=>{const c=document.createElement('canvas');c.width=c.height=8;const cx=c.getContext('2d');cx.fillStyle='#6a2c91';cx.fillRect(0,0,8,8);return c.toDataURL('image/jpeg');});
+  await page.getByRole('button',{name:'Replace image',exact:true}).click();await page.locator('#floor-image-input').setInputFiles({name:'replacement.jpg',mimeType:'image/jpeg',buffer:Buffer.from(jpeg.split(',')[1],'base64')});await page.waitForFunction(src=>object().src===src,jpeg);assert.deepEqual(await page.evaluate(()=>[object().width,object().height]),dimensions);
+  await page.getByRole('button',{name:'Remove image',exact:true}).click();assert.equal(await page.evaluate(()=>object().src),undefined);nearPixel(await pixel(250,250),[52,171,103]);await page.evaluate(id=>{undo();choose(id);},floorId);assert.equal(await page.evaluate(()=>object().src),jpeg);
+  // Invalid payloads and cancellation never enter history or destroy the old image.
+  const stable=await page.evaluate(()=>[JSON.stringify(workspaceData()),history.length]);
+  for(const file of [{name:'broken.png',mimeType:'image/png',buffer:Buffer.from('not an image')},{name:'vector.svg',mimeType:'image/svg+xml',buffer:Buffer.from('<svg/>')},{name:'oversize.png',mimeType:'image/png',buffer:Buffer.alloc(21*1024*1024)}]){await page.locator('#floor-image-input').setInputFiles([]);await page.getByRole('button',{name:'Replace image',exact:true}).click();await page.locator('#floor-image-input').setInputFiles(file);await page.waitForFunction(()=>/could not be opened|Choose a PNG|20 MB/.test(document.getElementById('toast').textContent));assert.deepEqual(await page.evaluate(()=>[JSON.stringify(workspaceData()),history.length]),stable);}
+  await page.getByRole('button',{name:'Replace image',exact:true}).click();await page.locator('#floor-image-input').setInputFiles([]);assert.deepEqual(await page.evaluate(()=>[JSON.stringify(workspaceData()),history.length]),stable);
+  await page.getByRole('button',{name:'Replace image',exact:true}).click();await page.locator('#floor-image-input').setInputFiles(upload);await page.waitForFunction(src=>object().src===src,png);
+  // Foreground objects are created before and after floors. Reordering never changes the floor pass.
+  await page.evaluate(id=>{addObject('asset:sofa',{x:400,y:300});addObject('actor',{x:480,y:310});addObject('camera',{x:560,y:370});addObject('light',{x:280,y:380});addObject('asset:mug',{x:400,y:300});addObject('floor',{x:400,y:300});object().width=100;object().height=100;object().color='#aa5522';scene().objects.reverse();choose(id);commit();view={x:0,y:0,z:1};draw();},floorId);
+  assert.notDeepEqual(await pixel(400,300),[170,85,34]);assert.notEqual(await page.evaluate(()=>hit({x:400,y:300}).type),'floor');
+  await page.locator('#scene-canvas').click({position:{x:400,y:300}});assert.notEqual(await page.evaluate(()=>object().type),'floor');
+  await page.getByRole('tab',{name:'Scene layers',exact:true}).click();await page.locator(`[data-object="${floorId}"]`).click();assert.equal(await page.evaluate(()=>selected),floorId);
+  const layerTypes=await page.evaluate(()=>Array.from(document.querySelectorAll('[data-object]')).map(b=>scene().objects.find(o=>o.id===b.dataset.object).type));assert(layerTypes.slice(-2).every(t=>t==='floor'));
+  // Save portable .scenic through the real UI, import into an isolated new browser context.
+  const downloadPromise=page.waitForEvent('download');await page.locator('#save-project').click();const download=await downloadPromise;await download.saveAs(path.join(out,'synthetic-floor.scenic'));const saved=JSON.parse(await fs.readFile(path.join(out,'synthetic-floor.scenic'),'utf8'));assert.equal(saved.scenes[0].objects.find(o=>o.id===floorId).src,png);
+  await page.waitForFunction(()=>document.getElementById('save-state').textContent.includes('Saved on this device'));const savedWorkspace=await page.evaluate(()=>JSON.stringify(workspaceData()));await page.reload();await page.waitForFunction(id=>typeof doc!=='undefined'&&doc.projectId===id,'floor-qa');assert.equal(await page.evaluate(()=>JSON.stringify(workspaceData())),savedWorkspace);
+  const imported=await browser.newContext({viewport:{width:1440,height:1000},acceptDownloads:true}),fresh=await imported.newPage();await fresh.goto(page.url());await fresh.waitForFunction(()=>!!db);await fresh.locator('#project-input').setInputFiles(path.join(out,'synthetic-floor.scenic'));await fresh.waitForFunction(()=>doc.name==='Synthetic Floor QA');assert.equal(await fresh.evaluate(id=>scene().objects.find(o=>o.id===id).src,floorId),png);
+  // Cold cache PNG export must finish decoding floor pixels before drawing.
+  await fresh.evaluate(()=>{images.clear();simulation=false;grid=false;const normalDraw=draw;draw=(exporting)=>{if(exporting)window.lastExportView={...view};normalDraw(exporting);};});const exportPromise=fresh.waitForEvent('download');await fresh.locator('#export').click();const exported=await exportPromise;await exported.saveAs(path.join(out,'floor-export.png'));
+  const exportData=await fs.readFile(path.join(out,'floor-export.png'));const exportPixels=await fresh.evaluate(async src=>{const image=new Image();image.src=src;await image.decode();const c=document.createElement('canvas');c.width=image.width;c.height=image.height;const cx=c.getContext('2d');cx.drawImage(image,0,0);return [[150,180],[650,180],[150,420],[650,420]].map(([x,y])=>Array.from(cx.getImageData(Math.round(x*lastExportView.z+lastExportView.x),Math.round(y*lastExportView.z+lastExportView.y),1,1).data).slice(0,3));},'data:image/png;base64,'+exportData.toString('base64'));exportPixels.forEach((p,i)=>nearPixel(p,[[255,0,0],[0,255,0],[0,0,255],[255,255,0]][i]));
+  const cold=await fresh.evaluate(async()=>{images.clear();const previous=JSON.stringify({active:doc.active,view,selected});const thumbnail=await ScenicSceneBrowser.preview(doc.projectId,doc.active);return {thumbnail,restored:previous===JSON.stringify({active:doc.active,view,selected})};});assert(cold.restored);assert(cold.thumbnail.startsWith('data:image/jpeg;base64,'));await fs.writeFile(path.join(out,'floor-preview.jpg'),Buffer.from(cold.thumbnail.split(',')[1],'base64'));
+  // Desktop, minimum native window, and mobile layouts use the real controls.
+  const layouts=[];
+  for(const [name,width,height] of [['desktop',1440,1000],['compact',1024,768],['tablet',768,1024],['mobile',390,844]]){
+   await fresh.setViewportSize({width,height});await fresh.evaluate(id=>{choose(id);renderLibrary('walls');fit();draw();},floorId);
+   if(name==='mobile'){await fresh.locator('#workspace-menu').click();await fresh.locator('[data-tool="floor"]').waitFor({state:'visible'});await fresh.screenshot({path:path.join(out,'floor-mobile-library.png')});await fresh.locator('[data-tool="floor"]').click();await fresh.evaluate(id=>{setTool('select');choose(id);},floorId);}
+   await fresh.evaluate(()=>{document.getElementById('toast').classList.remove('show');});await fresh.screenshot({path:path.join(out,`floor-${name}.png`)});const layout=await fresh.evaluate(()=>{const ids=['properties-sidebar','canvas-wrap'];return ids.map(id=>{const el=document.getElementById(id),r=el.getBoundingClientRect();return {id,x:r.x,width:r.width,right:r.right,scrollWidth:el.scrollWidth,clientWidth:el.clientWidth};});});layouts.push({name,width,height,layout});for(const box of layout)assert(box.x>=0&&box.right<=width+1,`${name}: ${box.id} exceeds viewport`);const tabBounds=await fresh.locator('.catalog-tabs [data-category="walls"]').evaluate(el=>({client:el.clientWidth,scroll:el.scrollWidth}));assert(tabBounds.scroll<=tabBounds.client,`${name}: Walls/Floor label clipped`);
+   const widthInput=fresh.getByRole('textbox',{name:'Width',exact:true});await widthInput.fill('18 ft');await widthInput.press('Tab');assert.equal(await fresh.evaluate(()=>object().width),648);
+   if(name==='mobile'){await fresh.getByRole('button',{name:'Remove image',exact:true}).click();assert.equal(await fresh.evaluate(()=>object().src),undefined);await fresh.evaluate(id=>{undo();choose(id);},floorId);assert.equal(await fresh.evaluate(()=>object().src),png);}
+
+  }
+  assert.deepEqual(errors,[]);await fs.writeFile(path.join(out,'browser-results.json'),JSON.stringify({engine:browser.version(),passed:true,layouts,errors,checks:['real controls','color','independent sizes','four-quadrant stretch pixels','image replacement/removal','invalid MIME/corrupt/oversize/cancel','overlap picking and stacking','array reorder','portable download/import','autosave/reload','cold PNG and preview','desktop/compact/mobile']},null,2));
+  await context.close();await imported.close();console.log('Real browser floor workflows passed; screenshots and portable synthetic fixtures: '+out);
+ }finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));}
+})().catch(e=>{console.error(e);process.exitCode=1;});

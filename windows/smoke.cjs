@@ -72,26 +72,19 @@ module.exports=async({win,store,flush,report})=>{
  checks.push('Actual renderer crash reloads the saved workspace and prompts for description/log review; dismiss and Settings reopen work without sending email');
  await js("window.__originalFlush=window.scenicFlush;window.scenicFlush=async()=>{throw Error('test save failure')};void 0");assert.equal(await flush(),false);await js('window.scenicFlush=window.__originalFlush;void 0');assert.equal(await flush(),true);checks.push('Failed save blocks update/exit gate; retry succeeds');
  const before=fs.readFileSync(store.current,'utf8');await assert.rejects(js("window.ScenicDesktop.request('saveProject',{project:'invalid'})"));assert.equal(fs.readFileSync(store.current,'utf8'),before);checks.push('Invalid native save rejected without modifying workspace');
- // Exercise the shipped demo with real Electron storage, then restore the
- // previous synthetic workspace so install/reinstall preservation checks remain exact.
- const beforeDemo=await js('JSON.stringify(workspaceData())');
+ // Release resources contain no demo entry points; legacy workspaces remain intact.
+ assert.equal(await js("document.querySelector('[id*=demo]')===null"),true);
+ assert.equal(await js("typeof ScenicDemo"),'undefined');
+ const beforeFloor=await js('JSON.stringify(workspaceData())');
  try{
-  await js('loadDemoProduction()');assert.equal(await flush(),true);
-  assert.equal(await js('doc.scenes.length'),8);assert.equal(await js('doc.scenes.flatMap(s=>s.shotList).length'),16);
-  assert.equal(await js('doc.scenes.reduce((n,s)=>n+ScenicShotList.coverage(s).linked,0)'),16);
-  const demoID=await js('doc.projectId'),demoCount=await js('workspace.projects.length');
-  const originals=JSON.parse(beforeDemo).projects;const loaded=JSON.parse(await js('JSON.stringify(workspaceData())'));
-  for(const p of originals)assert.deepEqual(loaded.projects.find(q=>q.projectId===p.projectId),p);
-  await js("document.getElementById('project-name').value='Native edited Last Light demo';document.getElementById('project-name').dispatchEvent(new Event('input'));document.getElementById('project-name').dispatchEvent(new Event('change'))");
-  await js('loadDemoProduction()');assert.equal(await flush(),true);
-  assert.equal(await js('doc.projectId'),demoID);assert.equal(await js('workspace.projects.length'),demoCount);assert.equal(await js('doc.name'),'Native edited Last Light demo');
-  await js("document.getElementById('demo-guide-button').click();document.getElementById('demo-reset').click();document.getElementById('demo-reset-cancel').click()");
-  assert.equal(await js('doc.name'),'Native edited Last Light demo');
-  await js('loadDemoProduction('+JSON.stringify(demoID)+')');assert.equal(await flush(),true);
-  assert.equal(await js('doc.name'),'DEMO · The Last Light');assert.equal(await js('workspace.projects.length'),demoCount);
-  await js('undo()');assert.equal(await flush(),true);assert.equal(await js('doc.name'),'Native edited Last Light demo');
-  checks.push('Native Last Light demo has8 original scenes and16 linked shots; existing productions preserved; edited repeat avoids duplicates; reset cancel and Undo preserve edits');
- }finally{await js('loadWorkspace('+beforeDemo+');commit()');assert.equal(await flush(),true);}
+  await js("addObject('floor',{x:400,y:300});object().width=648;object().height=216;object().color='#ff9300';object().src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==';commit()");
+  assert.equal(await flush(),true);
+  const floor=JSON.parse(await js('JSON.stringify(object())'));
+  assert.equal(floor.width,648);assert.equal(floor.height,216);assert.equal(floor.color,'#ff9300');
+  assert.equal(await js('ScenicProjectFile.parse(ScenicProjectFile.serialize(doc)).scenes.find(s=>s.id===doc.active).objects.find(o=>o.id===selected).src'),floor.src);
+  await js('addObject("actor",{x:400,y:300});scene().objects.reverse();draw(true)');assert.notEqual(await js('hit({x:400,y:300}).type'),'floor');
+  checks.push('No bundled demo UI; native floor color/dimensions/embedded bytes survive portable serialization; foreground remains selectable after reordering');
+ }finally{await js('loadWorkspace('+beforeFloor+');commit()');assert.equal(await flush(),true);}
  assert.equal(await js("typeof window.require"),'undefined');assert.equal(win.webContents.getLastWebPreferences().contextIsolation,true);assert.equal(win.webContents.getLastWebPreferences().sandbox,true);checks.push('Renderer has no Node access, runs in sandbox and isolated context');
  const png=await win.webContents.capturePage();fs.writeFileSync(path.join(path.dirname(report),'windows.png'),png.toPNG());
  return {passed:true,platform:process.platform,version:require('./package.json').version,checks};

@@ -188,13 +188,13 @@ function validProject(p){
   if(s.shotList!==undefined&&!shotLists.validList(s.shotList))return false;
   const objectIds=new Set();let suns=0;
   for(const o of s.objects){
-   if(!o||typeof o.id!=='string'||objectIds.has(o.id)||typeof o.name!=='string'||!['wall','room','wallGroup','camera','light','actor','sofa','table','prop','set','gear','image'].includes(o.type)||![o.x,o.y].every(coordinate))return false;objectIds.add(o.id);
-   const nums={wall:['x2','y2','thickness'],room:['width','height','rotation','thickness'],wallGroup:['width','height','rotation'],camera:['rotation','fov','lens'],light:['rotation','power','temperature','beam','radius'],actor:['rotation'],sofa:['width','height','rotation'],table:['width','height','rotation'],prop:['width','height','rotation'],set:['width','height','rotation'],gear:['width','height','rotation'],image:['width','height','rotation','opacity']}[o.type];
+   if(!o||typeof o.id!=='string'||objectIds.has(o.id)||typeof o.name!=='string'||!['wall','room','wallGroup','floor','camera','light','actor','sofa','table','prop','set','gear','image'].includes(o.type)||![o.x,o.y].every(coordinate))return false;objectIds.add(o.id);
+   const nums={wall:['x2','y2','thickness'],room:['width','height','rotation','thickness'],floor:['width','height','rotation'],wallGroup:['width','height','rotation'],camera:['rotation','fov','lens'],light:['rotation','power','temperature','beam','radius'],actor:['rotation'],sofa:['width','height','rotation'],table:['width','height','rotation'],prop:['width','height','rotation'],set:['width','height','rotation'],gear:['width','height','rotation'],image:['width','height','rotation','opacity']}[o.type];
    if(!nums.every(k=>finite(o[k])))return false;
    if(o.type==='camera'&&((o.sensorWidth!==undefined&&(!finite(o.sensorWidth)||o.sensorWidth<1||o.sensorWidth>100))||(o.viewDistance!==undefined&&(!finite(o.viewDistance)||o.viewDistance<3||o.viewDistance>5000))))return false;
    if(o.shotId!==undefined&&(o.type!=='camera'||typeof o.shotId!=='string'||!s.shotList?.some(shot=>shot.id===o.shotId)))return false;
    if(o.type==='wall'&&(!coordinate(o.x2)||!coordinate(o.y2)||o.thickness<=0||o.thickness>100))return false;
-   if(['wallGroup','room','image','table','sofa','prop','set','gear'].includes(o.type)&&(!(o.width>0&&o.width<=5000)||!(o.height>0&&o.height<=5000)))return false;
+   if(['floor','wallGroup','room','image','table','sofa','prop','set','gear'].includes(o.type)&&(!(o.width>0&&o.width<=5000)||!(o.height>0&&o.height<=5000)))return false;
    if(o.type==='wallGroup'&&(!Array.isArray(o.wallIds)||o.wallIds.length<2||o.wallIds.length>1999||new Set(o.wallIds).size!==o.wallIds.length||!o.wallIds.every(id=>typeof id==='string'&&s.objects.some(w=>w.id===id&&w.type==='wall'))))return false;
    if(o.type==='wallGroup'&&(o.width<1.5||o.height<1.5||o.keepProportions!==undefined&&typeof o.keepProportions!=='boolean'))return false;
    if(o.type==='actor'&&['width','height'].some(k=>o[k]!==undefined&&(!finite(o[k])||o[k]<1.5||o[k]>5000)))return false;
@@ -210,6 +210,7 @@ function validProject(p){
      if(!solar.validFields(o)||++suns>1||!['time','sunrise','sunset','riseDirection','setDirection'].every(k=>finite(o[k]))||o.time<0||o.time>24||o.sunrise<0||o.sunset>24||o.sunrise>=o.sunset||o.riseDirection<0||o.riseDirection>360||o.setDirection<0||o.setDirection>360)return false;
     }
    }
+   if(o.type==='floor'&&(!/^#[0-9a-f]{6}$/i.test(o.color)||o.width<1.5||o.height<1.5||o.locked!==undefined&&typeof o.locked!=='boolean'||o.src!==undefined&&(typeof o.src!=='string'||o.src.length>28*1024*1024||!/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(o.src)||(o.src.length-o.src.indexOf(',')-1)%4!==0)))return false;
    if(o.type==='image'&&(typeof o.src!=='string'||!/^data:image\/(png|jpeg|webp);base64,/.test(o.src)))return false;
    if(openingKind(o)){
     if(o.wallId!==undefined&&(typeof o.wallId!=='string'||!finite(o.wallT)||o.wallT<0||o.wallT>1))return false;

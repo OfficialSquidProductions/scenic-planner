@@ -1,0 +1,13 @@
+"Day","Scene","Shot","Description","Size","Movement","Camera","Lens mm","Equipment","Setup minutes","Shoot minutes","Actual minutes","Status","Takes","Circle take","Priority","Notes","Script coverage"
+"Day 1","12","12A","Wide, quiet ""room""
+Then turn — café","Medium close-up","Tracking","B","85","Dolly, tripod","12","25","17","Done","4","3","Essential","'=preserve formula-like text
+Quoted ""notes""","Rich ""Plan"".pdf · pp. 1–3 · Off camera · Off camera, pause
+Second line
+Rich ""Plan"".pdf · p. 4 · On camera · Close ""reaction"""
+"Day 1","12","12.2","Wide, quiet ""room""
+Then turn — café","Medium close-up","Tracking","B","24–70","Dolly, tripod","12","25","","Omitted","4","3","Essential","'=preserve formula-like text
+Quoted ""notes""",""
+"Unscheduled","14A","14AAA","Wide, quiet ""room""
+Then turn — café","Medium close-up","Tracking","B","85","Dolly, tripod","12","25","17","Planned","4","3","Essential","Unscheduled; preserve Unicode ✓",""
+"Day 2","01","01.3","Insert of road, carpet and floor","Medium close-up","Tracking","B","85","Dolly, tripod","12","25","17","Ready","4","3","Essential","'=preserve formula-like text
+Quoted ""notes""",""

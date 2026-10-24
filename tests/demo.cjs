@@ -1,5 +1,5 @@
 const assert=require('node:assert/strict');
-const demo=require('../dist/demo.js'),file=require('../dist/project-file.js'),model=require('../dist/model.js'),shots=require('../dist/shot-list.js');
+const demo=require('./fixtures/legacy-demo.js'),file=require('../dist/project-file.js'),model=require('../dist/model.js'),shots=require('../dist/shot-list.js');
 const project=demo.project();file.validate(project);assert(model.validProject(project));
 assert.equal(project.scenes.length,8);assert.equal(project.name,'DEMO · The Last Light');
 assert.equal(project.scenes.flatMap(s=>s.shotList).length,16);
@@ -23,3 +23,6 @@ const reset=demo.plan(imported.workspace,id,owned.projectId);assert.equal(reset.
 const stale={...reset.workspace,_demoProjects:{[demo.key]:'deleted'}};const fresh=demo.plan(stale,id);assert.equal(fresh.workspace.projects.length,5);assert.equal(demo.managed(fresh.workspace).projectId,'copy-'+seq);
 assert.notEqual(demo.project().scenes[0].objects,project.scenes[0].objects);
 console.log('PASS: eight original scenes,16 linked shots, portable roundtrip; legacy/real/imported projects preserved; repeat, reset ownership and stale registry safe.');
+
+for(const name of ['app.js','workflow.js','index.html'])assert(!require('node:fs').readFileSync('dist/'+name,'utf8').match(/ScenicDemo|loadDemoProduction|load-demo|demo-guide|demo-reset/),name+' ships demo entry points');
+assert(!require('node:fs').existsSync('dist/demo.js'));

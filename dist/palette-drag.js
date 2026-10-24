@@ -2,7 +2,7 @@
    Touch waits for a hold; a swipe before the hold remains ordinary scrolling. */
 (()=>{
  'use strict';
- const root=document.documentElement,selector='#library [data-asset],#library [data-tool],#tools [data-tool]',tools=new Set(['camera','light','actor','wall']);
+ const root=document.documentElement,selector='#library [data-asset],#library [data-tool],#tools [data-tool]',tools=new Set(['camera','light','actor','wall','floor']);
  const help=document.createElement('p');help.id='palette-drag-help';help.className='palette-drag-help';help.textContent=window.ScenicIPad?'Hold, then drag · Swipe to scroll':'Click, then map · Or drag to place';
  $('library-heading').after(help);
  const status=document.createElement('div');status.className='visually-hidden';status.setAttribute('role','status');status.setAttribute('aria-live','polite');document.body.append(status);
@@ -14,7 +14,7 @@
   const button=target.closest?.(selector);if(!button||button.disabled)return null;
   const asset=button.dataset.asset&&ScenicCatalog.get(button.dataset.asset),type=asset?'asset:'+asset.id:button.dataset.tool;
   if(!asset&&!tools.has(type))return null;
-  return {button,type,name:asset?.name||({camera:'Camera',light:'Light',actor:'Talent',wall:'Wall'})[type]};
+  return {button,type,name:asset?.name||({camera:'Camera',light:'Light',actor:'Talent',wall:'Wall',floor:'Floor tile'})[type]};
  }
  function decorate(){if(window.ScenicIPad)$('library-heading').querySelector('.tiny').textContent='TAP OR HOLD & DRAG';document.querySelectorAll(selector).forEach(button=>{if(!source(button))return;button.setAttribute('aria-describedby',help.id);button.draggable=false;});}
  decorate();new MutationObserver(decorate).observe($('library'),{childList:true,subtree:true});

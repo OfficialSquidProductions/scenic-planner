@@ -1,7 +1,7 @@
 /* Production Desk CSV interchange and coverage data. No editor or DOM dependencies. */
 (function(root){
 'use strict';
-const columns=[['Day','day'],['Scene','scene'],['Shot','number'],['Description','description'],['Size','size'],['Movement','movement'],['Camera','camera'],['Lens mm','lens'],['Equipment','equipment'],['Setup minutes','setupMinutes'],['Shoot minutes','shootMinutes'],['Actual minutes','actualMinutes'],['Status','status'],['Takes','takes'],['Circle take','circleTake'],['Priority','priority'],['Notes','notes']];
+const columns=[['Day','day'],['Scene','scene'],['Shot','number'],['Description','description'],['Size','size'],['Movement','movement'],['Camera','camera'],['Lens mm','lens'],['Equipment','equipment'],['Setup minutes','setupMinutes'],['Shoot minutes','shootMinutes'],['Actual minutes','actualMinutes'],['Status','status'],['Takes','takes'],['Circle take','circleTake'],['Priority','priority'],['Notes','notes'],['Script coverage','scriptCoverage']];
 const sizes=['Wide','Medium wide','Medium','Medium close-up','Close-up','Extreme close-up','Insert','Over the shoulder','POV'];
 const matchKey=value=>value.trim().toUpperCase();
 function parseCSV(text){
@@ -88,7 +88,7 @@ function mergeImport(project,incoming,selectedIds,targets){
  return {scenes,active,plan};
 }
 function validList(list){
- return Array.isArray(list)&&list.length<=2000&&new Set(list.map(s=>s?.id)).size===list.length&&list.every(s=>s&&typeof s.id==='string'&&s.id.length>0&&typeof s.checked==='boolean'&&columns.every(([,key])=>typeof s[key]==='string'&&s[key].length<=20000)&&s.scene.trim()&&s.number.trim());
+ return Array.isArray(list)&&list.length<=2000&&new Set(list.map(s=>s?.id)).size===list.length&&list.every(s=>s&&typeof s.id==='string'&&s.id.length>0&&typeof s.checked==='boolean'&&columns.every(([,key])=>key==='scriptCoverage'&&s[key]===undefined||typeof s[key]==='string'&&s[key].length<=20000)&&s.scene.trim()&&s.number.trim());
 }
 function linkedCameras(scene,shot){return scene.objects.filter(o=>o.type==='camera'&&o.shotId===shot.id);}
 function coverage(scene){const shots=(scene.shotList||[]).filter(s=>s.status.toLowerCase()!=='omitted');return {total:shots.length,linked:shots.filter(s=>linkedCameras(scene,s).length).length,checked:shots.filter(s=>s.checked).length};}

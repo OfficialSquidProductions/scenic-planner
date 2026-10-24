@@ -38,7 +38,8 @@ sources=[];children=[];resource_builds=[]
 for index,name in enumerate(['ScenicIPad.swift','WorkspaceStore.swift','Diagnostics.swift']):
  f=ident(10+index);b=ident(20+index);obj(f,f'isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = {name}; sourceTree = "<group>";');obj(b,f'isa = PBXBuildFile; fileRef = {f};');sources.append(b);children.append(f)
 for index,(name,typ) in enumerate([('web','folder'),('PrivacyInfo.xcprivacy','text.xml'),('LICENSE.txt','text'),('smoke.js','sourcecode.javascript'),('portable-smoke.js','sourcecode.javascript'),('palette-smoke.js','sourcecode.javascript'),('desktop-fixture.scenic','text.json'),('Assets.xcassets','folder.assetcatalog')]):
- f=ident(30+index);b=ident(40+index);obj(f,f'isa = PBXFileReference; lastKnownFileType = {typ}; path = Resources/{name}; sourceTree = "<group>";');obj(b,f'isa = PBXBuildFile; fileRef = {f};');children.append(f);resource_builds.append(b)
+ resource_path=('Tests/Fixtures/' if name in ['smoke.js','portable-smoke.js','palette-smoke.js','desktop-fixture.scenic'] else 'Resources/')+name
+ f=ident(30+index);b=ident(40+index);obj(f,f'isa = PBXFileReference; lastKnownFileType = {typ}; path = {resource_path}; sourceTree = "<group>";');obj(b,f'isa = PBXBuildFile; fileRef = {f};');children.append(f);resource_builds.append(b)
 product=ident(50);group=ident(51);products=ident(52);target=ident(53);proj=ident(54);source_phase=ident(55);res_phase=ident(56);framework_phase=ident(57)
 obj(product,'isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Scenic.app; sourceTree = BUILT_PRODUCTS_DIR;')
 obj(group,f'isa = PBXGroup; children = ({",".join(children)},{products}); sourceTree = "<group>";')
@@ -55,7 +56,8 @@ for list_key,offset,is_target in [(proj_list,70,False),(target_list,80,True)]:
   key=ident(offset+index);keys.append(key)
   settings={'SDKROOT':'iphoneos','IPHONEOS_DEPLOYMENT_TARGET':'17.0','SWIFT_VERSION':'5.0','CLANG_ENABLE_MODULES':'YES'}
   if is_target:
-   settings.update({'PRODUCT_NAME':'Scenic','PRODUCT_MODULE_NAME':'ScenicIPad','PRODUCT_BUNDLE_IDENTIFIER':'org.squidproductions.scenic.ipad','INFOPLIST_FILE':'Info.plist','MARKETING_VERSION':'1.4.22','CURRENT_PROJECT_VERSION':'28','TARGETED_DEVICE_FAMILY':'1,2','SUPPORTED_PLATFORMS':'iphoneos iphonesimulator','SUPPORTS_MACCATALYST':'NO','SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD':'NO','SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD':'NO','CODE_SIGN_STYLE':'Automatic','ASSETCATALOG_COMPILER_APPICON_NAME':'AppIcon','SWIFT_EMIT_LOC_STRINGS':'YES'})
+   settings.update({'PRODUCT_NAME':'Scenic','PRODUCT_MODULE_NAME':'ScenicIPad','PRODUCT_BUNDLE_IDENTIFIER':'org.squidproductions.scenic.ipad','INFOPLIST_FILE':'Info.plist','MARKETING_VERSION':'1.4.23','CURRENT_PROJECT_VERSION':'29','TARGETED_DEVICE_FAMILY':'1,2','SUPPORTED_PLATFORMS':'iphoneos iphonesimulator','SUPPORTS_MACCATALYST':'NO','SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD':'NO','SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD':'NO','CODE_SIGN_STYLE':'Automatic','ASSETCATALOG_COMPILER_APPICON_NAME':'AppIcon','SWIFT_EMIT_LOC_STRINGS':'YES'})
+  if config=='Release' and is_target: settings['EXCLUDED_SOURCE_FILE_NAMES']='smoke.js portable-smoke.js palette-smoke.js desktop-fixture.scenic'
   settings.update({'SWIFT_OPTIMIZATION_LEVEL':'-Onone' if config=='Debug' else '-O','DEBUG_INFORMATION_FORMAT':'dwarf' if config=='Debug' else 'dwarf-with-dsym','ENABLE_TESTABILITY':'YES' if config=='Debug' else 'NO','SWIFT_ACTIVE_COMPILATION_CONDITIONS':'DEBUG' if config=='Debug' else ''})
   text=' '.join(f'{k} = "{v}";' for k,v in settings.items());obj(key,f'isa = XCBuildConfiguration; buildSettings = {{{text}}}; name = {config};')
  obj(list_key,f'isa = XCConfigurationList; buildConfigurations = ({",".join(keys)}); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release;')

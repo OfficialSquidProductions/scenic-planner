@@ -10,7 +10,7 @@
   if(productionId!==doc.projectId)return null;
   const targetScene=doc.scenes.find(s=>s.id===sceneId);if(!targetScene)return null;
   const version=revision,key=productionId+':'+sceneId;if(cache.has(key))return cache.get(key);
-  await Promise.allSettled(targetScene.objects.filter(o=>o.type==='image').map(o=>{const image=imageFor(o);return image.complete?Promise.resolve():image.decode();}));
+  await Promise.allSettled(targetScene.objects.filter(o=>(o.type==='image'||o.type==='floor')&&o.src).map(o=>{const image=imageFor(o);return image.complete?Promise.resolve():image.decode();}));
   if(productionId!==doc.projectId||version!==revision||!doc.scenes.includes(targetScene))return null;
   const previous={canvas,ctx,size,view,active:doc.active,selected,selectedIds,playback};
   try{

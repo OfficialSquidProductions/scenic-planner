@@ -150,16 +150,20 @@ main{container-type:inline-size}
 
 .shot-import-selection{display:flex;gap:8px;margin-top:16px}.shot-import-selection button{font-size:11px}.shot-import-row{align-items:center;flex-wrap:wrap;gap:10px}.shot-import-choice{display:flex;align-items:center;gap:12px;cursor:pointer;flex:1;min-width:170px}.shot-import-choice input{width:17px;height:17px;flex:none}.shot-import-choice strong{display:block;color:var(--ink);overflow-wrap:anywhere}.shot-import-choice small{display:block;font-size:10px;line-height:1.6;margin-top:4px}.shot-import-destination{font-size:10px;max-width:180px;overflow-wrap:anywhere}.shot-import-target{display:grid;gap:5px;font-size:10px;max-width:100%}.shot-import-target select{max-width:240px}#shot-import-changes{font-size:11px;color:var(--muted);line-height:1.8}#shot-import-error{color:var(--accent-ink);font-size:11px;line-height:1.7}#shot-import-error:empty{display:none}
 
-#load-demo[hidden]{display:none}
 
 /* Keep CSV exchange controls together and reachable as Shot List content changes. */
 .shot-list-intro{gap:16px;flex-wrap:wrap}.shot-list-heading{flex:1 1 220px;min-width:0}.shot-list-actions{display:flex;flex-wrap:wrap;gap:8px;min-width:0}.shot-list-actions button{min-height:44px;max-width:100%;white-space:normal}
 @media(max-width:650px){.shot-list-actions{margin-top:15px}.shot-list-intro .shot-list-actions button{margin-top:0}}
 
-#load-demo{font-weight:600;border-color:var(--accent);min-height:44px;white-space:normal}
-#demo-guide-button{min-height:44px;white-space:normal}
-#demo-guide-button[hidden]{display:none}
-#demo-guide-dialog,#demo-reset-dialog{max-width:700px;max-height:85dvh;overflow:auto}
-#demo-guide-dialog li{margin:10px 0;line-height:1.55}
-#demo-guide-dialog .property-actions,#demo-reset-dialog .property-actions{flex-wrap:wrap}
-.ipad-app.ipad-library-docked #demo-guide-button{grid-column:1/-1}
+
+/* Keep the longer library label and floor editing controls within narrow panels. */
+.catalog-tabs button{flex-basis:auto;min-width:max-content;white-space:nowrap}
+@media(max-width:650px){.workspace{grid-template-columns:minmax(0,1fr) 190px}}
+@media(max-width:650px){
+ .scene-heading{display:block;padding:12px 9px}
+ .scene-heading .eyebrow{margin-bottom:8px}
+ #scene-title{min-width:0;font-size:16px}
+ .scene-heading p{display:none}
+ .scene-heading .view-tabs{margin-top:6px;width:max-content;max-width:100%}
+ .scene-heading .view-tabs button{padding:6px 7px}
+}

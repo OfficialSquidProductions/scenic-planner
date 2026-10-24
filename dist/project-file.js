@@ -59,8 +59,8 @@ function validate(project){
  for(const scene of project.scenes){
   if(scene.subtitle!==undefined&&typeof scene.subtitle!=='string'||scene.notes!==undefined&&typeof scene.notes!=='string')fail('Invalid scene text.');
   for(const object of scene.objects){
-   if(object.type==='image'){
-    if(object.opacity<0||object.opacity>100)fail('Invalid image opacity.');
+   if(object.type==='image'||object.type==='floor'&&object.src){
+    if(object.type==='image'&&(object.opacity<0||object.opacity>100))fail('Invalid image opacity.');
     if(!sources.has(object.src)){const info=imageInfo(object.src);pixels+=info.width*info.height;sources.add(object.src);if(sources.size>100||pixels>120000000)fail('This project exceeds the limit of 100 reference images or 120 megapixels in total.');}
    }
   }
@@ -75,7 +75,7 @@ function parse(text){
 async function checkImages(project){
  // Header checks bound decoded memory before the platform image decoder runs.
  if(typeof Image==='undefined')return;
- const sources=new Set(project.scenes.flatMap(s=>s.objects.filter(o=>o.type==='image').map(o=>o.src)));
+ const sources=new Set(project.scenes.flatMap(s=>s.objects.filter(o=>(o.type==='image'||o.type==='floor')&&o.src).map(o=>o.src)));
  for(const src of sources){
   await new Promise((resolve,reject)=>{const img=new Image();const timer=setTimeout(()=>{img.src='';reject(Error('A reference image could not be decoded.'));},10000);img.onload=()=>{clearTimeout(timer);resolve();};img.onerror=()=>{clearTimeout(timer);reject(Error('A reference image is damaged.'));};img.src=src;});
  }

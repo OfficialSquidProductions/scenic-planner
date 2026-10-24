@@ -111,7 +111,7 @@ final class ScenicUITests: XCTestCase {
         XCTAssertTrue(paletteSource("Place Mug").isHittable)
         shot(phone ? "iPhone searched Mug source" : "iPad searched Mug source")
         dragPalette("Place Mug");expectObjectCount(n+1)
-        openItems();app.webViews.buttons["Open Walls library"].tap()
+        openItems();app.webViews.buttons["Open Walls/Floor library"].tap()
         let room=app.webViews.descendants(matching:.any).matching(NSPredicate(format:"label BEGINSWITH %@","Place Square room")).firstMatch
         XCTAssertTrue(room.isHittable,app.debugDescription)
         let map=app.webViews.otherElements.matching(NSPredicate(format:"label BEGINSWITH %@","Interactive scene map.")).firstMatch
@@ -133,7 +133,7 @@ final class ScenicUITests: XCTestCase {
         XCTAssertLessThan(map.frame.minX,10)
         let n=objectCount()
         for i in 1...2 { openItems();dragPalette("Place Camera",dx:0.55,dy:0.4);expectObjectCount(n+i) }
-        openItems();app.webViews.buttons["Open Walls library"].tap()
+        openItems();app.webViews.buttons["Open Walls/Floor library"].tap()
         let wall=app.webViews.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","Draw a straight wall")).firstMatch
         XCTAssertTrue(wall.isHittable)
         wall.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.5)).press(forDuration:0.5,thenDragTo:map.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.5)))
@@ -343,31 +343,12 @@ final class ScenicUITests: XCTestCase {
         app.webViews.buttons["Close scenes and items"].tap()
         shot("Scenic phone touch editing")
     }
-    func testZDemoLoadEditAndReload() throws {
-        let menu=app.webViews.buttons[phone ? "Scenes and items" : "Scenes"]
-        menu.tap()
-        let demo=app.webViews.buttons["Load The Last Light demo"]
-        XCTAssertTrue(demo.waitForExistence(timeout:5));demo.tap()
-        let storyScene=app.webViews.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","01 ")).firstMatch
-        // Reopening an existing production closes a temporary drawer through normal navigation.
-        if !storyScene.waitForExistence(timeout:2) { menu.tap() }
-        XCTAssertTrue(storyScene.waitForExistence(timeout:10));storyScene.tap()
-        let title=app.webViews.textFields["Scene title"]
-        let loaded=XCTNSPredicateExpectation(predicate:NSPredicate { _,_ in (title.value as? String)?.contains("COASTAL ROAD")==true },object:title)
-        XCTAssertEqual(XCTWaiter.wait(for:[loaded],timeout:10),.completed)
+    func testNoBundledDemoEntryPoints() throws {
+        app.webViews.buttons[phone ? "Scenes and items" : "Scenes"].tap()
+        XCTAssertFalse(app.webViews.buttons["Load The Last Light demo"].exists)
+        XCTAssertFalse(app.webViews.buttons["Demo guide / reset"].exists)
+        shot("No bundled demo entry points")
         if app.webViews.buttons[phone ? "Close scenes and items" : "Close panel"].exists { closePanel() }
-        shot("The Last Light loaded demo map")
-        title.tap();title.typeText(" Demo edit")
-        app.webViews.buttons["Scene map"].tap()
-        menu.tap();demo.tap()
-        if app.webViews.buttons[phone ? "Close scenes and items" : "Close panel"].exists { closePanel() }
-        XCTAssertTrue((title.value as? String)?.contains("Demo edit")==true,"Load Demo must reopen the existing edited demo")
-        shot("The Last Light editable fictional demo")
-        app.webViews.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","Shot list")).firstMatch.tap()
-        XCTAssertTrue(app.webViews.switches["Coverage checked for shot 1A"].waitForExistence(timeout:5))
-        shot("The Last Light sixteen linked demo shots")
-        app.terminate();app.launch()
-        XCTAssertTrue(title.waitForExistence(timeout:15));XCTAssertTrue((title.value as? String)?.contains("Demo edit")==true)
     }
     func testRealTouchCanvasAndBackupRoundTrip() throws {
         // Keep the existing synthetic production: this suite only runs in its dedicated simulator.

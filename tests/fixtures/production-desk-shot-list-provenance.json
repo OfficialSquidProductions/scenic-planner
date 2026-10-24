@@ -1,0 +1,13 @@
+{
+  "source": "Production Desk web/shots.js actual createShotDesk().csv()",
+  "sourceSHA256": "48fb09cbd71cb5b11af834d96d450ecf1d335b20cd402acf765ee2fedcfbdb1b",
+  "export": "Shot list → Export shots; all filters",
+  "synthetic": true,
+  "expectedShotNumbers": [
+    "12A",
+    "12.2",
+    "14AAA",
+    "01.3"
+  ],
+  "fields": 18
+}
