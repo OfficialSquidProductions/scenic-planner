@@ -28,7 +28,7 @@ final class ScenicUITests: XCTestCase {
         attachment.lifetime = .keepAlways; add(attachment)
     }
     func paletteSource(_ label: String) -> XCUIElement {
-        app.webViews.descendants(matching:.any).matching(NSPredicate(format:"label == %@",label)).firstMatch
+        app.webViews.descendants(matching:.any).matching(NSPredicate(format:label == "Floor tile" ? "label BEGINSWITH %@" : "label == %@",label)).firstMatch
     }
     func objectCount() -> Int {
         let value=app.webViews.staticTexts.matching(NSPredicate(format:"label MATCHES %@","[0-9]+ objects")).firstMatch.label
@@ -47,14 +47,14 @@ final class ScenicUITests: XCTestCase {
     }
     func palettePoint(_ label: String) -> XCUICoordinate {
         let source=paletteSource(label),reference=app.webViews.buttons.matching(NSPredicate(format:"label CONTAINS %@","Bring in a reference")).firstMatch
-        let top=app.webViews.buttons[phone ? "Scenes and items" : "Items"].frame.maxY+12
-        let paddingX=app.webViews.firstMatch.frame.minX+8
+        let tabs=app.webViews.switches["Walls/Floor"]
+        let top=max(app.webViews.buttons[phone ? "Scenes and items" : "Items"].frame.maxY+12,tabs.isHittable ? tabs.frame.maxY+8 : 0)
         for _ in 0..<6 {
             let bottom=reference.isHittable ? min(reference.frame.minY-12,app.frame.maxY-35) : app.frame.maxY-35
             if source.frame.minY < bottom-12 && source.frame.maxY > top+12 { break }
-            let back=app.webViews.buttons["Back to Build your scene"]
-            if phone && back.isHittable && source.frame.minY>=bottom-12 { back.swipeUp() }
-            else {let from=app.coordinate(withNormalizedOffset:.zero).withOffset(CGVector(dx:phone ? paddingX : source.frame.midX,dy:source.frame.minY>=bottom-12 ? bottom-15 : top+15));from.press(forDuration:0.01,thenDragTo:from.withOffset(CGVector(dx:0,dy:source.frame.minY>=bottom-12 ? -150 : 150)))}
+            // Scroll inside the library, rather than its fixed heading or outer drawer.
+            let from=app.coordinate(withNormalizedOffset:.zero).withOffset(CGVector(dx:source.frame.midX,dy:source.frame.minY>=bottom-12 ? bottom-15 : top+15))
+            from.press(forDuration:0.01,thenDragTo:from.withOffset(CGVector(dx:0,dy:source.frame.minY>=bottom-12 ? -150 : 150)))
         }
         let bottom=reference.isHittable ? min(reference.frame.minY-12,app.frame.maxY-35) : app.frame.maxY-35
         let y=max(top+8,min(source.frame.midY,bottom-8))
@@ -342,6 +342,32 @@ final class ScenicUITests: XCTestCase {
         XCTAssertTrue((app.webViews.textFields["Project name"].value as? String)?.contains("Phone")==true)
         app.webViews.buttons["Close scenes and items"].tap()
         shot("Scenic phone touch editing")
+    }
+    func testFloorTileControlsAndImagePickerCancel() throws {
+        app.webViews.buttons["Scene map"].tap();openItems()
+        app.webViews.buttons["Open Walls/Floor library"].tap()
+        palettePoint("Floor tile").tap()
+        let map=app.webViews.otherElements.matching(NSPredicate(format:"label BEGINSWITH %@","Interactive scene map.")).firstMatch
+        let n=objectCount();map.coordinate(withNormalizedOffset:CGVector(dx:0.62,dy:0.55)).tap();expectObjectCount(n+1)
+        app.webViews.buttons["Properties"].firstMatch.tap()
+        XCTAssertTrue(app.webViews.buttons["Upload image"].waitForExistence(timeout:5))
+        for (label,value) in [("Width","18 ft"),("Height","6 ft")] {
+            let field=app.webViews.textFields[label]
+            field.coordinate(withNormalizedOffset:CGVector(dx:0.97,dy:0.5)).tap()
+            field.typeText(String(repeating:XCUIKeyboardKey.delete.rawValue,count:20)+value+"\n")
+        }
+        XCTAssertTrue((app.webViews.textFields["Width"].value as? String)?.contains("18")==true)
+        XCTAssertTrue((app.webViews.textFields["Height"].value as? String)?.contains("6")==true)
+        shot("Floor independent dimensions and color controls")
+        app.webViews.buttons["Upload image"].tap()
+        shot("Floor native image picker")
+        let choose=app.buttons["Choose File"]
+        if choose.waitForExistence(timeout:3) { choose.tap() }
+        let cancel=app.buttons["Cancel"].firstMatch
+        if cancel.waitForExistence(timeout:5) { cancel.tap() }
+        else { cancelFiles() }
+        XCTAssertTrue(app.webViews.buttons["Upload image"].waitForExistence(timeout:5))
+        shot("Floor image picker cancellation preserves editable floor")
     }
     func testNoBundledDemoEntryPoints() throws {
         app.webViews.buttons[phone ? "Scenes and items" : "Scenes"].tap()
