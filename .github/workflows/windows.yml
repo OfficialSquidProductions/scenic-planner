@@ -25,6 +25,10 @@ jobs:
         run: |
           node tests/platform-branding.cjs
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          node tests/shortcut-hints.cjs
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          node tests/windows-menu.cjs
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
           node tests/floors.cjs
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           node tests/production-desk-interchange.cjs
@@ -107,7 +111,12 @@ jobs:
             exit 0
           }
           gh release view $tag *> $null
-          if ($LASTEXITCODE) { gh release create $tag --draft --title "Scenic $version" --notes-file desktop/release-notes.txt }
+          if ($LASTEXITCODE) { gh release create $tag --target $env:GITHUB_SHA --draft --title "Scenic $version" --notes-file desktop/release-notes.txt }
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           gh release upload $tag $exe release/windows/latest.yml release/windows/Scenic-Windows-Setup.exe.blockmap release/windows/SHA256-Windows.txt
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Publish approved Windows-only release while preserving Mac updates
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: ./tools/publish_windows.ps1
