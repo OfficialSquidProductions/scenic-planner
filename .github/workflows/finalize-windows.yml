@@ -1,0 +1,25 @@
+name: Finalize verified Windows 1.4.24 draft
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/finalize-windows.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  publish:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify existing CI evidence and publish unchanged candidate
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: ./tools/publish_windows.ps1 -CandidateSha b20d11bbe207b8a20c665061d51d365385f29a1c -VerificationRunId 40377117371
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-publication-verification
+          path: release/windows-verification
