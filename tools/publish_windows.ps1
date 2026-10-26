@@ -8,11 +8,10 @@ $version = (Get-Content desktop/release.json | ConvertFrom-Json).version
 if ($plan.version -ne $version) { Write-Output 'No Windows-only publication plan for this version.'; exit 0 }
 $tag = "v$version"
 $repo = $env:GITHUB_REPOSITORY
-$release = gh release view $tag --json isDraft,assets | ConvertFrom-Json
+$release = gh release view $tag --json isDraft,assets,targetCommitish,databaseId | ConvertFrom-Json
 if ($LASTEXITCODE) { throw 'Cannot inspect candidate release' }
 if (!$release.isDraft) { Write-Output 'Release already public; preserving immutable assets.'; exit 0 }
-$candidate = gh api "repos/$repo/releases/tags/$tag" | ConvertFrom-Json
-if ($LASTEXITCODE -or $candidate.target_commitish -ne $CandidateSha) { throw 'Draft target differs from tested commit' }
+if ($release.targetCommitish -ne $CandidateSha) { throw 'Draft target differs from tested commit' }
 # GitHub does not create the tag until a draft is published. If a tag already
 # exists, it must also point to the candidate; never move an existing tag.
 $refText = gh api "repos/$repo/git/ref/tags/$tag" 2>$null
@@ -67,7 +66,7 @@ foreach ($asset in $plan.assets.PSObject.Properties) {
     gh release upload $tag "$verify/$name" --repo $repo
     if ($LASTEXITCODE) { throw "Cannot upload retained Mac asset: $name" }
   }
-  $remote = gh api "repos/$repo/releases/tags/$tag" | ConvertFrom-Json
+  $remote = gh api "repos/$repo/releases/$($release.databaseId)" | ConvertFrom-Json
   if ($LASTEXITCODE) { throw 'Cannot verify retained release assets' }
   $uploaded = @($remote.assets | Where-Object name -eq $name)
   if ($uploaded.Count -ne 1 -or $uploaded[0].digest -ne ('sha256:' + $asset.Value)) {
