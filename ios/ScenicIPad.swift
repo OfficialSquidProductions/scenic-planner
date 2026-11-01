@@ -70,6 +70,11 @@ final class ScenicViewController: UIViewController, WKScriptMessageHandler, WKNa
         config.userContentController.addUserScript(WKUserScript(source: "window.ScenicIPad={addSelection:false,isPhone:\(UIDevice.current.userInterfaceIdiom == .phone ? "true" : "false")};", injectionTime: .atDocumentStart, forMainFrameOnly: true))
         let result = ScenicClipboardWebView(frame: .zero, configuration: config)
         result.navigationDelegate = self; result.uiDelegate = self
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--clipboard-smoke-test") || ProcessInfo.processInfo.arguments.contains("--verify-clipboard-persistence") || ProcessInfo.processInfo.arguments.contains("--clipboard-ui-test") {
+            result.objectPasteboard = UIPasteboard(name: UIPasteboard.Name("org.squidproductions.scenic.clipboard.qa"), create: true)!
+        }
+        #endif
         return result
     }
     private func reply(_ id: String, result: Any = NSNull(), error: String? = nil, target: WKWebView? = nil) {
@@ -98,6 +103,12 @@ final class ScenicViewController: UIViewController, WKScriptMessageHandler, WKNa
         switch action {
         case "copySceneObjects": web.copy(nil); reply(id, result: true)
         case "pasteSceneObjects": web.paste(nil); reply(id, result: true)
+        #if DEBUG
+        case "clipboardTestState", "clipboardTestSet":
+            guard ProcessInfo.processInfo.arguments.contains("--clipboard-smoke-test") || ProcessInfo.processInfo.arguments.contains("--verify-clipboard-persistence"), let editor = web as? ScenicClipboardWebView else { reply(id, error: "Unavailable test action"); return }
+            if action == "clipboardTestSet" { editor.objectPasteboard.string = data["text"] as? String; reply(id, result: true) }
+            else { reply(id, result: ["text": editor.objectPasteboard.string ?? "", "normalCopies":editor.normalCopies,"normalPastes":editor.normalPastes,"keyCommands":(editor.keyCommands ?? []).map { ["input":$0.input ?? "", "command":$0.modifierFlags.contains(.command)] }]) }
+        #endif
         case "readProject":
             queue.async { [self] in
                 do {
@@ -274,19 +285,20 @@ final class ScenicViewController: UIViewController, WKScriptMessageHandler, WKNa
     private func runSmokeIfRequested() {
         #if DEBUG
         let args = ProcessInfo.processInfo.arguments
+        let clipboard = args.contains("--clipboard-smoke-test") || args.contains("--verify-clipboard-persistence") || args.contains("--clipboard-ui-test")
         let numbered = args.contains("--numbered-shots-smoke-test") || args.contains("--verify-numbered-persistence")
-        guard !smokeStarted, numbered || args.contains("--smoke-test") || args.contains("--verify-persistence") || args.contains("--portable-smoke-test") || args.contains("--palette-smoke-test") else { return }
+        guard !smokeStarted, clipboard || numbered || args.contains("--smoke-test") || args.contains("--verify-persistence") || args.contains("--portable-smoke-test") || args.contains("--palette-smoke-test") else { return }
         smokeStarted = true
-        guard let url = Bundle.main.url(forResource: numbered ? "numbered-smoke" : args.contains("--palette-smoke-test") ? "palette-smoke" : args.contains("--portable-smoke-test") ? "portable-smoke" : "smoke", withExtension: "js"), let script = try? String(contentsOf: url, encoding: .utf8) else { return }
+        guard let url = Bundle.main.url(forResource: clipboard ? "clipboard-smoke" : numbered ? "numbered-smoke" : args.contains("--palette-smoke-test") ? "palette-smoke" : args.contains("--portable-smoke-test") ? "portable-smoke" : "smoke", withExtension: "js"), let script = try? String(contentsOf: url, encoding: .utf8) else { return }
         let fixture = (try? String(contentsOf: Bundle.main.url(forResource: "desktop-fixture", withExtension: "scenic")!, encoding: .utf8)) ?? ""
-        web.callAsyncJavaScript(script, arguments: ["verifyOnly":args.contains("--verify-persistence") || args.contains("--verify-numbered-persistence"),"fixture":fixture], in: nil, in: .page) { [weak self] result in
+        web.callAsyncJavaScript(script, arguments: ["verifyOnly":args.contains("--verify-persistence") || args.contains("--verify-numbered-persistence") || args.contains("--verify-clipboard-persistence"),"uiOnly":args.contains("--clipboard-ui-test"),"fixture":fixture,"clipboardFixture":(try? String(contentsOf: Bundle.main.url(forResource: "bathroom-clipboard", withExtension: "json")!, encoding: .utf8)) ?? ""], in: nil, in: .page) { [weak self] result in
             guard let self else { return }
             let output: [String: Any]
             switch result {
             case .success(let value): output = ["passed":true,"result":value,"editorErrors":self.errorLog]
             case .failure(let error): output = ["passed":false,"error":error.localizedDescription,"details":String(describing: (error as NSError).userInfo),"editorErrors":self.errorLog]
             }
-            let file = self.store.root.appendingPathComponent(numbered ? (args.contains("--verify-numbered-persistence") ? "numbered-persistence-results.json" : "numbered-results.json") : args.contains("--palette-smoke-test") ? "palette-results.json" : args.contains("--portable-smoke-test") ? "portable-results.json" : args.contains("--verify-persistence") ? "persistence-results.json" : "smoke-results.json")
+            let file = self.store.root.appendingPathComponent(clipboard ? (args.contains("--verify-clipboard-persistence") ? "clipboard-persistence-results.json" : "clipboard-results.json") : numbered ? (args.contains("--verify-numbered-persistence") ? "numbered-persistence-results.json" : "numbered-results.json") : args.contains("--palette-smoke-test") ? "palette-results.json" : args.contains("--portable-smoke-test") ? "portable-results.json" : args.contains("--verify-persistence") ? "persistence-results.json" : "smoke-results.json")
             if let data = try? JSONSerialization.data(withJSONObject: output, options: [.prettyPrinted,.sortedKeys]) { try? data.write(to: file, options: .atomic) }
         }
         #endif

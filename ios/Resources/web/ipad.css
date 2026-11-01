@@ -34,7 +34,7 @@ html.ipad-app,html.ipad-app body{height:100%;overflow:hidden;-webkit-text-size-a
 .ipad-app .canvas-hint{max-width:calc(100% - 28px);font-size:10px;white-space:normal;bottom:10px}
 .ipad-app #properties-sidebar .inspector-heading{padding:6px}
 .ipad-app .inspector-tabs button{font-size:12px}
-.ipad-app .ipad-selection-tools{display:flex;gap:6px;margin:0 0 12px}
+.ipad-app .ipad-selection-tools{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
 .ipad-app .ipad-selection-tools button{font-size:12px}
 .ipad-app #ipad-selection.active{background:var(--accent-soft);color:var(--accent-ink)}
 .ipad-app dialog{max-width:calc(100vw - 32px);max-height:calc(100dvh - 32px);overflow:auto}

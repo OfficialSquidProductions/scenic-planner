@@ -15,3 +15,7 @@ for(const item of items)objects.push({id:item.id,type:item.category==='props'?'p
 assert(validProject(JSON.parse(JSON.stringify(project))));
 objects.at(-1).asset='missing';assert(!validProject(project));objects.pop();objects.find(o=>o.type==='set').width=0;assert(!validProject(project));
 console.log('Portable project validation verified: legacy layouts, every new catalog piece, and invalid asset/size rejection.');
+for(const [id,category,word] of [['mug','props','Coffee'],['cup','props','cup'],['paper-cup','props','cup'],['sofa','set','Couch']]){
+ const item=require('../dist/catalog.js').get(id);assert.equal(item.category,category);assert(item.name.includes(word));assert(item.width>0&&item.height>0);assert(require('../dist/catalog.js').shapes[item.shape][0]);
+}
+console.log('Requested coffee mug/cups and couch palette entries retain stable legacy IDs and valid scalable geometry.');
