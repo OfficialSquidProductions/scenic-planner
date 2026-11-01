@@ -66,6 +66,50 @@ final class ScenicUITests: XCTestCase {
         let map=app.webViews.otherElements.matching(NSPredicate(format:"label BEGINSWITH %@","Interactive scene map.")).firstMatch
         palettePoint(label).press(forDuration:0.5,thenDragTo:map.coordinate(withNormalizedOffset:CGVector(dx:dx,dy:dy)))
     }
+    func prepareClipboardFixture() {
+        app.terminate(); app.launchArguments = ["--clipboard-ui-test"]; app.launch()
+        XCTAssertTrue(app.webViews.buttons["Properties"].firstMatch.waitForExistence(timeout:15))
+        let ready = XCTNSPredicateExpectation(predicate:NSPredicate { _,_ in
+            self.app.webViews.textFields["Scene title"].value as? String == "Bathroom scene 1" && self.objectCount() == 13
+        }, object:app)
+        XCTAssertEqual(XCTWaiter.wait(for:[ready],timeout:10),.completed,app.debugDescription)
+    }
+    func goToLaterClipboardScene() {
+        app.webViews.buttons[phone ? "Scenes and items" : "Scenes"].tap()
+        let row = app.webViews.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","02 Later existing scene")).firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout:5))
+        if !row.isHittable { app.webViews.buttons.matching(NSPredicate(format:"label BEGINSWITH %@","01 Bathroom")).firstMatch.swipeUp() }
+        row.tap()
+        if app.webViews.buttons[phone ? "Close scenes and items" : "Close panel"].isHittable { closePanel() }
+        expectObjectCount(1)
+    }
+    func testClipboardHardwareCommandsAcrossScenes() throws {
+        prepareClipboardFixture()
+        app.typeKey("c",modifierFlags:.command)
+        goToLaterClipboardScene()
+        app.typeKey("v",modifierFlags:.command)
+        expectObjectCount(13)
+        let title=app.webViews.textFields["Scene title"];title.tap();title.typeKey("a",modifierFlags:.command);title.typeText("Keyboard text QA")
+        title.typeKey("a",modifierFlags:.command);title.typeKey("c",modifierFlags:.command);title.typeKey("v",modifierFlags:.command)
+        XCTAssertEqual(title.value as? String,"Keyboard text QA","Hardware shortcuts retain normal text editing")
+        expectObjectCount(13)
+        shot(phone ? "iPhone native keyboard bathroom paste" : "iPad native keyboard bathroom paste")
+    }
+    func testClipboardTouchControlsAcrossScenes() throws {
+        prepareClipboardFixture()
+        app.webViews.buttons["Properties"].firstMatch.tap()
+        let copy = app.webViews.buttons["Copy selected scene items"]
+        XCTAssertTrue(copy.waitForExistence(timeout:5));copy.tap();closePanel()
+        goToLaterClipboardScene()
+        app.webViews.buttons["Properties"].firstMatch.tap()
+        app.webViews.buttons["Paste scene items"].tap()
+        expectObjectCount(13)
+        app.webViews.buttons["Cancel / deselect"].tap()
+        let duplicate = app.webViews.buttons["Duplicate scene"]
+        if !duplicate.isHittable { app.webViews.buttons["Cancel / deselect"].swipeUp() }
+        duplicate.tap();expectObjectCount(13)
+        shot(phone ? "iPhone touch duplicate environment" : "iPad touch duplicate environment")
+    }
     func testPaletteTouchDragPortraitAndLandscape() throws {
         app.webViews.buttons["Scene map"].tap()
         for orientation in [UIDeviceOrientation.portrait,.landscapeLeft] {

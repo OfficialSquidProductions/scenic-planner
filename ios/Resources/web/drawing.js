@@ -45,7 +45,7 @@ function drawSun(c,left,top,right,bottom){
 function drawSunMarker(o){
  const state=ScenicModel.sunState(o);localShape(o,()=>{ctx.strokeStyle=state.daylight&&o.enabled?'#e4b65d':color('--muted');ctx.fillStyle='#d8ad5922';ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,18,0,Math.PI*2);ctx.fill();ctx.stroke();for(let i=0;i<8;i++){const a=i*Math.PI/4;ctx.beginPath();ctx.moveTo(Math.cos(a)*23,Math.sin(a)*23);ctx.lineTo(Math.cos(a)*29,Math.sin(a)*29);ctx.stroke();}});
  if(o.solarReal&&!state.error){ctx.save();ctx.translate(o.x,o.y);ctx.strokeStyle=color('--accent');ctx.lineWidth=1.5/view.z;const toward=state.rayAngle+Math.PI;ctx.setLineDash([3/view.z,3/view.z]);ctx.beginPath();ctx.moveTo(Math.cos(toward)*33,Math.sin(toward)*33);ctx.lineTo(Math.cos(toward)*62,Math.sin(toward)*62);ctx.stroke();ctx.restore();
- }label(o,'Sun · '+timeLabel(o.time),43);
+ }
 }
 
 // North stays beside the zoom controls while the map pans and zooms.
@@ -66,7 +66,8 @@ function drawExportNorthCompass(){
 /* Selection handles are screen-sized at every map zoom, and omitted from exports. */
 function drawTransformHandles(o,showHandles=true){
  ctx.save();ctx.strokeStyle=color('--accent');ctx.fillStyle=color('--paper');ctx.lineWidth=1.5/view.z;ctx.setLineDash([4/view.z,4/view.z]);
- if(o.type==='wall'){
+ if(o.type==='arrow'){const points=ScenicModel.annotationPoints(o);ctx.beginPath();ctx.moveTo(points[0].x,points[0].y);ctx.lineTo(points[1].x,points[1].y);ctx.lineTo(points[2].x,points[2].y);ctx.stroke();}
+ else if(o.type==='wall'){
   ctx.beginPath();ctx.moveTo(o.x,o.y);ctx.lineTo(o.x2,o.y2);ctx.stroke();
   if(showHandles)label(ScenicTransforms.center(o),formatLength(Math.hypot(o.x2-o.x,o.y2-o.y)),18/view.z);
  }else if(o.type==='actor'){localShape(o,()=>{const f=ScenicModel.actorFootprint(o);ctx.beginPath();ctx.ellipse(0,0,f.width/2+6/view.z,f.height/2+6/view.z,0,0,Math.PI*2);ctx.stroke();});}else if(ScenicTransforms.aimable(o)){ctx.beginPath();ctx.arc(o.x,o.y,(o.type==='light'?24:28)+6/view.z,0,Math.PI*2);ctx.stroke();}
@@ -84,7 +85,7 @@ function drawTransformHandles(o,showHandles=true){
  ctx.restore();
 }
 function updateTransformReadout(o){
- for(const key of ['x','y','x2','y2','width','height']){for(const field of document.querySelectorAll(`[data-prop="${key}"][data-length]`)){if(field.dataset.inside){field.dataset.min=36-o.thickness;field.dataset.max=5000-o.thickness;}if(Number.isFinite(o[key]))field.value=formatLength(o[key]-(field.dataset.inside?o.thickness:0));}}
+ for(const key of ['x','y','x2','y2','width','height','labelOffsetX','labelOffsetY']){for(const field of document.querySelectorAll(`[data-prop="${key}"][data-length]`)){if(field.dataset.inside){field.dataset.min=36-o.thickness;field.dataset.max=5000-o.thickness;}if(Number.isFinite(o[key]))field.value=formatLength(o[key]-(field.dataset.inside?o.thickness:0));}}
  if(o.type!=='wall'){
   const field=document.querySelector('[data-prop="rotation"]'),output=$('out-rotation');if(field)field.value=o.rotation||0;if(output)output.textContent=Math.round((o.rotation||0)*10)/10+'°';
  }
@@ -112,4 +113,27 @@ function drawCameraCoverage(o,walls){
  ctx.fillStyle=doc.theme==='dark'?'#9eb7e312':'#587ba412';ctx.fill();
  ctx.strokeStyle=o.id===selected?'#587ba4c0':'#8ea9d080';ctx.lineWidth=(o.id===selected?1.5:1)/view.z;
  ctx.setLineDash([4/view.z,5/view.z]);ctx.stroke();ctx.restore();
+}
+
+
+function informationLabelBox(o){
+ return ScenicModel.informationLabel(o,(text,size)=>{ctx.save();ctx.font=`${size}px Futura,sans-serif`;const width=ctx.measureText(text).width;ctx.restore();return width;});
+}
+function informationLabelHit(o,p){if(o?.locked)return false;const b=informationLabelBox(o);return !!b&&p.x>=b.left&&p.x<=b.right&&p.y>=b.top&&p.y<=b.bottom;}
+function drawInformationLabel(o,exporting=false){
+ const b=informationLabelBox(o);ctx.save();
+ if(o.labelConnector!==false&&(Math.abs(o.labelOffsetX||0)>2||Math.abs(o.labelOffsetY||0)>2)){
+  const end={x:Math.max(b.left,Math.min(b.right,o.x)),y:Math.max(b.top,Math.min(b.bottom,o.y))};
+  ctx.strokeStyle=b.color;ctx.lineWidth=1.4;ctx.beginPath();ctx.moveTo(o.x,o.y);ctx.lineTo(end.x,end.y);ctx.stroke();
+ }
+ ctx.fillStyle=color('--map');ctx.globalAlpha=.91;rounded(ctx,b.left,b.top,b.width,b.height,4);ctx.fill();ctx.globalAlpha=1;
+ if(!exporting&&o.id===selected&&selectionItems().length===1){ctx.strokeStyle=b.color;ctx.lineWidth=1/view.z;ctx.setLineDash([3/view.z,3/view.z]);ctx.stroke();ctx.setLineDash([]);}
+ ctx.textAlign='center';ctx.textBaseline='alphabetic';ctx.font='11px Futura,sans-serif';ctx.fillStyle=color('--map-text');ctx.fillText(b.lines[0],b.x,b.top+14);ctx.font='9px Futura,sans-serif';ctx.fillStyle=color('--muted');ctx.fillText(b.lines[1],b.x,b.top+29);ctx.restore();
+}
+function drawSceneAnnotation(o){
+ if(o.type==='text'){
+  localShape(o,()=>{const lines=o.text.split('\n'),longest=Math.max(1,...lines.map(line=>{ctx.font='100px Futura,sans-serif';return ctx.measureText(line||' ').width;}));const font=Math.min(o.height/(lines.length*1.25),o.width*100/longest);ctx.font=`${font}px Futura,sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle=o.color;for(let i=0;i<lines.length;i++)ctx.fillText(lines[i],0,(i-(lines.length-1)/2)*font*1.25);});return;
+ }
+ const p=ScenicModel.annotationPoints(o);ctx.save();ctx.strokeStyle=o.color;ctx.fillStyle=o.color;ctx.lineCap='round';ctx.lineJoin='round';ctx.lineWidth=o.lineWidth;ctx.beginPath();ctx.moveTo(p[0].x,p[0].y);ctx.quadraticCurveTo(p[1].x,p[1].y,p[2].x,p[2].y);ctx.stroke();
+ const before=Math.hypot(p[2].x-p[1].x,p[2].y-p[1].y)>.01?p[1]:p[0],a=Math.atan2(p[2].y-before.y,p[2].x-before.x),head=Math.max(12,o.lineWidth*3);ctx.beginPath();ctx.moveTo(p[2].x,p[2].y);ctx.lineTo(p[2].x-head*Math.cos(a-.48),p[2].y-head*Math.sin(a-.48));ctx.lineTo(p[2].x-head*Math.cos(a+.48),p[2].y-head*Math.sin(a+.48));ctx.closePath();ctx.fill();ctx.restore();
 }

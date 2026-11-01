@@ -44,6 +44,15 @@ final class ScenicViewController: UIViewController, WKScriptMessageHandler, WKNa
     private var ready = false
     private var smokeStarted = false
 
+    override var keyCommands: [UIKeyCommand]? {
+        guard presentedViewController == nil else { return super.keyCommands }
+        let copy = UIKeyCommand(title: "Copy", action: #selector(copySceneItems(_:)), input: "c", modifierFlags: .command)
+        let paste = UIKeyCommand(title: "Paste", action: #selector(pasteSceneItems(_:)), input: "v", modifierFlags: .command)
+        copy.wantsPriorityOverSystemBehavior = true; paste.wantsPriorityOverSystemBehavior = true
+        return [copy, paste] + (super.keyCommands ?? [])
+    }
+    @objc private func copySceneItems(_ sender: Any?) { web.copy(sender) }
+    @objc private func pasteSceneItems(_ sender: Any?) { web.paste(sender) }
     override func viewDidLoad() {
         super.viewDidLoad(); view.backgroundColor = .systemBackground
         web = makeWeb(); web.translatesAutoresizingMaskIntoConstraints = false

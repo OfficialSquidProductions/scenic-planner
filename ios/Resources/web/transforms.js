@@ -2,15 +2,16 @@
 (function(root){
 'use strict';
 const model=typeof module==='object'&&module.exports?require('./model.js'):root.ScenicModel;
-const boxTypes=new Set(['floor','wallGroup','room','image','sofa','table','prop','set','gear']);
+const boxTypes=new Set(['floor','wallGroup','room','image','sofa','table','prop','set','gear','text']);
 const angle=o=>o.type==='wall'?Math.atan2(o.y2-o.y,o.x2-o.x):(o.rotation||0)*Math.PI/180;
 const center=o=>o.type==='wall'?{x:(o.x+o.x2)/2,y:(o.y+o.y2)/2}:{x:o.x,y:o.y};
 const rotate=(p,a)=>({x:p.x*Math.cos(a)-p.y*Math.sin(a),y:p.x*Math.sin(a)+p.y*Math.cos(a)});
 const normalize=degrees=>((degrees+180)%360+360)%360-180;
 const aimable=o=>!!o&&(o.type==='actor'||o.type==='camera'||o.type==='light'&&o.kind!=='sun');
-const supported=o=>!!o&&!o.locked&&(o.type==='wall'||boxTypes.has(o.type)||aimable(o));
+const supported=o=>!!o&&!o.locked&&(o.type==='wall'||o.type==='arrow'||boxTypes.has(o.type)||aimable(o));
 function handles(o,zoom=1){
  if(!supported(o))return [];
+ if(o.type==='arrow')return model.annotationPoints(o).map((p,index)=>({kind:'arrow-point',index,...p}));
  const c=center(o),a=angle(o),toWorld=p=>{const r=rotate(p,a);return{x:c.x+r.x,y:c.y+r.y};};
  if(aimable(o)){const base=Math.max(o.type==='actor'?model.actorFootprint(o).width/2+10:o.type==='light'?24:28,20/zoom);return [{kind:'rotate',...toWorld({x:base+28/zoom,y:0}),base:toWorld({x:base,y:0})}];}
  if(o.type==='wall')return [
@@ -30,6 +31,7 @@ function cursor(o,h){
 function apply(o,h,start,p,{step=0,proportional=false,angleStep=0,min=1.5,max=5000}={}){
  if(!supported(o)||aimable(o)&&h.kind!=='rotate')return {};
  const c=center(o),a=angle(o),dx=p.x-start.x,dy=p.y-start.y;
+ if(o.type==='arrow'){if(h.kind!=='arrow-point')return {};const points=structuredClone(o.points),d=rotate({x:dx,y:dy},-a);points[h.index]={x:Math.max(-5000,Math.min(5000,points[h.index].x+d.x/o.scale)),y:Math.max(-5000,Math.min(5000,points[h.index].y+d.y/o.scale))};return {points};}
  if(Math.hypot(dx,dy)<1e-9)return aimable(o)?{rotation:o.rotation||0}:o.type==='wall'?{x:o.x,y:o.y,x2:o.x2,y2:o.y2}:{x:o.x,y:o.y,width:o.width,height:o.height,rotation:o.rotation};
  const quantize=n=>step?Math.round(n/step)*step:n,clamp=n=>Math.max(min,Math.min(max,n));
  if(h.kind==='rotate'){

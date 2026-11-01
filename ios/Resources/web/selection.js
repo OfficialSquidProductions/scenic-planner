@@ -15,6 +15,7 @@ function polygonTouches(points,r){
 }
 function touches(o,r,objects){
  if(o.locked)return false;
+ if(o.type==='arrow'){const points=model.annotationPoints(o);let before=points[0];for(let i=1;i<=48;i++){const next=model.curvePoint(points,i/48);if(segmentTouches({...before,x2:next.x,y2:next.y},r,o.lineWidth/2))return true;before=next;}return false;}
  if(o.type==='wall')return segmentTouches(o,r,o.thickness/2);
  if(o.type==='room')return model.roomSegments(o).some(w=>segmentTouches(w,r,w.thickness/2));
  if(o.type==='wallGroup')return objects.some(w=>o.wallIds.includes(w.id)&&w.type==='wall'&&touches(w,r,objects));

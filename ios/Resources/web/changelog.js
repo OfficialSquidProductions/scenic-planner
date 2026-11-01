@@ -5,10 +5,14 @@ window.ScenicChangelog = {
     {
       "version": "1.4.30",
       "changes": [
-        "Copy selected scene items and paste them into the same or another existing scene. Preserve layout, editable properties, images, wall groups, attached openings, camera settings and movement marks; copied items remain independent.",
-        "On iPhone and iPad, use Copy items and Paste items in Properties, or Command+C and Command+V with an attached keyboard. Normal text-field copy and paste remain available.",
-        "Duplicate a complete scene environment with independent object and shot identifiers. Paste and duplication support Undo/Redo and editable project save/reopen.",
-        "Includes the numbered-scene shot-list import fix while preserving descriptions, Script coverage, camera links and existing supported numbering formats."
+        "Right-click a shot or use its Actions button to delete it safely. Imported-shot deletion keeps and unlinks map cameras; coverage checks preserve your position, focus and expanded details in the shot list.",
+        "Select actors and cameras in doorways more easily while keeping door frames and leaves selectable.",
+        "Export all scenes from the scene browser as one multipage PDF or separate PNG files, with ordered scene names, progress and native destination controls.",
+        "Drag selected camera and light information boxes independently. Labels follow their owners, keep their relative positions when copied, and offer a checkbox for colored connector lines.",
+        "Add scalable text and curved arrows from the top toolbar. Shape arrows with start, middle and end handles and choose their color in Properties.",
+        "Find coffee mugs, drinking cups and paper cups under Props, and Couch / sofa under Set. Existing mug and sofa objects retain their original asset identities.",
+        "Copy selected scene objects across scenes with independent properties, images, groups and shot links. iPhone/iPad offer Copy items and Paste items in Properties plus attached-keyboard Command+C/V; scene duplication, Undo/Redo and portable persistence are supported.",
+        "Includes numbered-scene CSV import while preserving descriptions, Script coverage, camera links and supported legacy numbering."
       ]
     },
     {
