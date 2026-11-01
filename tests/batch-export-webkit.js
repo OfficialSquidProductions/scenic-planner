@@ -13,7 +13,7 @@ const raw=ScenicDesktop.exportFile;ScenicDesktop.exportFile=async()=>{throw Erro
 check(rejected&&!ScenicBatchExport.status().running&&JSON.stringify(workspaceData())===source,'Save error is reported and leaves the editor unchanged');
 if(ScenicModel.annotationPoints){
  const extreme=structuredClone(p);extreme.projectId='extreme-export-qa';extreme.name='Extreme annotation frame QA';const camera=extreme.scenes[0].objects.find(o=>o.type==='camera');camera.labelOffsetX=10000;camera.labelOffsetY=-10000;
- extreme.scenes[0].objects.push({id:'far-text',type:'text',x:-12000,y:12000,text:'Far scene label',width:400,height:100,rotation:25,color:'#111111',keepProportions:true},{id:'wide-arrow',type:'arrow',x:1000,y:2000,points:[{x:-5000,y:5000},{x:5000,y:-5000},{x:5000,y:5000}],scale:10,rotation:15,lineWidth:6,color:'#ff2020'});
+ extreme.scenes[0].objects.push({id:'far-text',name:'Far scene label',type:'text',x:-12000,y:12000,text:'Far scene label',width:400,height:100,rotation:25,color:'#111111',keepProportions:true},{id:'wide-arrow',name:'Wide arrow',type:'arrow',x:1000,y:2000,points:[{x:-5000,y:5000},{x:5000,y:-5000},{x:5000,y:5000}],scale:10,rotation:15,lineWidth:6,color:'#ff2020'});
  loadWorkspace({version:2,activeProject:extreme.projectId,projects:[extreme]});refresh();const originalDraw=draw;let framed=0;
  draw=function(exporting){if(exporting&&doc.projectId==='extreme-export-qa'&&scene().id===extreme.scenes[0].id){
   const points=scene().objects.filter(o=>o.type==='text'||o.type==='arrow').flatMap(o=>ScenicModel.annotationPoints(o));const label=informationLabelBox(scene().objects.find(o=>o.type==='camera'));points.push({x:label.left,y:label.top},{x:label.right,y:label.bottom});

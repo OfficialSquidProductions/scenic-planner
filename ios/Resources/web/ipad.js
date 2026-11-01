@@ -117,6 +117,13 @@
  function finish(e){if(e.pointerType!=='touch')return;points.delete(e.pointerId);if(suppress){e.preventDefault();e.stopImmediatePropagation();}if(!points.size){gesture=null;before=null;suppress=false;}}
  canvas.addEventListener('pointerup',finish,true);canvas.addEventListener('pointercancel',finish,true);
  const originalHit=ScenicTransforms.hit;
- ScenicTransforms.hit=(o,p,z)=>originalHit(o,p,z)||ScenicTransforms.handles(o,z).find(h=>Math.hypot(p.x-h.x,p.y-h.y)<=22/z)||null;
+ ScenicTransforms.hit=(o,p,z)=>{
+  const exact=originalHit(o,p,z);if(exact)return exact;
+  const target=ScenicModel.pickObject(scene().objects,p,z);
+  // A larger touch halo must not steal a deliberate tap on another foreground
+  // item, such as the doorway beside a selected actor's rotation handle.
+  if(target&&target.id!==o?.id&&!['floor','image'].includes(target.type)&&!(o?.type==='wallGroup'&&o.wallIds.includes(target.id)))return null;
+  return ScenicTransforms.handles(o,z).find(h=>Math.hypot(p.x-h.x,p.y-h.y)<=22/z)||null;
+ };
  document.addEventListener('visibilitychange',()=>{if(document.hidden&&window.scenicReady)window.scenicFlush().catch(()=>{});});
 })();

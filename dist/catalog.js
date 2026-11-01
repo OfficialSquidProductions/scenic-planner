@@ -118,7 +118,7 @@ shapes.dolly=['M3 0H21V24H3Z M0 3H3 M21 3H24 M0 21H3 M21 21H24','M6 3H18V21H6Z M
 // footprint rather than treating unused space in the 24-unit icon as size.
 const shapeBounds=Object.fromEntries(Object.keys(shapes).map(shape=>[shape,[0,0,24,24]]));
 Object.assign(shapeBounds,{
- remote:[3,0,18,24],phone:[2,0,20,24],mug:[1,0,23,24],bottle:[2,0,20,24],
+ remote:[3,0,18,24],phone:[2,0,20,24],mug:[1,0,23,24],cup:[1,1,22,22],'paper-cup':[1,1,22,22],bottle:[2,0,20,24],
  keys:[0,6,24,13],controller:[0,2,24,225/11],toilet:[2,0,20,24],spot:[3,0,18,24],
  'room-square':[1,1,22,22],'room-circle':[1,1,22,22],'room-l':[1,1,22,22],
  'monitor-stand':[0,0,24,22],'monitor-cart':[0,3,24,18],stand:[2,0,20,22],

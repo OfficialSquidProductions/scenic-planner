@@ -105,7 +105,7 @@ function afterObjectChange(o,prop,previous){if(!o)return;stopPlayback();
   ScenicModel.syncOpenings(scene().objects);
  }
  if(o.type==='room'){if(prop==='keepProportions')roomAspectRatio=o.width/o.height;if(o.keepProportions&&['width','height'].includes(prop)){const previous=roomAspectRatio||1;if(prop==='width')o.height=o.width/previous;else o.width=o.height*previous;const factor=Math.min(1,5000/o.width,5000/o.height);o.width*=factor;o.height*=factor;}ScenicModel.syncOpenings(scene().objects);updateTransformReadout(o);}
- if(o.type==='image'){
+ if(o.type==='image'||o.type==='text'){
   if(prop==='keepProportions')imageAspectRatio=o.width/o.height;
   if(o.keepProportions!==false&&['width','height'].includes(prop)){
    if(prop==='width')o.height=o.width/imageAspectRatio;else o.width=o.height*imageAspectRatio;

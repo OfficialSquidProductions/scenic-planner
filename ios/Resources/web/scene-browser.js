@@ -34,17 +34,20 @@
  }
  function select(productionId,sceneId){return productionId===doc.projectId&&activateScene(sceneId);}
  function duplicate(productionId,sceneId){return productionId===doc.projectId&&duplicateScene(sceneId);}
- function closed(){isOpen=false;popup=null;cache.clear();}
- window.ScenicSceneBrowser={open,changed,preview,select,duplicate,closed};
+ function closed(){window.ScenicBatchExport?.cancel(window.ScenicBatchExport.status().productionId);isOpen=false;popup=null;cache.clear();}
+ window.ScenicSceneBrowser={open,changed,preview,select,duplicate,closed,exportAll:(productionId,format)=>ScenicBatchExport.start(productionId,format),exportStatus:()=>ScenicBatchExport.status(),cancelExport:productionId=>ScenicBatchExport.cancel(productionId)};
  $('browse-scenes').onclick=open;
  window.addEventListener('message',async event=>{
   if(event.source!==popup||event.origin!==location.origin||event.data?.channel!=='scenic-scene-browser')return;
-  const {id,action,payload={}}=event.data;let result;
+  const {id,action,payload={}}=event.data;let result;try{
   if(action==='sceneBrowserReady')result=snapshot();
   else if(action==='scenePreview')result=await preview(payload.productionId,payload.sceneId);
   else if(action==='selectScene')result=select(payload.productionId,payload.sceneId);
   else if(action==='duplicateScene')result=duplicate(payload.productionId,payload.sceneId);
+  else if(action==='exportAllScenes')result=await ScenicBatchExport.start(payload.productionId,payload.format);
+  else if(action==='sceneExportStatus')result=ScenicBatchExport.status();
+  else if(action==='cancelAllSceneExport')result=ScenicBatchExport.cancel(payload.productionId);
   else if(action==='sceneBrowserClosed'){closed();return;}else return;
-  browserSend({channel:'scenic-scene-browser',id,result});
+  browserSend({channel:'scenic-scene-browser',id,result});}catch(error){browserSend({channel:'scenic-scene-browser',id,error:error.message||'The scene action could not complete.'});}
  });
 })();
