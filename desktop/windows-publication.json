@@ -1,11 +1,12 @@
 {
-  "version": "1.4.24",
-  "retainedMacTag": "v1.4.23",
+  "version": "1.4.29",
+  "retainedMacTag": "v1.4.27",
   "assets": {
-    "appcast.xml": "942251631dd19fe8364ea9ec2474dbc9059593f607f6c36e95073962a3edc4ea",
-    "Scenic-1.4.23-29.html": "48627cfd349005fd6828f97c20b0d9288ee34b9288ae169b4b7449ed721117af",
-    "Scenic-1.4.23-29.zip": "3df82ff60e44750cacadff1c24a032eec70957d83872c395483988cc74edda70",
-    "Scenic-Mac-Notarized.zip": "3df82ff60e44750cacadff1c24a032eec70957d83872c395483988cc74edda70",
-    "SHA256-Mac.txt": "0da3f5251818c37ef672759ff9160ef6ca048557f3ce21805b88d139c7088d21"
+    "appcast.xml": "e30d78ccab793582cc36ac689fcaac15454b6b1ffc59411d9c8f82ed55d03c82",
+    "Mac-Verification.json": "11c0ad2747e711f415d5010dc188b4d4608e42bc0ef2ad2f38501890a12b3828",
+    "Scenic-1.4.27-33.html": "1df9dbc77fe1861ec9d6b524b4c8c849267b172f89357a49b06f1c47421c6e57",
+    "Scenic-1.4.27-33.zip": "8600a9f734f623fceeb315cec19874d2c768340cc451097058950e85e759b42a",
+    "Scenic-Mac-Notarized.zip": "8600a9f734f623fceeb315cec19874d2c768340cc451097058950e85e759b42a",
+    "SHA256-Mac.txt": "1044498382531aa12ae2403e3393d9ac7ee17bcbf5e7ab45bd6316c593d1e04f"
   }
 }

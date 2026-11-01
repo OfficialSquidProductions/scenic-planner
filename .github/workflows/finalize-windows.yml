@@ -1,8 +1,5 @@
-name: Finalize verified Windows 1.4.24 draft
+name: Finalize verified Windows 1.4.29 draft
 on:
-  push:
-    branches: [main]
-    paths: ['.github/workflows/finalize-windows.yml']
   workflow_dispatch:
 permissions:
   contents: write
@@ -13,11 +10,11 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: Verify existing CI evidence and publish unchanged draft by release ID
+      - name: Verify CI and retained Mac assets before publishing
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-        run: ./tools/publish_windows.ps1 -CandidateSha b20d11bbe207b8a20c665061d51d365385f29a1c -VerificationRunId 40377117371
+        run: ./tools/publish_windows.ps1 -CandidateSha 24a09c69af4b4a482cb0bb3f2c3ced39591c149b -VerificationRunId 41357595461
       - uses: actions/upload-artifact@v4
         if: always()
         with:

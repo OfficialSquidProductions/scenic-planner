@@ -73,5 +73,6 @@ foreach ($asset in $plan.assets.PSObject.Properties) {
     throw "Published Mac asset digest mismatch: $name"
   }
 }
-gh release edit $tag --repo $repo --draft=false --latest --title "Scenic $version for Windows (Mac remains 1.4.23)" --notes-file desktop/release-notes.txt
+gh release edit $tag --repo $repo --draft=false --latest --title "Scenic $version for Windows (Mac remains $($plan.retainedMacTag.TrimStart('v')))" --notes-file desktop/release-notes.txt
 if ($LASTEXITCODE) { throw 'Release publication failed; inspect state before retrying' }
+
