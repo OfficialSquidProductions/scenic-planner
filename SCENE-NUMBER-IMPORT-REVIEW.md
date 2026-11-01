@@ -15,3 +15,9 @@ Validation passed:
 - Packaged-app native WebKit: preview has nine scenes/17 shots; confirm preserves the current production and existing scenes; repeat import keeps IDs; portable reopen retains shots; legacy-grouping warning blocks duplicates and preserves data (13 checks).
 
 Distribution is macOS GitHub only. The source commit uses `[skip ci]` because the repository's main-branch Windows workflow otherwise builds and uploads a Windows installer when shared code changes. Windows 1.4.24 installer, blockmap, checksum and latest.yml are retained byte-for-byte on the new latest release for continued updater resolution. No Windows build, App Store build, upload, release or submission is authorized by this change. iOS resources and all native signing/runtime source remain unchanged. Developer ID notarization is the standalone Mac distribution check.
+
+Published release: https://github.com/OfficialSquidProductions/scenic-planner/releases/tag/v1.4.25
+
+Shipping commit: `f228a18b6b4d4bd2f235acbe2c249ee19e001b73`. All ten uploaded asset digests matched local tested files before publication and were verified again on the public latest release. Mac build 31 is newer than the retained Mac build 29; Windows latest.yml remains 1.4.24 with its original SHA512 and exact installer bytes. The release includes `Mac-Verification.json`, signed `appcast.xml` and `SHA256-Mac.txt`.
+
+The notarized final app passed codesign, stapler, Gatekeeper (`Notarized Developer ID`), native WebKit checks and byte-for-byte comparison of every bundled web resource with the shipping source. Sparkle signature verification passed; modified archives and unrelated signing keys were rejected. No Windows workflow was created for the shipping commit.
