@@ -41,6 +41,14 @@ jobs:
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           node tests/windows-clipboard.cjs
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          node tests/annotations.cjs
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          node tests/annotation-editor.cjs
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          node tests/shot-actions.cjs
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          node tests/batch-export.cjs
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
           node tests/floors.cjs
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           node tests/scene-shot-numbering.cjs
