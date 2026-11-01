@@ -54,6 +54,10 @@ final class BatchExportCheck: NSObject, NSApplicationDelegate, WKNavigationDeleg
             let files=try FileManager.default.contentsOfDirectory(at:folder,includingPropertiesForKeys:nil).sorted{$0.lastPathComponent<$1.lastPathComponent};guard files.count==2 else{throw ScenicPNGExport.failure("PNG batch count mismatch")}
             for file in files {guard let source=CGImageSourceCreateWithURL(file as CFURL,nil),let image=CGImageSourceCreateImageAtIndex(source,0,nil),image.width==1800,image.height==1250 else{throw ScenicPNGExport.failure("PNG output is not a complete rendered scene")}}
         };checks.append("Both repeated native PNG exports contain two distinct ordered full-size scene files")
+        let maps=outputs.filter{$0.pathExtension=="png"}
+        guard maps.count==2 else {throw ScenicPNGExport.failure("Expected normal and interrupted single-map PNG evidence")}
+        for file in maps {guard let source=CGImageSourceCreateWithURL(file as CFURL,nil),let image=CGImageSourceCreateImageAtIndex(source,0,nil),image.width==1800,image.height==1250 else {throw ScenicPNGExport.failure("Single-map export is not a complete rendered PNG")}}
+        checks.append("Normal and interrupted single-map exports decode natively as full-size PNG images")
         return checks
     }
     func finish(_ proof:[String:Any]){if let data=try? JSONSerialization.data(withJSONObject:proof,options:[.prettyPrinted,.sortedKeys]){try? data.write(to:root.appendingPathComponent("result.json"),options:.atomic)};NSApp.terminate(nil)}
