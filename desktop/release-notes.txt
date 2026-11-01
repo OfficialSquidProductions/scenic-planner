@@ -1,5 +1,5 @@
-Scenic 1.4.25
+Scenic 1.4.26
 
-- Mac: Import full scene.shot numbers into their numbered scenes, even when the CSV Scene column still refers to a different linked screenplay scene. For example, 7.2 imports as scene 7, shot 2.
-- Keep all shots, descriptions and Script coverage, including noncontiguous scene numbers and out-of-order CSV rows. Lettered and suffix-only shot formats continue using the explicit Scene column.
-- This is a macOS GitHub update only. Windows remains at 1.4.24; iPhone, iPad and all App Store releases are on hold.
+- Import Production Desk shot lists into the scene identified by full dotted shot numbers: 7.2 belongs to scene 7, shot 2, even when its linked screenplay scene is different.
+- Preserve all shots, descriptions, Script coverage and existing supported numbering formats, including noncontiguous scene numbers and out-of-order CSV rows.
+- Reimport matching shots without duplicates while retaining camera links and coverage checks. Previously misgrouped imports show guidance that preserves the original production and maps.

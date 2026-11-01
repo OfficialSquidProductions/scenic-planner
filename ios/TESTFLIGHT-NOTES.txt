@@ -1,5 +1,3 @@
-Scenic 1.4.23 (29)
+Scenic 1.4.26 (32)
 
-Add scalable floor tiles from Walls/Floor. Change their color or upload an image that stretches with width and height; floors stay beneath foreground objects.
-New productions start empty. Bundled demo, guide and demo reset entry points are removed; existing productions are preserved.
-Import Production Desk Shot list → Export shots CSV, including Script coverage. Matching-number reimports keep map objects, camera links and coverage checks. Save portable .scenic backups with embedded floor images.
+Import full dotted shot numbers into their numbered scenes: 7.2 is scene 7, shot 2. Preserve all shots, descriptions and Script coverage, including noncontiguous scenes and out-of-order rows. Reimport matching shots without duplicates and keep camera links and checks. Previously misgrouped imports receive guidance that preserves original productions and maps.

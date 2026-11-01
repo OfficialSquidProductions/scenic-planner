@@ -4,6 +4,12 @@ on:
     branches: [main]
     paths: ['dist/**', 'windows/**', 'tests/**', 'tools/**', 'desktop/**', '.github/workflows/windows.yml']
   workflow_dispatch:
+    inputs:
+      publish_verified_windows:
+        description: Publish only after recorded native Windows VM verification
+        type: boolean
+        required: false
+        default: false
 permissions:
   contents: write
 jobs:
@@ -30,6 +36,8 @@ jobs:
           node tests/windows-menu.cjs
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           node tests/floors.cjs
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          node tests/scene-shot-numbering.cjs
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           node tests/production-desk-interchange.cjs
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
@@ -116,6 +124,7 @@ jobs:
           gh release upload $tag $exe release/windows/latest.yml release/windows/Scenic-Windows-Setup.exe.blockmap release/windows/SHA256-Windows.txt
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
       - name: Publish approved Windows-only release while preserving Mac updates
+        if: github.event_name == 'workflow_dispatch' && inputs.publish_verified_windows == true
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
