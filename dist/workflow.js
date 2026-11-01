@@ -204,16 +204,107 @@ function bindCameraShot(){
  };
  if($('camera-shot-checked'))$('camera-shot-checked').onchange=e=>{const shot=scene().shotList?.find(s=>s.id===camera.shotId);if(!shot)return;snapshot();shot.checked=e.target.checked;commit();};
 }
+let shotActionTarget=null,shotActionOrigin=null,shotActionsBound=false,pendingCameraShotDelete=null;
+function shotViewKey(){return JSON.stringify([doc.projectId,doc.active]);}
+function shotRowKey(row){return row?JSON.stringify([row.dataset.shotKind,row.dataset.shotRow]):null;}
+function shotTextPoint(node,offset){
+ const row=(node?.nodeType===1?node:node?.parentElement)?.closest?.('[data-shot-row]');if(!row)return null;
+ const range=document.createRange();range.selectNodeContents(row);range.setEnd(node,offset);
+ const path=[];let child=node;while(child!==row){path.unshift([...child.parentNode.childNodes].indexOf(child));child=child.parentNode;}
+ return {row:shotRowKey(row),path,nodeType:node.nodeType,offset,textOffset:range.cloneContents().textContent.length};
+}
+function captureShotListView(){
+ const content=$('shot-list-content');if(content.dataset.sceneKey!==shotViewKey())return null;
+ const active=document.activeElement,rows=[...content.querySelectorAll('[data-shot-row]')];
+ const focus=content.contains?.(active)?{row:shotRowKey(active.closest('[data-shot-row]')),checked:active.dataset.shotChecked!==undefined,actions:active.dataset.shotActions!==undefined,edit:active.dataset.editCamera}:null;
+ const state={top:$('shot-list').scrollTop,left:$('shot-list').scrollLeft,open:[...content.querySelectorAll('[data-shot-details]')].filter(el=>el.open).map(el=>el.dataset.shotDetails),focus};
+ const selection=document.getSelection?.();
+ if(selection&&!selection.isCollapsed&&content.contains?.(selection.anchorNode)&&content.contains?.(selection.focusNode)){
+  const anchor=shotTextPoint(selection.anchorNode,selection.anchorOffset),end=shotTextPoint(selection.focusNode,selection.focusOffset);if(anchor&&end)state.selection={anchor,end};
+ }
+ return state;
+}
+function restoreShotListView(state){
+ if(!state)return;
+ const content=$('shot-list-content'),rows=[...content.querySelectorAll('[data-shot-row]')];
+ content.querySelectorAll('[data-shot-details]').forEach(el=>{el.open=state.open.includes(el.dataset.shotDetails);});
+ const row=rows.find(el=>shotRowKey(el)===state.focus?.row);
+ const focus=state.focus?.checked?row?.querySelector('[data-shot-checked]'):state.focus?.actions?row?.querySelector('[data-shot-actions]'):state.focus?.edit?[...content.querySelectorAll('[data-edit-camera]')].find(el=>el.dataset.editCamera===state.focus.edit):row;
+ focus?.focus({preventScroll:true});
+ if(state.selection&&document.createTreeWalker){
+  const point=value=>{const row=rows.find(el=>shotRowKey(el)===value.row);if(!row)return null;let exact=row;for(const index of value.path||[])exact=exact?.childNodes[index];if(exact?.nodeType===value.nodeType)return [exact,Math.min(value.offset,exact.nodeType===3?exact.textContent.length:exact.childNodes.length)];const walk=document.createTreeWalker(row,4);let node,last,remaining=value.textOffset;while(node=walk.nextNode()){last=node;if(remaining<=node.textContent.length)return [node,remaining];remaining-=node.textContent.length;}return last?[last,last.textContent.length]:null;};
+  const a=point(state.selection.anchor),b=point(state.selection.end);if(a&&b)document.getSelection()?.setBaseAndExtent(...a,...b);
+ }
+ $('shot-list').scrollTop=state.top;$('shot-list').scrollLeft=state.left;
+}
+function hideShotContext(restoreFocus=false){
+ $('shot-context').hidden=true;shotActionTarget=null;
+ if(restoreFocus)shotActionOrigin?.focus({preventScroll:true});shotActionOrigin=null;
+}
+function deleteShotEntry(target,confirmedCamera=false){
+ hideShotContext();
+ if(!target||target.productionId!==doc.projectId||target.sceneId!==doc.active){toast('The scene changed. Open shot actions again.');return false;}
+ const owner=doc.scenes.find(s=>s.id===target.sceneId);if(!owner)return false;
+ let replacement;
+ if(target.kind==='shot')replacement=ScenicShotList.withoutShot(owner,target.id);
+ else if(target.kind==='camera'){
+  const camera=owner.objects.find(o=>o.id===target.id&&o.type==='camera');if(!camera)return false;
+  if(!confirmedCamera){pendingCameraShotDelete={...target};$('delete-shot-setup-detail').textContent=`This removes ${camera.name} from the scene map. Every other item stays in place. Undo can restore this camera setup.`;$('delete-shot-setup').showModal();return false;}
+  replacement={...owner,objects:owner.objects.filter(o=>o!==camera)};
+ }
+ if(!replacement)return false;
+ const rows=[...$('shot-list-content').querySelectorAll('[data-shot-row]')],index=rows.findIndex(row=>row.dataset.shotRow===target.id&&row.dataset.shotKind===target.kind);
+ snapshot();doc.scenes=doc.scenes.map(s=>s.id===owner.id?replacement:s);
+ if(target.kind==='camera'){selectedIds.delete(target.id);if(selected===target.id)selected=[...selectedIds][0]||null;}
+ commit();const nextRows=$('shot-list-content').querySelectorAll('[data-shot-row]');nextRows[Math.min(Math.max(index,0),nextRows.length-1)]?.focus({preventScroll:true});
+ toast(target.kind==='shot'?'Shot deleted · Map cameras kept and unlinked · Undo to restore':'Camera setup deleted · Undo to restore');return true;
+}
+function openShotActions(row,origin,x,y){
+ shotActionTarget={productionId:doc.projectId,sceneId:doc.active,kind:row.dataset.shotKind,id:row.dataset.shotRow};shotActionOrigin=origin||row;
+ const menu=$('shot-context');$('context-delete-shot').textContent=shotActionTarget.kind==='camera'?'Delete camera setup…':'Delete shot';menu.hidden=false;
+ menu.style.left=Math.max(8,Math.min(x,innerWidth-220))+'px';menu.style.top=Math.max(8,Math.min(y,innerHeight-58))+'px';$('context-delete-shot').focus({preventScroll:true});
+}
+function bindShotActions(){
+ const content=$('shot-list-content');
+ content.querySelectorAll('[data-shot-row]').forEach(row=>{
+  row.oncontextmenu=e=>{e.preventDefault();e.stopPropagation();openShotActions(row,row,e.clientX,e.clientY);};
+  row.onkeydown=e=>{if(e.key==='ContextMenu'||e.shiftKey&&e.key==='F10'){e.preventDefault();e.stopPropagation();const r=row.getBoundingClientRect();openShotActions(row,document.activeElement,r.left,r.top);}};
+  const button=row.querySelector('[data-shot-actions]');if(button)button.onclick=e=>{e.stopPropagation();const r=button.getBoundingClientRect();openShotActions(row,button,r.left,r.bottom);};
+ });
+ if(shotActionTarget&&(shotActionTarget.productionId!==doc.projectId||shotActionTarget.sceneId!==doc.active||![...content.querySelectorAll('[data-shot-row]')].some(row=>row.dataset.shotRow===shotActionTarget.id&&row.dataset.shotKind===shotActionTarget.kind)))hideShotContext();
+ if(shotActionsBound)return;shotActionsBound=true;
+ $('context-delete-shot').onclick=()=>deleteShotEntry(shotActionTarget);
+ document.addEventListener('pointerdown',e=>{if(!e.target.closest('#shot-context'))hideShotContext();});
+ $('shot-list').addEventListener('scroll',()=>hideShotContext());window.addEventListener('resize',()=>hideShotContext());
+ window.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('shot-context').hidden){e.preventDefault();hideShotContext(true);}});
+ $('cancel-delete-shot-setup').onclick=()=>{$('delete-shot-setup').close();pendingCameraShotDelete=null;};
+ $('delete-shot-setup').onclose=()=>{pendingCameraShotDelete=null;};
+ $('confirm-delete-shot-setup').onclick=()=>{const target=pendingCameraShotDelete;$('delete-shot-setup').close();pendingCameraShotDelete=null;deleteShotEntry(target,true);};
+}
+function updateShotCoverage(target,checked){
+ if(!target||typeof checked!=='boolean'||target.productionId!==doc.projectId||target.sceneId!==doc.active)return false;
+ const shot=scene().shotList?.find(shot=>shot.id===target.id);if(!shot||shot.checked===checked)return false;
+ snapshot();shot.checked=checked;stopPlayback();save();updateUndo();renderScenes();
+ // Keep the actual checkbox/card nodes alive: no list replacement, scroll,
+ // selection, disclosure or focus loss when reviewing consecutive shots.
+ const content=$('shot-list-content'),stats=ScenicShotList.coverage(scene());
+ const summary=content.querySelector?.('.coverage-summary');
+ if(summary){summary.querySelector('strong').textContent=`${stats.checked} / ${stats.total} coverage checked`;const progress=summary.querySelector('progress');progress.max=stats.total||1;progress.value=stats.checked;}
+ content.querySelectorAll('[data-shot-checked]').forEach(el=>{if(el.dataset.shotChecked===shot.id){el.checked=checked;el.closest('[data-shot-row]').classList.toggle('coverage-checked',checked);}});
+ if(object()?.type==='camera'&&object().shotId===shot.id&&$('camera-shot-checked'))$('camera-shot-checked').checked=checked;
+ return true;
+}
 function renderShots(){
  const current=scene(),shots=current.shotList||[];
  if(!shots.length){renderCameraSetups();return;}
- const stats=ScenicShotList.coverage(current),cams=current.objects.filter(o=>o.type==='camera');
+ const state=captureShotListView(),stats=ScenicShotList.coverage(current),cams=current.objects.filter(o=>o.type==='camera');
  $('shot-list-heading').innerHTML=`<h2>Plan every angle.</h2><p>${esc(current.title)} · ${shots.length} imported shots · ${cams.length} camera setups</p>`;$('shot-list-content').innerHTML=`<div class="coverage-summary" role="status"><strong>${stats.checked} / ${stats.total} coverage checked</strong><span>${stats.linked} linked to cameras · ${stats.total-stats.linked} need a camera</span><progress aria-label="Shot coverage checked" max="${stats.total||1}" value="${stats.checked}"></progress></div><p class="empty-hint">Place a camera on the scene map, then select it and choose Link to shot in Properties. Check coverage as you verify each setup. Omitted shots are excluded from the totals; Production Desk status stays as imported.</p><div class="imported-shots">${shots.map(shot=>{
   const linked=ScenicShotList.linkedCameras(current,shot);
-  return `<article class="imported-shot ${shot.checked?'coverage-checked':''}"><div class="imported-shot-heading"><label class="shot-coverage-check"><input type="checkbox" data-shot-checked="${esc(shot.id)}" aria-label="Coverage checked for shot ${esc(shot.number)}" ${shot.checked?'checked':''}><strong>${esc(shot.number)}</strong></label><span class="shot-source-status">${esc(shot.status||'Planned')} · ${esc(shot.priority||'No priority')}</span></div><h3>${esc(shot.description||'Untitled shot')}</h3><p class="shot-source-specs">${esc([shot.size,shot.camera&&'Camera '+shot.camera,shot.lens&&shot.lens+' mm',shot.movement,shot.equipment].filter(Boolean).join(' · '))}</p><div class="shot-linked-cameras">${linked.length?linked.map(c=>`<button data-edit-camera="${esc(c.id)}">${esc(c.name)} ↗</button>`).join(''):'<span class="missing-camera">No camera linked</span>'}</div><details class="source-shot"><summary>All original shot details</summary>${shotDetails(shot)}</details></article>`;
+  return `<article tabindex="0" data-shot-row="${esc(shot.id)}" data-shot-kind="shot" aria-label="Shot ${esc(shot.number)}" class="imported-shot ${shot.checked?'coverage-checked':''}"><div class="imported-shot-heading"><label class="shot-coverage-check"><input type="checkbox" data-shot-checked="${esc(shot.id)}" aria-label="Coverage checked for shot ${esc(shot.number)}" ${shot.checked?'checked':''}><strong>${esc(shot.number)}</strong></label><div class="shot-row-actions"><span class="shot-source-status">${esc(shot.status||'Planned')} · ${esc(shot.priority||'No priority')}</span><button type="button" data-shot-actions aria-haspopup="menu" aria-label="Actions for shot ${esc(shot.number)}">⋯</button></div></div><h3>${esc(shot.description||'Untitled shot')}</h3><p class="shot-source-specs">${esc([shot.size,shot.camera&&'Camera '+shot.camera,shot.lens&&shot.lens+' mm',shot.movement,shot.equipment].filter(Boolean).join(' · '))}</p><div class="shot-linked-cameras">${linked.length?linked.map(c=>`<button data-edit-camera="${esc(c.id)}">${esc(c.name)} ↗</button>`).join(''):'<span class="missing-camera">No camera linked</span>'}</div><details class="source-shot" data-shot-details="${esc(shot.id)}"><summary>All original shot details</summary>${shotDetails(shot)}</details></article>`;
  }).join('')}</div>${cams.some(c=>!c.shotId)?`<div class="section-label">UNLINKED CAMERA SETUPS</div><div class="shot-linked-cameras">${cams.filter(c=>!c.shotId).map(c=>`<button data-edit-camera="${esc(c.id)}">${esc(c.name)} · Link in Properties ↗</button>`).join('')}</div>`:''}`;
  document.querySelectorAll('[data-edit-camera]').forEach(b=>b.onclick=()=>{showShots(false);choose(b.dataset.editCamera);});
- document.querySelectorAll('[data-shot-checked]').forEach(el=>el.onchange=()=>{const shot=shots.find(s=>s.id===el.dataset.shotChecked);if(!shot)return;snapshot();shot.checked=el.checked;commit();});
+ document.querySelectorAll('[data-shot-checked]').forEach(el=>{const target={productionId:doc.projectId,sceneId:current.id,id:el.dataset.shotChecked};el.onchange=()=>updateShotCoverage(target,el.checked);});
+ $('shot-list-content').dataset.sceneKey=shotViewKey();bindShotActions();restoreShotListView(state);
  $('export-shots').onclick=()=>download(new Blob([ScenicShotList.exportCSV(current)],{type:'text/csv;charset=utf-8'}),'scenic-shot-list.csv');
 }
 init();

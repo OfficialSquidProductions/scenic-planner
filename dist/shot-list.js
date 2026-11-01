@@ -100,6 +100,15 @@ function mergeImport(project,incoming,selectedIds,targets){
 function validList(list){
  return Array.isArray(list)&&list.length<=2000&&new Set(list.map(s=>s?.id)).size===list.length&&list.every(s=>s&&typeof s.id==='string'&&s.id.length>0&&typeof s.checked==='boolean'&&columns.every(([,key])=>key==='scriptCoverage'&&s[key]===undefined||typeof s[key]==='string'&&s[key].length<=20000)&&s.scene.trim()&&s.number.trim());
 }
+// Remove only the imported shot record. Placed cameras and their settings stay
+// on the map; links to the removed record are cleared atomically.
+function withoutShot(scene,shotId){
+ if(!scene.shotList?.some(shot=>shot.id===shotId))return null;
+ return {...scene,shotList:scene.shotList.filter(shot=>shot.id!==shotId),objects:scene.objects.map(object=>{
+  if(object.type!=='camera'||object.shotId!==shotId)return object;
+  const copy={...object};delete copy.shotId;return copy;
+ })};
+}
 function linkedCameras(scene,shot){return scene.objects.filter(o=>o.type==='camera'&&o.shotId===shot.id);}
 function coverage(scene){const shots=(scene.shotList||[]).filter(s=>s.status.toLowerCase()!=='omitted');return {total:shots.length,linked:shots.filter(s=>linkedCameras(scene,s).length).length,checked:shots.filter(s=>s.checked).length};}
 function linkCamera(camera,shot){
@@ -110,6 +119,6 @@ function linkCamera(camera,shot){
 }
 function csvCell(value){let v=String(value??'');if(/^[=+@\-\t\r]/.test(v))v="'"+v;return '"'+v.replace(/"/g,'""')+'"';}
 function exportCSV(scene){return [columns.map(([label])=>label).concat(['Scenic cameras','Coverage checked']),...(scene.shotList||[]).map(s=>columns.map(([,key])=>s[key]).concat([linkedCameras(scene,s).map(c=>c.name).join('; '),s.checked?'Yes':'No']))].map(row=>row.map(csvCell).join(',')).join('\r\n');}
-const api={columns,sizes,parseCSV,importCSV,planImport,mergeImport,validList,linkedCameras,coverage,linkCamera,csvCell,exportCSV};
+const api={columns,sizes,parseCSV,importCSV,planImport,mergeImport,validList,withoutShot,linkedCameras,coverage,linkCamera,csvCell,exportCSV};
 if(typeof module==='object'&&module.exports)module.exports=api;else root.ScenicShotList=api;
 })(globalThis);
