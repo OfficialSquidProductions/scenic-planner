@@ -55,6 +55,7 @@ final class ScenicApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
     var projectShareFile: URL?
     var projectShareReply: String?
     let updates = ScenicUpdates()
+    lazy var objectClipboard = ScenicObjectClipboard(webView: { [weak self] in self?.web }, isSceneWindow: { [weak self] in guard let self else { return false }; return NSApp.keyWindow === self.window })
     var releaseNotesWindow: NSWindow?
     lazy var crashes = ScenicReports(root: store.root, version: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Development")
     var reportEmailService: NSSharingService?
@@ -120,9 +121,10 @@ final class ScenicApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
         let edit = submenu("Edit")
         add(edit, "Undo", #selector(undo), "z"); add(edit, "Redo", #selector(redo), "z", [.command, .shift])
         edit.addItem(.separator())
-        for (name, action, key) in [("Cut", #selector(NSText.cut(_:)), "x"), ("Copy", #selector(NSText.copy(_:)), "c"), ("Paste", #selector(NSText.paste(_:)), "v"), ("Select All", #selector(NSText.selectAll(_:)), "a")] {
-            edit.addItem(withTitle: name, action: action, keyEquivalent: key)
-        }
+        edit.addItem(withTitle: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+        let copyItem = edit.addItem(withTitle: "Copy", action: #selector(ScenicObjectClipboard.copy(_:)), keyEquivalent: "c"); copyItem.target = objectClipboard
+        let pasteItem = edit.addItem(withTitle: "Paste", action: #selector(ScenicObjectClipboard.paste(_:)), keyEquivalent: "v"); pasteItem.target = objectClipboard
+        edit.addItem(withTitle: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
         add(edit, "Duplicate Object", #selector(duplicate), "d")
         let view = submenu("View")
         add(view, "Fit Scene", #selector(fit), "0")
@@ -238,13 +240,13 @@ final class ScenicApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
         if let browser = sceneBrowserWeb, message.webView === browser {
             guard url.standardizedFileURL == webRoot.appendingPathComponent("scene-browser.html").standardizedFileURL else { return }
             if action == "sceneBrowserReady" { reply(id, result: sceneBrowserSnapshot as Any? ?? NSNull(), target: browser); return }
-            guard ["scenePreview", "selectScene"].contains(action), let productionId = b["productionId"] as? String,
+            guard ["scenePreview", "selectScene", "duplicateScene"].contains(action), let productionId = b["productionId"] as? String,
                   let sceneId = b["sceneId"] as? String else { reply(id, error: "Unsupported scene browser request", target: browser); return }
-            web.callAsyncJavaScript("return await window.ScenicSceneBrowser[action](productionId, sceneId);", arguments: ["action": action == "scenePreview" ? "preview" : "select", "productionId": productionId, "sceneId": sceneId], in: nil, in: .page) { [weak self] result in
+            web.callAsyncJavaScript("return await window.ScenicSceneBrowser[action](productionId, sceneId);", arguments: ["action": action == "scenePreview" ? "preview" : action == "selectScene" ? "select" : "duplicate", "productionId": productionId, "sceneId": sceneId], in: nil, in: .page) { [weak self] result in
                 guard let self = self else { return }
                 switch result {
                 case .success(let value):
-                    if action == "selectScene", value as? Bool == true { self.allowClose = false; self.window.makeKeyAndOrderFront(nil) }
+                    if action != "scenePreview", value as? Bool == true { self.allowClose = false; self.window.makeKeyAndOrderFront(nil) }
                     self.reply(id, result: value, target: browser)
                 case .failure(let error): self.reply(id, error: error.localizedDescription, target: browser)
                 }

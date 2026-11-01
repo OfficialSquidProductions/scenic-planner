@@ -1,0 +1,35 @@
+const checks=[],check=(ok,message)=>{if(!ok)throw Error(message);checks.push(message);};
+const request=(action,payload={})=>ScenicDesktop.request(action,payload);
+async function until(checker,label){for(let i=0;i<100;i++){if(await checker())return;await new Promise(r=>setTimeout(r,25));}throw Error('Timed out: '+label);}
+loadWorkspace({version:2,activeProject:'bathroom-project',projects:[JSON.parse(clipboardFixture)]});history=[];future=[];refresh();
+const source=scene(),sourceId=source.id,roots=source.objects.filter(o=>o.id!=='unselected'&&!o.wallId&&o.type!=='wall').map(o=>o.id);
+setSelection(roots);refreshWallSelection();canvas.focus();
+const original=JSON.stringify(source),later=doc.scenes.find(s=>s.id==='later'),destination=JSON.stringify(later.objects),historyBefore=history.length;
+await request('qaCopy');await until(async()=>((await request('qaClipboardState')).text||'').startsWith('SCENIC OBJECTS 1\n'),'native copy');
+check(history.length===historyBefore&&JSON.stringify(source)===original,'Native Command+C route leaves source and undo history unchanged');
+const clipboard=(await request('qaClipboardState')).text;check(ScenicObjectCopies.decode(clipboard).selection.length===roots.length,'System pasteboard carries the selected bathroom items');
+document.querySelector('[data-scene="later"]').click();
+check(doc.active==='later'&&selected===null,'Switch to the existing later scene clears selection');
+await request('qaPaste');await until(()=>scene().objects.some(o=>o.type==='camera'),'native paste');
+check(JSON.stringify(doc.scenes.find(s=>s.id===sourceId))===original,'Scene 1 bathroom is unchanged after cross-scene paste');
+check(JSON.stringify(scene().objects.slice(0,1))===destination,'Later scene existing objects remain intact');
+const payload=ScenicObjectCopies.decode(clipboard),copied=scene().objects.slice(1);
+check(copied.length===payload.objects.length,'All selected items and architectural attachments arrive');
+for(const o of payload.objects){const copy=copied.find(p=>p.name===o.name);check(copy&&copy.id!==o.id&&copy.x===o.x&&copy.y===o.y,'Fresh independently editable item at original bathroom position: '+o.name);}
+check(copied.find(o=>o.type==='floor').src===source.objects.find(o=>o.type==='floor').src&&copied.find(o=>o.type==='image').opacity===45,'Floor/reference images and properties retained');
+const group=copied.find(o=>o.type==='wallGroup'),windowCopy=copied.find(o=>o.name==='Bathroom window');check(group.wallIds.every(id=>copied.some(o=>o.id===id&&o.type==='wall'))&&group.wallIds.includes(windowCopy.wallId),'Wall groups and attached windows point to copied walls');
+const camera=copied.find(o=>o.type==='camera');check(camera.lens===35&&camera.sensorWidth===36&&camera.marks.length===2&&camera.shotId!==source.objects.find(o=>o.type==='camera').shotId,'Camera properties, movement and independent cross-scene shot link retained');
+const pasted=JSON.stringify(workspaceData()),ids=JSON.stringify([...selectedIds]);undo();check(JSON.stringify(scene().objects)===destination,'One Undo restores only the destination before paste');redo();check(JSON.stringify(workspaceData())===pasted,'Redo restores the exact pasted state and IDs');
+await request('qaPaste');await until(()=>scene().objects.filter(o=>o.type==='camera').length===2,'repeat paste');check(scene().objects.filter(o=>o.type==='camera').at(-1).x===210&&JSON.stringify([...selectedIds])!==ids,'Repeated paste offsets and selects fresh copies');
+scene().objects.filter(o=>o.type==='camera').at(-1).notes='Later-scene independent edit';check(JSON.stringify(doc.scenes.find(s=>s.id===sourceId))===original,'Editing pasted copies never edits the original bathroom');
+const unchanged=JSON.stringify(workspaceData()),oldHistory=history.length;
+$('scene-title').focus();const fallbacks=await request('qaClipboardState');await request('qaCopy');await request('qaPaste');await until(async()=>{const s=await request('qaClipboardState');return s.copies>fallbacks.copies&&s.pastes>fallbacks.pastes;},'text fallback');check(JSON.stringify(workspaceData())===unchanged,'Text-field Copy/Paste use the native responder chain and never edit scene items');canvas.focus();
+await request('qaSetClipboard',{text:'<img src=x onerror=alert(1)>'});const unsupported=await request('qaClipboardState');await request('qaPaste');await until(async()=>(await request('qaClipboardState')).pastes>unsupported.pastes,'unsupported fallback');check(JSON.stringify(workspaceData())===unchanged&&history.length===oldHistory,'Unsupported clipboard content is not imported or executed');
+await request('qaSetClipboard',{text:'SCENIC OBJECTS 1\n{bad'});await request('qaPaste');await until(()=>$('toast').textContent.includes('damaged'),'damaged payload');check(JSON.stringify(workspaceData())===unchanged&&history.length===oldHistory,'Malformed Scenic clipboard data fails atomically');
+await request('qaSetClipboard',{text:clipboard});await request('qaSceneWindow',{enabled:false});const secondary=await request('qaClipboardState');await request('qaCopy');await request('qaPaste');await until(async()=>{const s=await request('qaClipboardState');return s.copies>secondary.copies&&s.pastes>secondary.pastes;},'secondary-window fallback');check(JSON.stringify(workspaceData())===unchanged,'Other native windows retain normal Copy/Paste');await request('qaSceneWindow',{enabled:true});
+const sceneRow=document.querySelector('[data-scene="bathroom"]');sceneRow.dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,cancelable:true,clientX:120,clientY:160}));check(!$('scene-context').hidden&&document.activeElement===$('context-duplicate-scene'),'Right-clicking an inactive scene exposes accessible Duplicate Scene');
+$('context-duplicate-scene').click();check(doc.scenes.length===3&&doc.active!=='bathroom'&&$('scene-context').hidden,'Context Duplicate Scene creates and activates an independent environment');
+const duplicate=scene();check(duplicate.objects.length===source.objects.length&&duplicate.objects.every(o=>!source.objects.some(s=>s.id===o.id)),'Duplicated scene has fresh object IDs');check(duplicate.shotList[0].id!==source.shotList[0].id&&duplicate.objects.find(o=>o.type==='camera').shotId===duplicate.shotList[0].id,'Duplicated shot IDs and camera links are remapped together');
+duplicate.objects.find(o=>o.type==='camera').notes='Duplicate only';check(JSON.stringify(doc.scenes.find(s=>s.id===sourceId))===original,'Duplicate environment edits leave Scene 1 unchanged');
+const portable=ScenicProjectFile.parse(ScenicProjectFile.serialize(doc));check(ScenicModel.validProject(portable)&&portable.scenes.length===3,'Copied and duplicated environments survive portable save/reopen');await window.scenicFlush();const saved=JSON.parse(await request('qaSaved'));check(ScenicModel.validWorkspace(saved)&&saved.projects.find(p=>p.projectId===doc.projectId).scenes.length===3,'Native save receives valid complete environments');
+return {passed:true,checks,scenario:'Selected bathroom in Scene 1 → native Copy → later existing scene → native Paste',copiedItems:payload.objects.length};

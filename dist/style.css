@@ -167,3 +167,6 @@ main{container-type:inline-size}
  .scene-heading .view-tabs{margin-top:6px;width:max-content;max-width:100%}
  .scene-heading .view-tabs button{padding:6px 7px}
 }
+
+#scene-context #context-duplicate-scene{color:var(--ink)}
+#browser-duplicate-scene{color:var(--ink)}

@@ -10,10 +10,18 @@ function renderProjects(){
  const select=$('production-select');select.innerHTML=workspaceData().projects.map(p=>`<option value="${esc(p.projectId)}">${esc(p.name)} · ${p.scenes.length} ${p.scenes.length===1?'scene':'scenes'}</option>`).join('');select.value=doc.projectId;
  select.onchange=()=>{workspaceData();const next=workspace.projects.find(p=>p.projectId===select.value);if(!next||next===doc)return;doc=next;applyEditorSettings();selected=null;selectedIds.clear();wallMultiSelect=false;stopPlayback();setTool('select');showShots(false);applyTheme();fit();commit();};
 }
+function duplicateScene(id){
+ try{
+  const copy=ScenicObjectCopies.duplicateScene(doc,id,uid);
+  const candidate={...doc,editorSettings:{grid,snap,simulation},active:copy.id,scenes:[...doc.scenes,copy]};
+  if(new TextEncoder().encode(JSON.stringify({...workspace,activeProject:doc.projectId,projects:workspace.projects.map(p=>p.projectId===doc.projectId?candidate:p)})).length>ScenicProjectFile.MAX_WORKSPACE)throw Error('This copy would exceed the workspace size limit.');
+  snapshot();doc.scenes.push(copy);hideContextMenu();activateScene(copy.id);canvas.focus();toast('Scene duplicated · Undo to restore');return true;
+ }catch(error){toast(error.message||'The scene could not be duplicated.');return false;}
+}
 function deleteScene(id){const target=doc.scenes.find(s=>s.id===id);if(!target)return;snapshot();doc.scenes=doc.scenes.filter(s=>s.id!==id);if(!doc.scenes.length)doc.scenes.push(blankScene());if(doc.active===id)doc.active=doc.scenes[0].id;selected=null;selectedIds.clear();wallMultiSelect=false;stopPlayback();hideContextMenu();setTool('select');fit();commit();toast('Scene deleted · Undo to restore');}
 function renderScenes(){
  $('scenes').innerHTML=doc.scenes.map((s,i)=>`<button class="scene-row ${s.id===doc.active?'active':''}" data-scene="${s.id}" title="Right-click for scene actions"><span class="scene-icon">${String(i+1).padStart(2,'0')}</span><span><strong>${esc(s.subtitle||s.title.replace(/^(INT\.|EXT\.)\s*/,'').split('—')[0].trim())}</strong><small>${s.shotList?.length?`${ScenicShotList.coverage(s).checked}/${ScenicShotList.coverage(s).total} checked · ${s.objects.filter(o=>o.type==='camera').length} cameras`:`${s.objects.filter(o=>o.type==='camera').length} shots · ${s.objects.filter(o=>o.type==='light').length} lights`}</small></span><span class="scene-more">›</span></button>`).join('');
- document.querySelectorAll('[data-scene]').forEach(b=>{b.onclick=()=>activateScene(b.dataset.scene);b.oncontextmenu=e=>{e.preventDefault();contextScene=b.dataset.scene;const menu=$('scene-context');menu.hidden=false;menu.style.left=Math.min(e.clientX,innerWidth-190)+'px';menu.style.top=Math.min(e.clientY,innerHeight-60)+'px';$('context-delete-scene').focus();};b.onkeydown=e=>{if(e.key==='ContextMenu'||e.shiftKey&&e.key==='F10'){e.preventDefault();const r=b.getBoundingClientRect();b.oncontextmenu({preventDefault(){},clientX:r.right,clientY:r.top});}};});
+ document.querySelectorAll('[data-scene]').forEach(b=>{b.onclick=()=>activateScene(b.dataset.scene);b.oncontextmenu=e=>{e.preventDefault();contextScene=b.dataset.scene;const menu=$('scene-context');menu.hidden=false;menu.style.left=Math.min(e.clientX,innerWidth-190)+'px';menu.style.top=Math.min(e.clientY,innerHeight-104)+'px';$('context-duplicate-scene').focus();};b.onkeydown=e=>{if(e.key==='ContextMenu'||e.shiftKey&&e.key==='F10'){e.preventDefault();const r=b.getBoundingClientRect();b.oncontextmenu({preventDefault(){},clientX:r.right,clientY:r.top});}};});
 }
 function activateScene(id){if(!doc.scenes.some(s=>s.id===id))return false;doc.active=id;selected=null;selectedIds.clear();wallMultiSelect=false;stopPlayback();setTool('select');showShots(false);fit();commit();return true;}
 function hideContextMenu(){$('scene-context').hidden=true;contextScene=null;}
@@ -121,6 +129,7 @@ function setupWorkflow(){
  setupControls();
  setupShotImport();
  $('new-project').onclick=newProject;$('library-search').oninput=e=>{libraryQuery=e.target.value;renderLibrary();$('library').scrollTop=0;};
+ $('context-duplicate-scene').onclick=()=>duplicateScene(contextScene);
  $('context-delete-scene').onclick=()=>deleteScene(contextScene);document.addEventListener('pointerdown',e=>{if(!e.target.closest('#scene-context'))hideContextMenu();});window.addEventListener('keydown',e=>{if(e.key==='Escape')hideContextMenu();});
  const openSettings=()=>{$('settings-theme').value=doc.theme;$('settings').showModal();};$('settings-button').onclick=openSettings;$('close-settings').onclick=()=>$('settings').close();
  $('report-bug').onclick=async()=>{try{if(window.ScenicDesktop)await window.ScenicDesktop.request('reportBug');else window.location.href='mailto:alexanderhosier@squidproductions.org?subject=Scenic%20bug%20report';}catch{toast('Could not open email. Contact alexanderhosier@squidproductions.org.');}};

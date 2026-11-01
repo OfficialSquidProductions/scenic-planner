@@ -35,6 +35,12 @@ jobs:
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           node tests/windows-menu.cjs
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          node tests/object-copy.cjs
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          node tests/object-clipboard.cjs
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          node tests/windows-clipboard.cjs
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
           node tests/floors.cjs
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           node tests/scene-shot-numbering.cjs

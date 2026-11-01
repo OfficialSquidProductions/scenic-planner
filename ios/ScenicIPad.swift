@@ -84,8 +84,8 @@ final class ScenicViewController: UIViewController, WKScriptMessageHandler, WKNa
         if let browser, message.webView === browser {
             guard url.lastPathComponent == "scene-browser.html" else { return }
             if action == "sceneBrowserReady" { reply(id, result: sceneSnapshot as Any? ?? NSNull(), target: browser); return }
-            guard ["scenePreview", "selectScene"].contains(action), let production = data["productionId"] as? String, let scene = data["sceneId"] as? String else { reply(id, error: "Unsupported scene-browser request", target: browser); return }
-            web.callAsyncJavaScript("return await window.ScenicSceneBrowser[action](production,scene)", arguments: ["action": action == "scenePreview" ? "preview" : "select", "production": production, "scene": scene], in: nil, in: .page) { [weak self] result in
+            guard ["scenePreview", "selectScene", "duplicateScene"].contains(action), let production = data["productionId"] as? String, let scene = data["sceneId"] as? String else { reply(id, error: "Unsupported scene-browser request", target: browser); return }
+            web.callAsyncJavaScript("return await window.ScenicSceneBrowser[action](production,scene)", arguments: ["action": action == "scenePreview" ? "preview" : action == "selectScene" ? "select" : "duplicate", "production": production, "scene": scene], in: nil, in: .page) { [weak self] result in
                 switch result {
                 case .success(let value): self?.reply(id, result: value, target: browser)
                 case .failure(let error): self?.reply(id, error: error.localizedDescription, target: browser)

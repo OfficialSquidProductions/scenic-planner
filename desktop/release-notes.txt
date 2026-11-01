@@ -1,5 +1,5 @@
-Scenic 1.4.26
+Scenic 1.4.27
 
-- Import Production Desk shot lists into the scene identified by full dotted shot numbers: 7.2 belongs to scene 7, shot 2, even when its linked screenplay scene is different.
-- Preserve all shots, descriptions, Script coverage and existing supported numbering formats, including noncontiguous scene numbers and out-of-order CSV rows.
-- Reimport matching shots without duplicates while retaining camera links and coverage checks. Previously misgrouped imports show guidance that preserves the original production and maps.
+- Copy selected scene items with Command+C and paste with Command+V on Mac (Ctrl+C / Ctrl+V on Windows). Copy a built environment into a later existing scene at the same positions while preserving its existing objects.
+- Pasted items are independent copies with fresh IDs. Preserve relative layout, editable properties, floor/reference images, walls and groups, attached doors/windows, camera settings, movement marks and supported shot links. Repeated pastes are offset; normal text-field copy and paste remain available.
+- Right-click a scene and choose Duplicate scene to reuse its complete constructed environment with independent object and shot IDs. Both paste and scene duplication support Undo/Redo and portable save/reopen.
