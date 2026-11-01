@@ -54,7 +54,7 @@ if ($VerificationRunId) {
   if ($manifest -notmatch "(?m)^version: $([regex]::Escape($version))\s*$" -or !$manifest.Contains($hash512)) { throw 'Update manifest differs from verified installer' }
 }
 # Mac's existing appcast uses /latest/ for its enclosure, so retain the exact signed
-# 1.4.23 archive too. These are unchanged prior-release assets, not a new Mac build.
+# Mac archive too. These are unchanged prior-release assets, not a new Mac build.
 foreach ($asset in $plan.assets.PSObject.Properties) {
   $name = $asset.Name
   gh release download $plan.retainedMacTag --repo $repo --pattern $name --dir $verify --clobber
@@ -73,5 +73,6 @@ foreach ($asset in $plan.assets.PSObject.Properties) {
     throw "Published Mac asset digest mismatch: $name"
   }
 }
-gh release edit $tag --repo $repo --draft=false --latest --title "Scenic $version for Windows (Mac remains 1.4.23)" --notes-file desktop/release-notes.txt
+$retainedMacVersion = $plan.retainedMacTag -replace '^v', ''
+gh release edit $tag --repo $repo --draft=false --latest --title "Scenic $version for Windows (Mac remains $retainedMacVersion)" --notes-file desktop/release-notes.txt
 if ($LASTEXITCODE) { throw 'Release publication failed; inspect state before retrying' }
