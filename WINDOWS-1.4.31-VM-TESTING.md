@@ -14,3 +14,11 @@ Use only synthetic projects in a disposable Windows QA profile. The JSON fixture
 8. Save/open portable copies, quit/relaunch and reinstall; verify all new objects, groups, links, labels, text/curve controls and images persist. Recheck 17 shots/nine numbered scenes, metadata, reimport deduplication, camera coverage and legacy numbering. Cancel/reopen native CSV/image/project pickers.
 
 After VM passes, record exact evidence and retain the public Mac 1.4.30 appcast, signed version ZIP, alias ZIP, HTML notes, checksum and Mac verification JSON by exact digest. The old `desktop/windows-publication.json` still targets 1.4.24 and deliberately cannot publish this candidate. Update it only after VM verification; preserve the tested candidate SHA and installer bytes, and verify both public updater channels after promotion. The publication helper now derives its retained Mac version in the release title instead of the old hardcoded value. Apple uploads/reviews are separate and must not be altered from this Windows task.
+
+## Verified installer handoff
+
+CI https://github.com/OfficialSquidProductions/scenic-planner/actions/runs/41364345947 succeeded for `a7e433dd5f1177d2d69e9c8e0c5bf3c66db4a3b5`. All shared/new suites and 13 native checks each for packaged, installed and reinstalled app passed; publication was skipped. Draft release ID `430940497` remains unpublished.
+
+Installer: `release/windows37-vm-candidate/Scenic-Windows-Setup.exe`, SHA256 `52a6f0a5029dd3a4e962cf97d7ec730bf0b774c20b5833f32dde663b71563685`. All four downloaded asset digests and latest.yml version/SHA512 match CI evidence. GitHub Actions evidence artifact: `windows-verification` ID `13107125134`.
+
+On the connected Windows VM, use authenticated `gh release download v1.4.31 --repo OfficialSquidProductions/scenic-planner --dir Scenic-QA-1.4.31` and `gh run download 41364345947 --repo OfficialSquidProductions/scenic-planner --name windows-verification --dir Scenic-QA-1.4.31/evidence`. Verify `Get-FileHash Scenic-QA-1.4.31/Scenic-Windows-Setup.exe -Algorithm SHA256` before testing. Actual Windows VM feature checks have not run, so do not publish the draft.
