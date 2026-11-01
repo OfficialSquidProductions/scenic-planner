@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.4.25",
+    "changes": [
+      "Mac: Import full scene.shot numbers into their numbered scenes, even when the CSV Scene column still refers to a different linked screenplay scene. For example, 7.2 imports as scene 7, shot 2.",
+      "Keep all shots, descriptions and Script coverage, including noncontiguous scene numbers and out-of-order CSV rows. Lettered and suffix-only shot formats continue using the explicit Scene column.",
+      "This is a macOS GitHub update only. Windows remains at 1.4.24; iPhone, iPad and all App Store releases are on hold."
+    ]
+  },
+  {
     "version": "1.4.24",
     "changes": [
       "Windows: File > Import Shot List CSV now opens the file picker from the scene map. Canceling and reimporting retain the existing preview and duplicate-free merge behavior.",

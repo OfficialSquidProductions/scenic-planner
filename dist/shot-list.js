@@ -4,6 +4,7 @@
 const columns=[['Day','day'],['Scene','scene'],['Shot','number'],['Description','description'],['Size','size'],['Movement','movement'],['Camera','camera'],['Lens mm','lens'],['Equipment','equipment'],['Setup minutes','setupMinutes'],['Shoot minutes','shootMinutes'],['Actual minutes','actualMinutes'],['Status','status'],['Takes','takes'],['Circle take','circleTake'],['Priority','priority'],['Notes','notes'],['Script coverage','scriptCoverage']];
 const sizes=['Wide','Medium wide','Medium','Medium close-up','Close-up','Extreme close-up','Insert','Over the shoulder','POV'];
 const matchKey=value=>value.trim().toUpperCase();
+const numberedScene=number=>number.match(/^(\d+[A-Za-z]?)\.\d+[A-Za-z]?$/)?.[1];
 function parseCSV(text){
  if(typeof text!=='string'||text.length>10*1024*1024)throw Error('Choose a shot list smaller than 10 MB.');
  text=text.replace(/^\uFEFF/,'');
@@ -34,6 +35,11 @@ function importCSV(text,id){
   const shot={id:id(),checked:false};
   for(const [heading,key] of columns){const index=headers.indexOf(heading.toLowerCase());shot[key]=index<0?'':row[index].replace(/^'(?=[=+@\-\t\r])/,'');}
   shot.scene=shot.scene.trim();shot.number=shot.number.trim();
+  // Full scene.shot identifiers survive manual renumbering in Production Desk,
+  // even when its linked screenplay scene (the Scene column) is unchanged.
+  // Lettered identifiers and suffix-only numbers still use the Scene column.
+  const numbered=numberedScene(shot.number);
+  if(numbered)shot.scene=numbered;
   if(!shot.scene||!shot.number)throw Error(`Row ${i+2} needs a scene and a shot number.`);
   const key=matchKey(shot.scene);
   if(!groups.has(key))groups.set(key,[]);
@@ -49,9 +55,13 @@ function planImport(project,incoming,selectedIds=incoming.map(s=>s.id),targets={
  const selected=new Set(selectedIds),entries=[],errors=[];
  let newScenes=0,updatedScenes=0,newShots=0,updatedShots=0,retainedShots=0;
  for(const source of incoming){
-  const matches=project.scenes.filter(s=>sceneKey(s)===sceneKey(source)),target=targets[source.id]?matches.find(s=>s.id===targets[source.id]):matches.length===1?matches[0]:null;
+  const sourceKey=sceneKey(source),matches=project.scenes.filter(s=>sceneKey(s)===sourceKey),target=targets[source.id]?matches.find(s=>s.id===targets[source.id]):matches.length===1?matches[0]:null;
   const entry={source,matches,target,selected:selected.has(source.id),added:0,updated:0,retained:0};entries.push(entry);
   if(!entry.selected)continue;
+  const numberedKeys=new Set(source.shotList.filter(s=>numberedScene(s.number)).map(s=>matchKey(s.number)));
+  if(project.scenes.some(s=>(s.shotList||[]).some(shot=>numberedKeys.has(matchKey(shot.number))&&matchKey(shot.scene)!==sourceKey))){
+   errors.push(`Existing shots for ${source.title} were imported under a different scene number. Import this CSV into a new production to separate the numbered scenes and preserve your existing maps.`);continue;
+  }
   if(matches.length&&!target){errors.push(`Choose an existing scene to update for ${source.title}.`);continue;}
   if(target){
    const existing=target.shotList||[],keys=new Set(existing.map(s=>matchKey(s.number))),sourceKeys=new Set(source.shotList.map(s=>matchKey(s.number)));

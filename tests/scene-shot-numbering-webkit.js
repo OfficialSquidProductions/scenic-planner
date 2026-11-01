@@ -1,0 +1,24 @@
+const checks=[],assert=(value,message)=>{if(!value)throw Error(message);checks.push(message);};
+const numbers=['17.2','3.2','1.1','21.1','7.1','3.1','12.2','9.2','5.1','17.1','7.2','12.1','9.1','5.2','24.1','1.2','21.2'];
+const csv=['Scene,Shot,Description,Script coverage',...numbers.map((number,i)=>`${[1,2,4,8][i%4]},${number},Description ${number},Coverage ${number}`)].join('\r\n');
+const old=JSON.stringify(doc.scenes),count=doc.scenes.length,projectId=doc.projectId;
+async function importFile(){await $('shot-list-input').onchange({target:{files:[new File([csv],'synthetic-numbered-shots.csv',{type:'text/csv'})],value:''}});}
+await importFile();
+assert($('shot-import').open,'Native WebKit opens CSV import preview');
+assert(document.querySelectorAll('[data-import-scene]').length===9,'Preview offers all nine numbered scenes');
+assert($('shot-import-summary').textContent.includes('9 selected scenes · 17 shots'),'Preview reports nine scenes and seventeen shots');
+assert(!$('confirm-shot-import').disabled,'Preview permits validated import');
+$('confirm-shot-import').click();
+assert(doc.projectId===projectId,'Import retains the current production');
+assert(doc.scenes.length===count+9&&JSON.stringify(doc.scenes.slice(0,count))===old,'Import preserves all pre-existing scenes');
+const imported=doc.scenes.slice(count),ids=imported.flatMap(s=>s.shotList).map(s=>s.id);
+assert(ids.length===17,'All seventeen shots arrive');
+assert(imported.every(s=>s.shotList.every(shot=>s.title==='Scene '+shot.number.split('.')[0]&&shot.scene===shot.number.split('.')[0])),'Every full shot number belongs to its numbered scene');
+await importFile();assert($('shot-import-changes').textContent.includes('9 existing scenes to update'),'Reimport identifies the same nine scenes');$('confirm-shot-import').click();
+assert(doc.scenes.length===count+9&&JSON.stringify(doc.scenes.slice(count).flatMap(s=>s.shotList).map(s=>s.id))===JSON.stringify(ids),'Repeated import preserves shot identities without duplicating scenes or shots');
+const reopened=ScenicProjectFile.parse(ScenicProjectFile.serialize(doc));
+assert(reopened.scenes.slice(count).flatMap(s=>s.shotList).length===17,'Portable save and reopen preserves all imported shots');
+const before=JSON.stringify(doc);doc.scenes[count].shotList[0].scene='4';const legacy=JSON.stringify(doc);
+await importFile();assert($('confirm-shot-import').disabled&&$('shot-import-error').textContent.includes('new production'),'Previously misgrouped shots block duplicate-producing merge and explain safe import');
+assert(JSON.stringify(doc)===legacy,'Legacy grouping warning preserves existing production and maps');$('cancel-shot-import').click();
+return {passed:true,checks,scenes:9,shots:17};
