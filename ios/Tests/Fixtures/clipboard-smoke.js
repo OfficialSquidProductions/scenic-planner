@@ -17,7 +17,7 @@ if(verifyOnly){
 const project=JSON.parse(clipboardFixture);loadWorkspace({version:2,activeProject:project.projectId,projects:[project]});history=[];future=[];selected=null;selectedIds.clear();wallMultiSelect=false;showShots(false);refresh();fit();
 const source=scene(),sourceId=source.id,original=JSON.stringify(source),destination=JSON.stringify(doc.scenes.find(s=>s.id==='later').objects);
 setSelection(source.objects.filter(o=>o.name!=='Unselected source table').map(o=>o.id));canvas.focus();
-if(uiOnly){commit();return{checks:['Synthetic selected environment prepared for native UI test']};}
+if(uiOnly){doc.name='Scenic native UI QA36 '+Date.now();commit();return{checks:['Synthetic selected environment prepared for native UI test']};}
 const bindings=(await request('clipboardTestState')).keyCommands;
 check(bindings.some(k=>k.input==='c'&&k.command)&&bindings.some(k=>k.input==='v'&&k.command),'Native hardware Command+C and Command+V commands registered');
 check($('ipad-copy-items')?.getAttribute('aria-label')==='Copy selected scene items'&&$('ipad-paste-items')?.getAttribute('aria-label')==='Paste scene items','Touch clipboard controls have accessible names');

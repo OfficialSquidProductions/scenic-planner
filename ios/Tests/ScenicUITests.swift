@@ -110,6 +110,40 @@ final class ScenicUITests: XCTestCase {
         duplicate.tap();expectObjectCount(13)
         shot(phone ? "iPhone touch duplicate environment" : "iPad touch duplicate environment")
     }
+    func testSceneBrowserBatchFilesExport() throws {
+        prepareClipboardFixture()
+        app.webViews.buttons[phone ? "Scenes and items" : "Scenes"].tap()
+        app.webViews.buttons["Browse all scenes"].tap()
+        let export=app.webViews.buttons["Export all"]
+        XCTAssertTrue(export.waitForExistence(timeout:8),app.debugDescription)
+        export.tap()
+        let save=app.buttons["Save"].firstMatch
+        XCTAssertTrue(save.waitForExistence(timeout:12),app.debugDescription)
+        shot(phone ? "iPhone native multipage PDF Files destination" : "iPad native multipage PDF Files destination")
+        let cancel=app.buttons["Cancel"].firstMatch
+        if cancel.exists { cancel.tap() } else { cancelFiles() }
+        XCTAssertTrue(export.waitForExistence(timeout:8),app.debugDescription)
+        export.tap();XCTAssertTrue(save.waitForExistence(timeout:12));XCTAssertTrue(save.isEnabled,app.debugDescription);save.tap()
+        XCTAssertTrue(export.waitForExistence(timeout:10),app.debugDescription)
+        XCTAssertTrue(app.webViews.staticTexts["Exported 2 scenes in one PDF."].waitForExistence(timeout:8),app.debugDescription)
+        let format=app.webViews.descendants(matching:.any).matching(NSPredicate(format:"label == %@","Export all scenes format")).firstMatch
+        format.tap()
+        let option=app.buttons["Separate PNG files"]
+        if option.waitForExistence(timeout:2) { option.tap() }
+        else {
+            let picker=app.pickerWheels.firstMatch;XCTAssertTrue(picker.waitForExistence(timeout:5),app.debugDescription);picker.adjust(toPickerWheelValue:"Separate PNG files")
+            if app.toolbars.buttons["Done"].exists { app.toolbars.buttons["Done"].tap() }
+        }
+        for index in 0..<2 {
+            export.tap();XCTAssertTrue(save.waitForExistence(timeout:12),app.debugDescription);XCTAssertTrue(save.isEnabled,app.debugDescription);save.tap()
+            let keepBoth=app.alerts.buttons["Keep Both"]
+            if keepBoth.waitForExistence(timeout:2) { keepBoth.tap() }
+            XCTAssertTrue(export.waitForExistence(timeout:10),app.debugDescription)
+            XCTAssertTrue(app.webViews.staticTexts["Exported 2 scenes as separate PNG files."].waitForExistence(timeout:8),app.debugDescription)
+            shot((phone ? "iPhone" : "iPad") + " native PNG folder export " + String(index+1))
+        }
+        app.navigationBars.buttons["Done"].firstMatch.tap();expectObjectCount(13)
+    }
     func testPaletteTouchDragPortraitAndLandscape() throws {
         app.webViews.buttons["Scene map"].tap()
         for orientation in [UIDeviceOrientation.portrait,.landscapeLeft] {

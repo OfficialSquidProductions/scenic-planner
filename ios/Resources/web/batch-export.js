@@ -25,7 +25,7 @@ const api={MAX_BYTES,safeName,filename,pdf,zip};if(typeof module==='object'&&mod
 })(globalThis);
 
 if(typeof window!=='undefined')(()=>{
- let active=null,last={running:false,message:''};
+ let active=null,mapRunning=false,last={running:false,message:''};
  const yieldFrame=()=>new Promise(resolve=>setTimeout(resolve,0));
  function status(){const s=active||last;return {productionId:s.productionId||'',name:s.name||'',running:!!s.running,completed:s.completed||0,total:s.total||0,message:s.message||''};}
  function cancel(productionId){if(active?.productionId!==productionId)return false;active.cancelled=true;active.message='Cancelling export…';return true;}
@@ -39,8 +39,19 @@ if(typeof window!=='undefined')(()=>{
    const encoded=surface.toDataURL(format==='pdf'?'image/jpeg':'image/png',.94).split(',')[1];if(!encoded)throw Error('The scene image could not be created.');return Uint8Array.from(atob(encoded),c=>c.charCodeAt(0));
   }finally{doc=previous.doc;canvas=previous.canvas;ctx=previous.ctx;size=previous.size;view=previous.view;selected=previous.selected;selectedIds=previous.selectedIds;playback=previous.playback;drag=previous.drag;document.documentElement.dataset.theme=previous.theme;updateZoom();invalidate();}
  }
+ async function map(productionId,sceneId){
+  if(active||mapRunning)throw Error('Finish or cancel the current scene export first.');
+  if(productionId!==doc.projectId||sceneId!==doc.active||!doc.scenes.some(s=>s.id===sceneId))throw Error('Choose the active scene before exporting its map.');
+  if(drag)throw Error('Finish moving the current item before exporting.');
+  mapRunning=true;
+  try{
+   const project=structuredClone(doc),index=project.scenes.findIndex(s=>s.id===sceneId),target=project.scenes[index],filename=ScenicBatchFiles.filename(target,index);
+   const data=await raster(project,target,index,'png');if(data.length>ScenicBatchFiles.MAX_BYTES)throw Error('This map export exceeds 80 MB.');
+   return {data,filename};
+  }finally{mapRunning=false;}
+ }
  async function start(productionId,format){
-  if(active)throw Error('Finish or cancel the current scene export first.');if(productionId!==doc.projectId)throw Error('Reopen Scenes for the active production.');if(!['pdf','png'].includes(format))throw Error('Choose PDF or PNG.');if(drag)throw Error('Finish moving the current item before exporting.');
+  if(active||mapRunning)throw Error('Finish or cancel the current scene export first.');if(productionId!==doc.projectId)throw Error('Reopen Scenes for the active production.');if(!['pdf','png'].includes(format))throw Error('Choose PDF or PNG.');if(drag)throw Error('Finish moving the current item before exporting.');
   const project=structuredClone(doc);if(!project.scenes.length||project.scenes.length>100)throw Error('Choose a production with 1 to 100 scenes.');const job=active={productionId,name:project.name,running:true,completed:0,total:project.scenes.length,message:'Preparing '+project.scenes.length+' scenes…',cancelled:false};const files=[];let totalBytes=0;
   try{
    if(format==='png'&&window.ScenicDesktop){job.token=await ScenicDesktop.request('beginScenePNGExport',{name:ScenicBatchFiles.safeName(project.name),count:job.total});if(!job.token){job.cancelled=true;cancelled(job);}}
@@ -54,5 +65,5 @@ if(typeof window!=='undefined')(()=>{
   }catch(error){job.message=error.message||'The scenes could not be exported.';if(job.token)try{await ScenicDesktop.request('cancelScenePNGExport',{token:job.token});}catch{}if(job.cancelled)return {completed:false,message:'Export cancelled.'};throw error;}
   finally{job.running=false;last={productionId,name:job.name,running:false,completed:job.completed,total:job.total,message:job.message};active=null;}
  }
- window.ScenicBatchExport={start,status,cancel};
+ window.ScenicBatchExport={start,status,cancel,map};
 })();
