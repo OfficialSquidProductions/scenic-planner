@@ -11,6 +11,47 @@ const movable=o=>['actor','camera','light'].includes(o.type)&&o.kind!=='sun';
 const markLabel=i=>i<26?String.fromCharCode(65+i):String.fromCharCode(64+Math.floor(i/26))+String.fromCharCode(65+i%26);
 const actorFootprint=o=>({width:o.width??catalog.ACTOR_FOOTPRINT.width,height:o.height??catalog.ACTOR_FOOTPRINT.height});
 function actorContains(o,p,padding=0){const {width,height}=actorFootprint(o),a=-(o.rotation||0)*Math.PI/180,dx=p.x-o.x,dy=p.y-o.y,x=dx*Math.cos(a)-dy*Math.sin(a),y=dx*Math.sin(a)+dy*Math.cos(a);return (x/(width/2+padding))**2+(y/(height/2+padding))**2<=1;}
+// Annotation geometry uses local coordinates, so moving/copying a parent never
+// aliases another object or leaves absolute control points behind.
+function annotationPoints(o){
+ const a=(o.rotation||0)*Math.PI/180,c=Math.cos(a),s=Math.sin(a),scale=o.scale??1;
+ const points=o.type==='arrow'?o.points:[{x:-o.width/2,y:-o.height/2},{x:o.width/2,y:-o.height/2},{x:o.width/2,y:o.height/2},{x:-o.width/2,y:o.height/2}];
+ return points.map(p=>({x:o.x+(p.x*c-p.y*s)*scale,y:o.y+(p.x*s+p.y*c)*scale}));
+}
+function annotationBounds(o){const ps=annotationPoints(o),pad=o.type==='arrow'?Math.max(12,o.lineWidth*3):0;return {left:Math.min(...ps.map(p=>p.x))-pad,right:Math.max(...ps.map(p=>p.x))+pad,top:Math.min(...ps.map(p=>p.y))-pad,bottom:Math.max(...ps.map(p=>p.y))+pad};}
+function curvePoint(points,t){const u=1-t;return{x:u*u*points[0].x+2*u*t*points[1].x+t*t*points[2].x,y:u*u*points[0].y+2*u*t*points[1].y+t*t*points[2].y};}
+function segmentDistance(p,a,b){const dx=b.x-a.x,dy=b.y-a.y,t=Math.max(0,Math.min(1,((p.x-a.x)*dx+(p.y-a.y)*dy)/(dx*dx+dy*dy||1)));return Math.hypot(p.x-a.x-t*dx,p.y-a.y-t*dy);}
+function arrowContains(o,p,padding=0){const ps=annotationPoints(o);let before=ps[0];for(let i=1;i<=48;i++){const next=curvePoint(ps,i/48);if(segmentDistance(p,before,next)<=o.lineWidth/2+padding)return true;before=next;}return false;}
+function informationLabel(o,measure=(text,size)=>String(text).length*size*.6){
+ if(!o||!['camera','light'].includes(o.type))return null;
+ const minutes=Math.round((o.time||0)*60),clock=String(Math.floor(minutes/60)%24).padStart(2,'0')+':'+String(minutes%60).padStart(2,'0');
+ const lines=o.type==='camera'?[o.name,`${o.lens}mm · ${o.shot||''}`]:o.kind==='sun'?[o.name||'Sun',`Sun · ${clock}`]:[o.name,o.enabled?`${o.power}% · ${o.rgbEnabled?'RGB '+lightColor(o).join(', '):o.temperature+'K'}`:'OFF'];
+ const width=Math.max(38,...lines.map((text,i)=>measure(text,i?9:11)))+12,height=38,x=o.x+(o.labelOffsetX||0),y=o.y+46+(o.labelOffsetY||0);
+ return {x,y,width,height,left:x-width/2,right:x+width/2,top:y-height/2,bottom:y+height/2,lines,color:o.type==='camera'?(o.color||'#8ca9ce'):o.kind==='sun'?'#d8ad59':`rgb(${lightColor(o)})`};
+}
+function openingContains(o,p,zoom,objects){
+ const a=-(o.rotation||0)*Math.PI/180,dx=p.x-o.x,dy=p.y-o.y,q={x:dx*Math.cos(a)-dy*Math.sin(a),y:dx*Math.sin(a)+dy*Math.cos(a)},wall=objects.find(w=>w.id===o.wallId),thickness=wall?.thickness||8,pad=Math.max(3,5/zoom),half=o.width/2;
+ if(Math.abs(q.x)<=half+pad&&Math.abs(q.y)<=thickness/2+pad)return true;
+ if(openingKind(o)!=='door')return false;
+ if(['door-sliding','door-pocket','door-garage'].includes(o.asset)){const offset=o.open?o.width:0;return segmentDistance(q,{x:-half+offset,y:2},{x:half+offset,y:2})<=pad;}
+ const sign=o.swingSide==='Side B'?-1:1,leaf=(hinge,dir,width)=>segmentDistance(q,{x:hinge,y:0},{x:hinge+(o.open?0:dir*width),y:o.open?sign*width:0})<=pad;
+ return ['door-double','door-french'].includes(o.asset)?leaf(-half,1,half)||leaf(half,-1,half):leaf(o.hinge==='Right'?half:-half,o.hinge==='Right'?-1:1,o.width);
+}
+function containsPoint(o,p,zoom=1,objects=[]){
+ if(o.locked||o.type==='wallGroup')return false;
+ if(o.type==='arrow')return arrowContains(o,p,Math.max(3,6/zoom));
+ if(o.type==='room')return roomSegments(o).some(w=>segmentDistance(p,w,{x:w.x2,y:w.y2})<=Math.max(5/zoom,o.thickness/2+3));
+ if(o.type==='wall')return segmentDistance(p,o,{x:o.x2,y:o.y2})<=Math.max(5/zoom,o.thickness/2+3);
+ if(o.type==='actor')return actorContains(o,p,3/zoom);
+ if(openingKind(o))return openingContains(o,p,zoom,objects);
+ if(o.type==='camera'||o.type==='light')return Math.hypot(p.x-o.x,p.y-o.y)<=Math.max(o.kind==='sun'?30:24,8/zoom);
+ const a=-(o.rotation||0)*Math.PI/180,dx=p.x-o.x,dy=p.y-o.y,x=dx*Math.cos(a)-dy*Math.sin(a),y=dx*Math.sin(a)+dy*Math.cos(a);return Math.abs(x)<=o.width/2+3/zoom&&Math.abs(y)<=o.height/2+3/zoom;
+}
+function pickObject(objects,p,zoom=1){
+ const priority=o=>['text','arrow'].includes(o.type)?6:['actor','camera','light'].includes(o.type)?5:openingKind(o)?3:o.type==='floor'?0:o.type==='image'?1:['wall','room'].includes(o.type)?2:4;
+ const candidates=objects.map((o,index)=>({o,index,priority:priority(o)})).sort((a,b)=>b.priority-a.priority||b.index-a.index);
+ return candidates.find(({o})=>containsPoint(o,p,zoom,objects))?.o||null;
+}
 // Rectilinear horizontal angle of view; distance is a guide plane, not lens reach.
 function cameraView(o){
  const lens=finite(o.lens)&&o.lens>0?o.lens:50,sensorWidth=o.sensorWidth??36,distance=o.viewDistance??360;
@@ -188,13 +229,19 @@ function validProject(p){
   if(s.shotList!==undefined&&!shotLists.validList(s.shotList))return false;
   const objectIds=new Set();let suns=0;
   for(const o of s.objects){
-   if(!o||typeof o.id!=='string'||objectIds.has(o.id)||typeof o.name!=='string'||!['wall','room','wallGroup','floor','camera','light','actor','sofa','table','prop','set','gear','image'].includes(o.type)||![o.x,o.y].every(coordinate))return false;objectIds.add(o.id);
-   const nums={wall:['x2','y2','thickness'],room:['width','height','rotation','thickness'],floor:['width','height','rotation'],wallGroup:['width','height','rotation'],camera:['rotation','fov','lens'],light:['rotation','power','temperature','beam','radius'],actor:['rotation'],sofa:['width','height','rotation'],table:['width','height','rotation'],prop:['width','height','rotation'],set:['width','height','rotation'],gear:['width','height','rotation'],image:['width','height','rotation','opacity']}[o.type];
+   if(!o||typeof o.id!=='string'||objectIds.has(o.id)||typeof o.name!=='string'||!['wall','room','wallGroup','floor','camera','light','actor','sofa','table','prop','set','gear','image','text','arrow'].includes(o.type)||![o.x,o.y].every(coordinate))return false;objectIds.add(o.id);
+   const nums={wall:['x2','y2','thickness'],room:['width','height','rotation','thickness'],floor:['width','height','rotation'],wallGroup:['width','height','rotation'],camera:['rotation','fov','lens'],light:['rotation','power','temperature','beam','radius'],actor:['rotation'],sofa:['width','height','rotation'],table:['width','height','rotation'],prop:['width','height','rotation'],set:['width','height','rotation'],gear:['width','height','rotation'],image:['width','height','rotation','opacity'],text:['width','height','rotation'],arrow:['rotation','scale','lineWidth']}[o.type];
    if(!nums.every(k=>finite(o[k])))return false;
+   if(['text','arrow'].includes(o.type)&&!/^#[0-9a-f]{6}$/i.test(o.color))return false;
+   if(o.type==='text'&&(typeof o.text!=='string'||o.text.length>10000||o.text.split('\n').length>100||o.keepProportions!==undefined&&typeof o.keepProportions!=='boolean'))return false;
+   if(o.type==='arrow'&&(!(o.scale>=.1&&o.scale<=10)||!(o.lineWidth>=1&&o.lineWidth<=20)||!Array.isArray(o.points)||o.points.length!==3||!o.points.every(p=>p&&[p.x,p.y].every(n=>finite(n)&&Math.abs(n)<=5000))))return false;
+   if(['labelOffsetX','labelOffsetY'].some(k=>o[k]!==undefined&&(!['camera','light'].includes(o.type)||!finite(o[k])||Math.abs(o[k])>10000)))return false;
+   if(o.labelConnector!==undefined&&(!['camera','light'].includes(o.type)||typeof o.labelConnector!=='boolean'))return false;
+   if(o.type==='camera'&&o.color!==undefined&&!/^#[0-9a-f]{6}$/i.test(o.color))return false;
    if(o.type==='camera'&&((o.sensorWidth!==undefined&&(!finite(o.sensorWidth)||o.sensorWidth<1||o.sensorWidth>100))||(o.viewDistance!==undefined&&(!finite(o.viewDistance)||o.viewDistance<3||o.viewDistance>5000))))return false;
    if(o.shotId!==undefined&&(o.type!=='camera'||typeof o.shotId!=='string'||!s.shotList?.some(shot=>shot.id===o.shotId)))return false;
    if(o.type==='wall'&&(!coordinate(o.x2)||!coordinate(o.y2)||o.thickness<=0||o.thickness>100))return false;
-   if(['floor','wallGroup','room','image','table','sofa','prop','set','gear'].includes(o.type)&&(!(o.width>0&&o.width<=5000)||!(o.height>0&&o.height<=5000)))return false;
+   if(['floor','wallGroup','room','image','table','sofa','prop','set','gear','text'].includes(o.type)&&(!(o.width>0&&o.width<=5000)||!(o.height>0&&o.height<=5000)))return false;
    if(o.type==='wallGroup'&&(!Array.isArray(o.wallIds)||o.wallIds.length<2||o.wallIds.length>1999||new Set(o.wallIds).size!==o.wallIds.length||!o.wallIds.every(id=>typeof id==='string'&&s.objects.some(w=>w.id===id&&w.type==='wall'))))return false;
    if(o.type==='wallGroup'&&(o.width<1.5||o.height<1.5||o.keepProportions!==undefined&&typeof o.keepProportions!=='boolean'))return false;
    if(o.type==='actor'&&['width','height'].some(k=>o[k]!==undefined&&(!finite(o[k])||o[k]<1.5||o[k]>5000)))return false;
@@ -232,6 +279,6 @@ function workspaceFrom(data,id){
  if(!validProject(data))throw Error('The saved project could not be read. Your existing files have been preserved.');
  const p=structuredClone(data);p.projectId=p.projectId||id;return {version:2,activeProject:p.projectId,projects:[p]};
 }
-const api={cameraView,cameraCoverage,actorFootprint,actorContains,translateSelection,groupWalls,wallGroupFor,transformWallGroup,splitRoom,roomSegments,playbackElapsed,motionPose,motionDuration,lightColor,openingKind,movable,markLabel,wallPose,syncOpenings,snapOpening,doorLeaves,effectiveWalls,sunState,pathPosition,validProject,validWorkspace,workspaceFrom};
+const api={annotationPoints,annotationBounds,curvePoint,arrowContains,informationLabel,openingContains,containsPoint,pickObject,cameraView,cameraCoverage,actorFootprint,actorContains,translateSelection,groupWalls,wallGroupFor,transformWallGroup,splitRoom,roomSegments,playbackElapsed,motionPose,motionDuration,lightColor,openingKind,movable,markLabel,wallPose,syncOpenings,snapOpening,doorLeaves,effectiveWalls,sunState,pathPosition,validProject,validWorkspace,workspaceFrom};
 if(typeof module==='object'&&module.exports)module.exports=api;else root.ScenicModel=api;
 })(globalThis);
