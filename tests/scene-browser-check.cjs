@@ -21,8 +21,8 @@ async function editorChecks(){
  api.closed();const count=requests.length;api.changed();assert.equal(requests.length,count);
 }
 async function nativeChecks(){
- const windows=[],editorScripts=[];let focusCount=0,selectionResult=true;
- const editor={webContents:{async executeJavaScript(code){editorScripts.push(code);return code.includes('.select(')||code.includes('.duplicate(')?selectionResult:'data:image/jpeg;base64,c3ludGhldGlj';}},isMinimized:()=>false,show(){},focus(){focusCount++;}};
+ const windows=[],editorScripts=[];let focusCount=0,selectionResult=true,destroyed=false;
+ const editor={isDestroyed:()=>destroyed,webContents:{isDestroyed:()=>destroyed,async executeJavaScript(code){editorScripts.push(code);return code.includes('.select(')||code.includes('.duplicate(')?selectionResult:'data:image/jpeg;base64,c3ludGhldGlj';}},isMinimized:()=>false,show(){},focus(){focusCount++;}};
  function BrowserWindow(options){this.options=options;this.events={};this.webEvents={};this.webContents={mainFrame:{},setWindowOpenHandler:fn=>{this.openHandler=fn;},on:(name,fn)=>{this.webEvents[name]=fn;},executeJavaScript:async code=>{this.renderScript=code;}};this.on=(name,fn)=>{this.events[name]=fn;};this.loadURL=async url=>{this.url=url;this.webContents.mainFrame.url=url;};this.setTitle=title=>{this.title=title;};this.show=this.focus=()=>{};windows.push(this);}
  const browser=new SceneBrowser({BrowserWindow,win:editor,rootURL:'file:///app/web/index.html',preload:'/app/preload.cjs'});
  const snapshot={productionId:'p1',name:'Synthetic production',active:'s1',theme:'dark',revision:0,scenes:[{id:'s1',title:'Scene 1',number:1}]};
@@ -37,5 +37,6 @@ async function nativeChecks(){
  await browser.update({...snapshot,name:'Renamed'},true);assert.equal(windows.length,1);assert.equal(window.title,'Renamed · Scenes · Scenic');assert.match(window.renderScript,/Renamed/);
  await assert.rejects(browser.update({...snapshot,scenes:[{id:'bad'}]},true),/Invalid/);
  window.events.closed();assert.equal(browser.window,null);assert(!browser.accepts(event));assert.match(editorScripts.at(-1),/closed/);
+ await browser.update(snapshot,true);destroyed=true;const count=editorScripts.length;assert.doesNotThrow(()=>windows.at(-1).events.closed());assert.equal(editorScripts.length,count,"Closing after editor destruction must not access its webContents");
 }
 (async()=>{await editorChecks();await nativeChecks();console.log('Scene browser passed: numbered metadata, real-renderer state restoration, failure recovery, preview caching, scene selection, stale IDs, live updates, window reuse, caller validation, and restricted native actions.');})().catch(error=>{console.error(error);process.exitCode=1;});

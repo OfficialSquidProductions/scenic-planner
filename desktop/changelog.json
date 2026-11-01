@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.4.29",
+    "changes": [
+      "Copy and paste selected objects within and across existing scenes, and duplicate scenes from either scene list. Preserve layout, images, groups, openings and independently editable camera and movement settings.",
+      "Keep native text copy and paste in input order when switching focus quickly.",
+      "Quit cleanly with Browse all scenes open.",
+      "Import complete numbered scene.shot identifiers with their descriptions, Script coverage and camera links."
+    ]
+  },
+  {
     "version": "1.4.28",
     "changes": [
       "Copy selected scene items with Ctrl+C and paste with Ctrl+V, including across existing scenes. Preserve the source environment, destination objects, layout, images, grouping, openings, camera settings and movement marks. Copies are independently editable.",

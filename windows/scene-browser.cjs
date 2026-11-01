@@ -7,7 +7,7 @@ class SceneBrowser{
   if(!this.window){
    const window=new this.BrowserWindow({width:1040,height:740,minWidth:600,minHeight:400,title:snapshot.name+' · Scenes · Scenic',backgroundColor:'#191419',webPreferences:{preload:this.preload,nodeIntegration:false,contextIsolation:true,sandbox:true,spellcheck:false}});this.window=window;
    window.webContents.setWindowOpenHandler(()=>({action:'deny'}));window.webContents.on('will-navigate',(event,url)=>{if(url!==this.url)event.preventDefault();});
-   window.on('closed',()=>{this.window=null;this.snapshot=null;this.editor.webContents.executeJavaScript('window.ScenicSceneBrowser?.closed()').catch(()=>{});});
+   window.on('closed',()=>{this.window=null;this.snapshot=null;if(!this.editor.isDestroyed()&&!this.editor.webContents.isDestroyed())this.editor.webContents.executeJavaScript('window.ScenicSceneBrowser?.closed()').catch(()=>{});});
    await window.loadURL(this.url);
   }else await this.window.webContents.executeJavaScript('window.ScenicSceneBrowserWindow?.render('+JSON.stringify(snapshot)+')');
   this.window.setTitle(snapshot.name+' · Scenes · Scenic');if(show){this.window.show();this.window.focus();}return true;
