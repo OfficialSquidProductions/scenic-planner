@@ -13,3 +13,9 @@ Use only a disposable QA profile and the synthetic `tests/assets/bathroom-clipbo
 7. Run all seven numbered-scene/native import checks in `WINDOWS-1.4.26-VM-TESTING.md`, using this 1.4.28 candidate instead. Verify nine populated scenes/seventeen shots, complete metadata, camera links/checks, no duplicate reimport, legacy formats and native CSV/file picker activation and cancellation.
 
 After VM passes, record evidence before publication. Refresh `desktop/windows-publication.json` from the then-current public Mac release and verify all exact retained asset digests. The old plan still targets Windows 1.4.24 and deliberately cannot publish 1.4.28. Preserve the newest public Mac feed and signed archive across `/releases/latest/download/`; do not overwrite immutable old releases. Publication must verify installer SHA256, latest.yml version/SHA512, remote commit and retained Mac bytes. Mac 1.4.27 notarization is currently blocked pending explicit Apple-upload approval, so do not assume it is public.
+
+## Downloaded candidate verified
+
+CI: https://github.com/OfficialSquidProductions/scenic-planner/actions/runs/41352614066 passed all checks, including 13 native checks each for packaged, installed and reinstalled app. Draft release ID `430873013` targets `b5a75b41f2e59ecd9b998db070efae2117b13bd2`; publication was skipped.
+
+Local candidate: `release/windows34-vm-candidate/Scenic-Windows-Setup.exe`. SHA256: `6b97302d1137aadfd72a3db2f0c8598a7429876507ff18df26a3524d5bc770e2`. Downloaded installer, blockmap, latest.yml and checksum match all GitHub asset digests and CI evidence; latest.yml version/SHA512 matches the installer. Actual Windows VM testing remains outstanding.
