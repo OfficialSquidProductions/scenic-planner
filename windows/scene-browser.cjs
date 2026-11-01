@@ -14,6 +14,7 @@ class SceneBrowser{
  }
  async request(action,payload={}){
   if(action==='sceneBrowserReady')return this.snapshot;
+  if(['exportAllScenes','sceneExportStatus','cancelAllSceneExport'].includes(action)){if(typeof (payload.productionId??this.snapshot?.productionId)!=='string')throw Error('Invalid production.');const method=action==='exportAllScenes'?'exportAll':action==='sceneExportStatus'?'exportStatus':'cancelExport',args=JSON.stringify([payload.productionId??this.snapshot.productionId,payload.format]);return this.editor.webContents.executeJavaScript(`window.ScenicSceneBrowser.${method}(...${args})`);}
   if(!['scenePreview','selectScene','duplicateScene'].includes(action)||typeof payload.productionId!=='string'||typeof payload.sceneId!=='string')throw Error('Unsupported scene browser request.');
   const method=action==='scenePreview'?'preview':action==='selectScene'?'select':'duplicate',args=JSON.stringify([payload.productionId,payload.sceneId]);
   const result=await this.editor.webContents.executeJavaScript(`window.ScenicSceneBrowser.${method}(...${args})`);

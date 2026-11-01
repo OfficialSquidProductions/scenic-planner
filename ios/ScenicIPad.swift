@@ -36,6 +36,7 @@ final class ScenicViewController: UIViewController, WKScriptMessageHandler, WKNa
     private var root: URL { Bundle.main.resourceURL!.appendingPathComponent("web") }
     private var browser: WKWebView?
     private var sceneSnapshot: [String: Any]?
+    private var pngExport: ScenicPNGExport?
     private var pendingPicker: (id: String, kind: String, file: URL?)?
     private var pendingOpen: URL?
     private var backgroundTask: UIBackgroundTaskIdentifier = .invalid
@@ -98,6 +99,13 @@ final class ScenicViewController: UIViewController, WKScriptMessageHandler, WKNa
         if let browser, message.webView === browser {
             guard url.lastPathComponent == "scene-browser.html" else { return }
             if action == "sceneBrowserReady" { reply(id, result: sceneSnapshot as Any? ?? NSNull(), target: browser); return }
+            if ["exportAllScenes", "sceneExportStatus", "cancelAllSceneExport"].contains(action) {
+                guard let production = data["productionId"] as? String ?? sceneSnapshot?["productionId"] as? String else { reply(id,error:"Invalid production",target:browser);return }
+                let method=action == "exportAllScenes" ? "exportAll" : action == "sceneExportStatus" ? "exportStatus" : "cancelExport"
+                web.callAsyncJavaScript("return await window.ScenicSceneBrowser[action](production,format)",arguments:["action":method,"production":production,"format":data["format"] as? String ?? ""],in:nil,in:.page) { [weak self] result in
+                    switch result {case .success(let value):self?.reply(id,result:value,target:browser);case .failure(let error):self?.reply(id,error:error.localizedDescription,target:browser)}
+                };return
+            }
             guard ["scenePreview", "selectScene", "duplicateScene"].contains(action), let production = data["productionId"] as? String, let scene = data["sceneId"] as? String else { reply(id, error: "Unsupported scene-browser request", target: browser); return }
             web.callAsyncJavaScript("return await window.ScenicSceneBrowser[action](production,scene)", arguments: ["action": action == "scenePreview" ? "preview" : action == "selectScene" ? "select" : "duplicate", "production": production, "scene": scene], in: nil, in: .page) { [weak self] result in
                 switch result {
@@ -110,6 +118,8 @@ final class ScenicViewController: UIViewController, WKScriptMessageHandler, WKNa
         guard message.webView === web, url.lastPathComponent == "index.html" else { return }
 
         switch action {
+        case "beginScenePNGExport", "appendScenePNGExport", "finishScenePNGExport", "cancelScenePNGExport":
+            handleScenePNGExport(action,id:id,payload:data)
         case "copySceneObjects": web.copy(nil); reply(id, result: true)
         case "pasteSceneObjects": web.paste(nil); reply(id, result: true)
         #if DEBUG
@@ -141,7 +151,7 @@ final class ScenicViewController: UIViewController, WKScriptMessageHandler, WKNa
         case "exportFile", "shareFile":
             guard let name = data["filename"] as? String, name == URL(fileURLWithPath: name).lastPathComponent,
                   let encoded = data["base64"] as? String, encoded.count <= 112 * 1024 * 1024,
-                  let content = Data(base64Encoded: encoded), pendingPicker == nil, presentedViewController == nil else { reply(id, error: "Finish the current dialog before saving or sharing."); return }
+                  let content = Data(base64Encoded: encoded), pendingPicker == nil, let presenter = sceneExportPresenter else { reply(id, error: "Finish the current dialog before saving or sharing."); return }
             do {
                 let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
                 try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -162,7 +172,7 @@ final class ScenicViewController: UIViewController, WKScriptMessageHandler, WKNa
                         try? FileManager.default.removeItem(at: directory)
                         self.reply(id, result: completed, error: error?.localizedDescription)
                     }
-                    present(activity, animated: true)
+                    presenter.present(activity, animated: true)
                     return
                 }
                 #if DEBUG
@@ -175,7 +185,7 @@ final class ScenicViewController: UIViewController, WKScriptMessageHandler, WKNa
                 if UIDevice.current.userInterfaceIdiom == .phone { picker.modalPresentationStyle = .fullScreen }
                 picker.delegate = self; pendingPicker = (id,"export",file)
                 // Export can be requested from a web dialog; UIKit still presents from this controller.
-                present(picker, animated: true)
+                presenter.present(picker, animated: true)
             } catch { reply(id, error: error.localizedDescription) }
         case "openSceneBrowser", "updateSceneBrowser":
             do { try updateSceneBrowser(data["snapshot"], show: action == "openSceneBrowser"); reply(id, result: true) }
@@ -196,6 +206,32 @@ final class ScenicViewController: UIViewController, WKScriptMessageHandler, WKNa
             guard MFMailComposeViewController.canSendMail() else { reply(id, error: "Set up Mail, or save the crash log and attach it to your own email."); return }
             composeMail(body: description, attachment: Data(errorLog.utf8)); reply(id, result: ["attachmentRequired": false])
         default: reply(id, error: "Unsupported request")
+        }
+    }
+    private var sceneExportPresenter: UIViewController? {
+        guard let presented = presentedViewController else { return self }
+        guard let browser, let navigation = presented as? UINavigationController,
+              navigation.viewControllers.first?.view === browser, navigation.presentedViewController == nil else { return nil }
+        return navigation
+    }
+    private func handleScenePNGExport(_ action:String,id:String,payload:[String:Any]) {
+        if action == "beginScenePNGExport" {
+            guard pngExport == nil,pendingPicker == nil,sceneExportPresenter != nil,let name=payload["name"] as? String,let count=payload["count"] as? Int else {reply(id,error:"Finish the current dialog or export first.");return}
+            do {let batch=try ScenicPNGExport(name:name,count:count);pngExport=batch;reply(id,result:batch.token)}catch{reply(id,error:error.localizedDescription)};return
+        }
+        guard let batch=pngExport,payload["token"] as? String == batch.token else {reply(id,error:"This scene export is no longer active.");return}
+        if action == "appendScenePNGExport" {
+            guard let index=payload["index"] as? Int,let name=payload["filename"] as? String,let encoded=payload["base64"] as? String,encoded.utf8.count<=32*1024*1024,let content=Data(base64Encoded:encoded) else {reply(id,error:"Invalid scene image.");return}
+            queue.async {do {try batch.append(index:index,filename:name,data:content);DispatchQueue.main.async{self.reply(id,result:true)}}catch{DispatchQueue.main.async{self.reply(id,error:error.localizedDescription)}}};return
+        }
+        if action == "cancelScenePNGExport" {queue.async {batch.cancel();DispatchQueue.main.async{self.pngExport=nil;self.reply(id,result:false)}};return}
+        guard pendingPicker == nil,let presenter=sceneExportPresenter else {reply(id,error:"Finish the current Files dialog first.");return}
+        queue.async {
+            do {let folder=try batch.prepareFilesExport();DispatchQueue.main.async {
+                self.pngExport=nil;let picker=UIDocumentPickerViewController(forExporting:[folder],asCopy:true)
+                if UIDevice.current.userInterfaceIdiom == .phone {picker.modalPresentationStyle = .fullScreen}
+                picker.delegate=self;self.pendingPicker=(id,"export",folder);presenter.present(picker,animated:true)
+            }}catch{DispatchQueue.main.async{self.reply(id,error:error.localizedDescription)}}
         }
     }
     func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) { finishPicker(nil) }

@@ -59,6 +59,9 @@ final class ScenicApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
     var releaseNotesWindow: NSWindow?
     lazy var crashes = ScenicReports(root: store.root, version: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Development")
     var reportEmailService: NSSharingService?
+    var pngExport: ScenicPNGExport?
+    var pngExportDestination: URL?
+    var pngExportScoped = false
     var sceneBrowserWindow: NSWindow?
     var sceneBrowserWeb: WKWebView?
     var sceneBrowserSnapshot: [String: Any]?
@@ -240,6 +243,15 @@ final class ScenicApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
         if let browser = sceneBrowserWeb, message.webView === browser {
             guard url.standardizedFileURL == webRoot.appendingPathComponent("scene-browser.html").standardizedFileURL else { return }
             if action == "sceneBrowserReady" { reply(id, result: sceneBrowserSnapshot as Any? ?? NSNull(), target: browser); return }
+            if ["exportAllScenes", "sceneExportStatus", "cancelAllSceneExport"].contains(action) {
+                guard let production = b["productionId"] as? String ?? sceneBrowserSnapshot?["productionId"] as? String else { reply(id, error: "Invalid production", target: browser); return }
+                let method = action == "exportAllScenes" ? "exportAll" : action == "sceneExportStatus" ? "exportStatus" : "cancelExport"
+                let format = b["format"] as? String ?? ""
+                web.callAsyncJavaScript("return await window.ScenicSceneBrowser[action](production,format)", arguments:["action":method,"production":production,"format":format], in:nil,in:.page) { [weak self] result in
+                    switch result { case .success(let value):self?.reply(id,result:value,target:browser);case .failure(let error):self?.reply(id,error:error.localizedDescription,target:browser) }
+                }
+                return
+            }
             guard ["scenePreview", "selectScene", "duplicateScene"].contains(action), let productionId = b["productionId"] as? String,
                   let sceneId = b["sceneId"] as? String else { reply(id, error: "Unsupported scene browser request", target: browser); return }
             web.callAsyncJavaScript("return await window.ScenicSceneBrowser[action](productionId, sceneId);", arguments: ["action": action == "scenePreview" ? "preview" : action == "selectScene" ? "select" : "duplicate", "productionId": productionId, "sceneId": sceneId], in: nil, in: .page) { [weak self] result in
@@ -255,6 +267,8 @@ final class ScenicApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
         }
         guard message.webView === web else { return }
         switch action {
+        case "beginScenePNGExport", "appendScenePNGExport", "finishScenePNGExport", "cancelScenePNGExport":
+            handleScenePNGExport(action, id: id, payload: b)
         case "openSceneBrowser", "updateSceneBrowser":
             do { try updateSceneBrowser(b["snapshot"], show: action == "openSceneBrowser"); reply(id, result: true) }
             catch { reply(id, error: error.localizedDescription) }
@@ -304,7 +318,7 @@ final class ScenicApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
         case "exportFile", "shareFile":
             guard let filename = b["filename"] as? String, let encoded = b["base64"] as? String,
                   encoded.count < 120 * 1024 * 1024, let data = Data(base64Encoded: encoded) else { reply(id, error: "Invalid or oversized export"); return }
-            guard window.attachedSheet == nil, projectShareFile == nil else { reply(id, error: "Finish the current save or share dialog first."); return }
+            guard window.attachedSheet == nil, sceneBrowserWindow?.attachedSheet == nil, projectShareFile == nil else { reply(id, error: "Finish the current save or share dialog first."); return }
             if action == "shareFile" {
                 do {
                     let directory = FileManager.default.temporaryDirectory.appendingPathComponent("Scenic-" + UUID().uuidString)
@@ -326,9 +340,9 @@ final class ScenicApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
             panel.canCreateDirectories = true
             let ext = URL(fileURLWithPath: filename).pathExtension
             if ext == "scenic" { panel.allowedContentTypes = [UTType(exportedAs: "org.squidproductions.scenic.project", conformingTo: .json)] }
-            if ["png", "csv", "json", "txt"].contains(ext), let type = UTType(filenameExtension: ext) { panel.allowedContentTypes = [type] }
+            if ["png", "pdf", "csv", "json", "txt"].contains(ext), let type = UTType(filenameExtension: ext) { panel.allowedContentTypes = [type] }
             panel.nameFieldStringValue = URL(fileURLWithPath: filename).lastPathComponent
-            panel.beginSheetModal(for: window) { [self] response in
+            panel.beginSheetModal(for: sceneBrowserWindow ?? window) { [self] response in
                 guard response == .OK, let destination = panel.url else { reply(id, result: false); return }
                 queue.async {
                     do { try data.write(to: destination, options: .atomic); DispatchQueue.main.async { self.reply(id, result: destination.lastPathComponent) } }
@@ -336,6 +350,31 @@ final class ScenicApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
                 }
             }
         default: reply(id, error: "Unsupported request")
+        }
+    }
+    func handleScenePNGExport(_ action: String, id: String, payload: [String:Any]) {
+        if action == "beginScenePNGExport" {
+            let host = sceneBrowserWindow ?? window
+            guard pngExport == nil, host?.attachedSheet == nil, window.attachedSheet == nil, projectShareFile == nil,
+                  let name = payload["name"] as? String, let count = payload["count"] as? Int else { reply(id,error:"Finish the current save dialog or export first."); return }
+            let panel = NSOpenPanel(); panel.canChooseDirectories=true;panel.canChooseFiles=false;panel.allowsMultipleSelection=false;panel.canCreateDirectories=true;panel.prompt="Export here";panel.message="Choose a destination. Scenic creates a new folder of separate PNG files and preserves existing exports."
+            panel.beginSheetModal(for: host ?? window) { [self] response in
+                guard response == .OK, let directory=panel.url else { reply(id,result:false); return }
+                do { pngExportScoped=directory.startAccessingSecurityScopedResource();pngExportDestination=directory;let batch=try ScenicPNGExport(name:name,count:count,parent:directory);pngExport=batch;reply(id,result:batch.token) }
+                catch { if pngExportScoped { directory.stopAccessingSecurityScopedResource() };pngExportScoped=false;pngExportDestination=nil;reply(id,error:error.localizedDescription) }
+            };return
+        }
+        guard let batch=pngExport, payload["token"] as? String == batch.token else { reply(id,error:"This scene export is no longer active.");return }
+        if action == "appendScenePNGExport" {
+            guard let index=payload["index"] as? Int,let filename=payload["filename"] as? String,let encoded=payload["base64"] as? String,encoded.utf8.count<=32*1024*1024,let data=Data(base64Encoded:encoded) else { reply(id,error:"Invalid scene image.");return }
+            queue.async { do { try batch.append(index:index,filename:filename,data:data);DispatchQueue.main.async {self.reply(id,result:true)} } catch {DispatchQueue.main.async {self.reply(id,error:error.localizedDescription)}} };return
+        }
+        guard let destination=pngExportDestination else {reply(id,error:"Choose an export destination.");return}
+        queue.async { [self] in
+            do {
+                let result: Any = action == "cancelScenePNGExport" ? {batch.cancel();return false}() : try batch.finish(in:destination).lastPathComponent
+                DispatchQueue.main.async {if self.pngExportScoped {destination.stopAccessingSecurityScopedResource()};self.pngExportScoped=false;self.pngExport=nil;self.pngExportDestination=nil;self.reply(id,result:result)}
+            } catch {DispatchQueue.main.async {self.reply(id,error:error.localizedDescription)}}
         }
     }
     func sharingServicePicker(_ sharingServicePicker: NSSharingServicePicker, didChoose service: NSSharingService?) {

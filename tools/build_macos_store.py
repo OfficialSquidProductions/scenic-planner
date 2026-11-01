@@ -97,7 +97,7 @@ def build(args):
         shutil.copy2(root.parent / 'LICENSE', resources / 'LICENSE.txt')
         shutil.copy2(root.parent / 'THIRD_PARTY_NOTICES.md', resources / 'THIRD_PARTY_NOTICES.md')
     else:
-        sources.extend([source_dir / 'Reports.swift', source_dir / 'ObjectClipboard.swift'])
+        sources.extend([source_dir / 'Reports.swift', source_dir / 'ObjectClipboard.swift',source_dir / 'ScenePNGExport.swift'])
         shutil.copytree(root / 'dist', resources / 'web')
         index = resources / 'web/index.html'
         html = index.read_text()

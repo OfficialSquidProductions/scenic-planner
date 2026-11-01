@@ -1,0 +1,20 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path');
+const B=require('../dist/batch-export.js'),{ScenePNGExporter}=require('../windows/scene-export.cjs');
+(async()=>{
+ assert.equal(B.filename({title:'../../Bad: Scene <one>'},0),'001 - Bad Scene one.png');assert.equal(B.filename({title:''},99),'100 - Scene.png');
+ const pdf=B.pdf([new Uint8Array([255,216,255,217]),new Uint8Array([255,216,255,217])]);const text=Buffer.from(pdf).toString('latin1');assert.match(text,/\/Count 2/);assert.match(text,/\/Kids \[3 0 R 6 0 R\]/);assert.match(text,/startxref\n\d+\n%%EOF/);assert.throws(()=>B.pdf([]),/1 to 100/);assert.throws(()=>B.pdf([new Uint8Array([1])]),/encoded/);
+ const directory=fs.mkdtempSync(path.join(os.tmpdir(),'scenic-export-test-'));const existing=path.join(directory,'QA - scenes');fs.mkdirSync(existing);fs.writeFileSync(path.join(existing,'keep.txt'),'Existing data');
+ let cancelled=false;const exporter=new ScenePNGExporter({dialog:{showOpenDialog:async()=>({canceled:cancelled,filePaths:[directory]})},window:()=>({}),validatePNG:data=>data.length===12});
+ cancelled=true;assert.equal(await exporter.request('beginScenePNGExport',{name:'QA',count:2}),false);cancelled=false;
+ await assert.rejects(exporter.request('beginScenePNGExport',{name:'../escape',count:2}),/Invalid/);
+ const token=await exporter.request('beginScenePNGExport',{name:'QA',count:2});await assert.rejects(exporter.request('beginScenePNGExport',{name:'QA',count:1}),/Finish/);await assert.rejects(exporter.request('finishScenePNGExport',{token}),/not finished/);
+ const png=Buffer.from([137,80,78,71,13,10,26,10,1,2,3,4]).toString('base64');
+ await assert.rejects(exporter.request('appendScenePNGExport',{token,index:1,filename:'001 - One.png',base64:png}),/out-of-order/);
+ await assert.rejects(exporter.request('appendScenePNGExport',{token,index:0,filename:'../../One.png',base64:png}),/Invalid/);
+ await assert.rejects(exporter.request('appendScenePNGExport',{token,index:0,filename:'001 - One.png',base64:'bad'}),/damaged/);
+ await exporter.request('appendScenePNGExport',{token,index:0,filename:'001 - One.png',base64:png});await exporter.request('appendScenePNGExport',{token,index:1,filename:'002 - One.png',base64:png});assert.equal(await exporter.request('finishScenePNGExport',{token}),'QA - scenes (2)');assert.equal(fs.readFileSync(path.join(existing,'keep.txt'),'utf8'),'Existing data');assert.deepEqual(fs.readdirSync(path.join(directory,'QA - scenes (2)')),['001 - One.png','002 - One.png']);
+ await assert.rejects(exporter.request('appendScenePNGExport',{token,index:0,filename:'001 - One.png',base64:png}),/no longer active/);
+ const t2=await exporter.request('beginScenePNGExport',{name:'Cancel',count:1});const stage=exporter.active.staging;await exporter.request('cancelScenePNGExport',{token:t2});assert(!fs.existsSync(stage));assert(fs.existsSync(existing));
+ fs.writeFileSync(path.join(directory,'files.zip'),B.zip([{name:'001 - One.png',data:new Uint8Array([1,2,3])},{name:'002 - One.png',data:new Uint8Array([4,5,6])}]));
+ const {execFileSync}=require('node:child_process');execFileSync('python3',['-c','import zipfile,sys;z=zipfile.ZipFile(sys.argv[1]);assert z.namelist()==["001 - One.png","002 - One.png"];assert z.read(z.namelist()[0])==bytes([1,2,3]);assert z.testzip() is None',path.join(directory,'files.zip')]);fs.rmSync(directory,{recursive:true});console.log('Batch export passed: ordered PDF objects, bounded output, sanitized/collision-safe scene names, native cancellation, stale tokens, ordered PNG sessions, invalid data, preserved existing folders, and valid separate-PNG ZIP fallback.');
+})().catch(e=>{console.error(e);process.exitCode=1;});

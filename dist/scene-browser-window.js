@@ -10,6 +10,13 @@
   if(window.ScenicDesktop)return window.ScenicDesktop.request(action,payload);
   return new Promise((resolve,reject)=>{if(!window.opener){reject(Error('Open the scene browser from Scenic.'));return;}const id=String(++next);pending.set(id,{resolve,reject});window.opener.postMessage({channel:'scenic-scene-browser',id,action,payload},location.origin==='null'?'*':location.origin);});
  }
+ const exportButton=document.getElementById('browser-export-all'),exportFormat=document.getElementById('browser-export-format'),cancelButton=document.getElementById('browser-export-cancel');let exporting=false,poll,exportProduction;
+ function exportState(data){if(!data?.running&&!exporting)return;status.textContent=data.message||'Exporting scenes…';}
+ exportButton.onclick=async()=>{if(exporting||!snapshot)return;exporting=true;const productionId=exportProduction=snapshot.productionId;exportButton.disabled=exportFormat.disabled=true;cancelButton.hidden=false;
+  poll=setInterval(()=>request('sceneExportStatus').then(exportState).catch(()=>{}),350);
+  try{const result=await request('exportAllScenes',{productionId,format:exportFormat.value});status.textContent=result?.message||'Export finished.';}catch(error){status.textContent=error.message||'The scenes could not be exported.';}finally{clearInterval(poll);exporting=false;exportButton.disabled=exportFormat.disabled=false;cancelButton.hidden=true;}
+ };
+ cancelButton.onclick=()=>{if(exportProduction)request('cancelAllSceneExport',{productionId:exportProduction}).catch(error=>{status.textContent=error.message;});};
  function pump(){
   while(activeRequests<2&&queue.length){const item=queue.shift();if(item.version!==version)continue;activeRequests++;
    request('scenePreview',{productionId:item.productionId,sceneId:item.id}).then(image=>{
@@ -20,7 +27,7 @@
   }
  }
  function render(data){
-  if(!data||!Array.isArray(data.scenes))return;closeMenu();const scroll=snapshot?.productionId===data.productionId?grid.scrollTop:0;snapshot=data;version++;queue=[];observer?.disconnect();grid.replaceChildren();status.textContent='';
+  if(!data||!Array.isArray(data.scenes))return;closeMenu();const scroll=snapshot?.productionId===data.productionId?grid.scrollTop:0;snapshot=data;version++;queue=[];observer?.disconnect();grid.replaceChildren();if(!exporting)status.textContent='';
   document.documentElement.dataset.theme=data.theme==='dark'?'dark':'light';document.title=data.name+' · Scenes · Scenic';
   document.getElementById('browser-production').textContent=data.name;document.getElementById('browser-count').textContent=data.scenes.length+' '+(data.scenes.length===1?'scene':'scenes');
   const items=new Map();
@@ -37,7 +44,7 @@
   grid.scrollTop=scroll;
  }
  window.ScenicSceneBrowserWindow={render};
- window.addEventListener('message',event=>{if(event.source!==window.opener||event.origin!==location.origin||event.data?.channel!=='scenic-scene-browser')return;if(event.data.snapshot)render(event.data.snapshot);else{const p=pending.get(event.data.id);if(p){pending.delete(event.data.id);p.resolve(event.data.result);}}});
+ window.addEventListener('message',event=>{if(event.source!==window.opener||event.origin!==location.origin||event.data?.channel!=='scenic-scene-browser')return;if(event.data.snapshot)render(event.data.snapshot);else{const p=pending.get(event.data.id);if(p){pending.delete(event.data.id);event.data.error?p.reject(Error(event.data.error)):p.resolve(event.data.result);}}});
  window.addEventListener('pagehide',()=>{if(!window.ScenicDesktop&&window.opener)window.opener.postMessage({channel:'scenic-scene-browser',action:'sceneBrowserClosed'},location.origin==='null'?'*':location.origin);});
  request('sceneBrowserReady').then(render).catch(()=>{status.textContent='Open this window using the four-pane button beside Scenes in Scenic.';});
 })();
