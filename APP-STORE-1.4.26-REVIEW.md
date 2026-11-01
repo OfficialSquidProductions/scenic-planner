@@ -16,9 +16,23 @@ Before uploading, live App Store Connect showed both platforms at 1.4.23 (29), R
 
 Both signed archives uploaded successfully through Xcode with `app-store-connect` distribution, using the existing Scenic listing. New 1.4.26 version pages were created for both platforms. Accurate What's New text and detailed reproducible reviewer notes were saved; inherited screenshots, contact details, existing automatic release-after-approval settings and descriptions were preserved. All 350 price/proceeds cells across 175 regions were verified zero. The existing published Data Not Collected privacy declaration was inspected and left unchanged.
 
-Latest verified checkpoint: Mac build `ad5a61cc-9d2e-436d-a72c-ea339f340a92` finished processing and is Ready to Submit in TestFlight. It was selected and saved on macOS 1.4.26 and added to a draft, making the version Ready for Review. The draft contains 1.4.26 (32) and exposes Submit for Review; final submission is pending browser serialization with the Production Desk task. iOS 1.4.26 (32) was last observed Processing, so its build association and final review submission remain pending. Upload or Ready for Review is not App Review submission or approval.
+## Verified App Review submissions
 
-The separate Scenic browser tab is `1553854372`. Continue within that tab; do not operate the Production Desk App Store tab. No Apple approval is claimed.
+Both versions are submitted, and App Store Connect's App Review overview verifies **Waiting for Review** for both platforms:
+
+| Platform | Version/build | Build ID | Submission ID |
+| --- | --- | --- | --- |
+| macOS | 1.4.26 (32) | `ad5a61cc-9d2e-436d-a72c-ea339f340a92` | `c597da35-d8ca-4ff8-b797-ec7842a550e0` |
+| iPhone/iPad | 1.4.26 (32) | `58834336-70c4-4ca0-b3ec-9e1df569f9d8` | `01d394a7-4220-4f00-a80f-3466e850b8d4` |
+
+Mac receipt: https://appstoreconnect.apple.com/apps/6823691617/distribution/reviewsubmissions/details/c597da35-d8ca-4ff8-b797-ec7842a550e0
+
+iOS receipt: https://appstoreconnect.apple.com/apps/6823691617/distribution/reviewsubmissions/details/01d394a7-4220-4f00-a80f-3466e850b8d4
+
+Mac submitted at the displayed Nov 1, 2026 2:55 PM; iOS at 3:04 PM. Build processing, build association, saved metadata, Add for Review and final Submit for Review completed on each platform. The App Review overview shows both submitted items and the confirmation banner. No Apple approval is claimed. Existing automatic release-after-approval settings were preserved.
+
+The separate Scenic browser tab `1553854372` is left on the verified App Review overview. Production Desk tabs and its pending approval were untouched. The parent-provided exclusive browser window resolved the earlier coordination pause. No Apple action remains blocked; review approval is Apple's next step.
+
 
 ## Windows candidate
 
