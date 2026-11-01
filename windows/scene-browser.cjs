@@ -14,10 +14,10 @@ class SceneBrowser{
  }
  async request(action,payload={}){
   if(action==='sceneBrowserReady')return this.snapshot;
-  if(!['scenePreview','selectScene'].includes(action)||typeof payload.productionId!=='string'||typeof payload.sceneId!=='string')throw Error('Unsupported scene browser request.');
-  const method=action==='scenePreview'?'preview':'select',args=JSON.stringify([payload.productionId,payload.sceneId]);
+  if(!['scenePreview','selectScene','duplicateScene'].includes(action)||typeof payload.productionId!=='string'||typeof payload.sceneId!=='string')throw Error('Unsupported scene browser request.');
+  const method=action==='scenePreview'?'preview':action==='selectScene'?'select':'duplicate',args=JSON.stringify([payload.productionId,payload.sceneId]);
   const result=await this.editor.webContents.executeJavaScript(`window.ScenicSceneBrowser.${method}(...${args})`);
-  if(action==='selectScene'&&result===true){if(this.editor.isMinimized())this.editor.restore();this.editor.show();this.editor.focus();}
+  if(action!=='scenePreview'&&result===true){if(this.editor.isMinimized())this.editor.restore();this.editor.show();this.editor.focus();}
   return result;
  }
 }

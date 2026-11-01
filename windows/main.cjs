@@ -1,4 +1,4 @@
-const {app,BrowserWindow,Menu,dialog,shell,ipcMain}=require('electron');
+const {app,BrowserWindow,Menu,dialog,shell,ipcMain,clipboard}=require('electron');
 const fs=require('node:fs'),path=require('node:path'),{pathToFileURL}=require('node:url');
 const {updateDetail}=require('./updates.cjs');
 const {CrashReports}=require('./reports.cjs');
@@ -16,10 +16,28 @@ async function quit(){if(closing||quitting)return;closing=true;const saved=await
 // Native menu actions are user gestures too; file inputs reject a synthetic click
 // without activation even though the same in-page button opens the picker.
 async function click(id){await win.webContents.executeJavaScript(`document.getElementById(${JSON.stringify(id)})?.click()`,true);}
+let objectClipboardQueue=Promise.resolve();
+function clipboardCommand(kind){
+ const result=objectClipboardQueue.then(async()=>{
+  const active=BrowserWindow.getFocusedWindow();if(!active)return;
+  if(active!==win){await active.webContents[kind]();return;}
+  try{
+   if(kind==='copy'){
+    const text=await win.webContents.executeJavaScript('window.ScenicObjectClipboard?.copy() ?? null',true);
+    if(typeof text==='string'&&text.startsWith('SCENIC OBJECTS 1\n')&&Buffer.byteLength(text)<=60*1024*1024)await clipboard.writeText(text);
+    else await win.webContents.copy();
+   }else{
+    const text=await clipboard.readText();
+    if(Buffer.byteLength(text)>60*1024*1024||!await win.webContents.executeJavaScript(`window.ScenicObjectClipboard?.paste(${JSON.stringify(text)}) ?? false`,true))await win.webContents.paste();
+   }
+  }catch{if(kind==='copy')await win.webContents.copy();else await win.webContents.paste();}
+ });
+ objectClipboardQueue=result.catch(()=>{});return result;
+}
 function menu(){Menu.setApplicationMenu(Menu.buildFromTemplate([
  {label:'Scenic',submenu:[{label:'About Scenic',click:()=>dialog.showMessageBox(win,{message:`Scenic ${app.getVersion()}`,detail:'Scene, shot, and lighting planning by Squid Productions.'})},{label:'What’s New…',click:()=>click('show-changelog')},{label:'Check for Updates…',click:()=>check(true)},{label:'View Update Details…',enabled:!!availableUpdate,click:()=>dialog.showMessageBox(win,{message:`Scenic ${availableUpdate.version}${updateReady?' is ready to install.':' is available.'}`,detail:updateDetail(availableUpdate),buttons:['OK']})},{label:'Continue Installing Update…',enabled:updateReady,click:install},{label:'Updates',submenu:[{label:'Automatically Check for Updates',type:'checkbox',checked:settings.automaticChecks,click:i=>{settings.automaticChecks=i.checked;persist();}},{label:'Automatically Download and Install Updates on Exit',type:'checkbox',checked:settings.automaticInstall,click:i=>{settings.automaticInstall=i.checked;autoUpdater.autoDownload=i.checked;persist();if(i.checked)check(false);}}]},{label:'Show Project Data Folder',click:()=>shell.openPath(store.root)},{type:'separator'},{label:'Quit Scenic',accelerator:'Ctrl+Q',click:quit}]},
  {label:'File',submenu:[{label:'New Scene',accelerator:'Ctrl+N',click:()=>click('add-scene')},{label:'Open Project…',accelerator:'Ctrl+O',click:()=>click('open-project')},{label:'Save',accelerator:'Ctrl+S',click:flush},{label:'Save Project As…',accelerator:'Ctrl+Shift+S',click:()=>click('save-project')},{label:'Share Project Copy…',click:()=>click('share-project')},{label:'Import Image…',click:()=>click('import-image')},{label:'Import Shot List CSV…',click:()=>click('import-shot-list')},{label:'Export Map…',accelerator:'Ctrl+E',click:()=>click('export')}]},
- {label:'Edit',submenu:[{label:'Undo',accelerator:'Ctrl+Z',click:()=>win.webContents.executeJavaScript("/INPUT|TEXTAREA/.test(document.activeElement.tagName)?document.execCommand('undo'):undo()")},{label:'Redo',accelerator:'Ctrl+Shift+Z',click:()=>win.webContents.executeJavaScript("/INPUT|TEXTAREA/.test(document.activeElement.tagName)?document.execCommand('redo'):redo()")},{type:'separator'},{role:'cut'},{role:'copy'},{role:'paste'},{role:'selectAll'}]},
+ {label:'Edit',submenu:[{label:'Undo',accelerator:'Ctrl+Z',click:()=>win.webContents.executeJavaScript("/INPUT|TEXTAREA/.test(document.activeElement.tagName)?document.execCommand('undo'):undo()")},{label:'Redo',accelerator:'Ctrl+Shift+Z',click:()=>win.webContents.executeJavaScript("/INPUT|TEXTAREA/.test(document.activeElement.tagName)?document.execCommand('redo'):redo()")},{type:'separator'},{role:'cut'},{label:'Copy',accelerator:'Ctrl+C',click:()=>clipboardCommand('copy')},{label:'Paste',accelerator:'Ctrl+V',click:()=>clipboardCommand('paste')},{role:'selectAll'}]},
  {label:'View',submenu:[{label:'Fit Scene',accelerator:'Ctrl+0',click:()=>click('fit')},{label:'Light / Dark Mode',click:()=>click('theme')},{role:'togglefullscreen'}]},
  {label:'Help',submenu:[{label:'Quick Guide',click:()=>click('help')},{label:'Scenic Website',click:()=>shell.openExternal('https://scenic.squidproductions.org')}]}]));}
 async function check(user){if(checking||!app.isPackaged||report)return;checking=true;manual=user;try{await autoUpdater.checkForUpdates();}catch(e){if(user)await dialog.showMessageBox(win,{type:'warning',message:'Could not check for updates.',detail:e.message});}finally{checking=false;manual=false;}}
