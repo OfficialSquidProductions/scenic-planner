@@ -1,5 +1,6 @@
-Scenic 1.4.27
+Scenic 1.4.30
 
-- Copy selected scene items with Command+C and paste with Command+V on Mac (Ctrl+C / Ctrl+V on Windows). Copy a built environment into a later existing scene at the same positions while preserving its existing objects.
-- Pasted items are independent copies with fresh IDs. Preserve relative layout, editable properties, floor/reference images, walls and groups, attached doors/windows, camera settings, movement marks and supported shot links. Repeated pastes are offset; normal text-field copy and paste remain available.
-- Right-click a scene and choose Duplicate scene to reuse its complete constructed environment with independent object and shot IDs. Both paste and scene duplication support Undo/Redo and portable save/reopen.
+- Copy selected scene items and paste them into the same or another existing scene. Preserve layout, editable properties, images, wall groups, attached openings, camera settings and movement marks; copied items remain independent.
+- On iPhone and iPad, use Copy items and Paste items in Properties, or Command+C and Command+V with an attached keyboard. Normal text-field copy and paste remain available.
+- Duplicate a complete scene environment with independent object and shot identifiers. Paste and duplication support Undo/Redo and editable project save/reopen.
+- Includes the numbered-scene shot-list import fix while preserving descriptions, Script coverage, camera links and existing supported numbering formats.

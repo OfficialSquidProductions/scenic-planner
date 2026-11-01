@@ -73,7 +73,10 @@
  }
  const actions=document.createElement('div');actions.className='ipad-selection-tools';
  const additive=button('ipad-selection','Add to selection'),cancel=button('ipad-cancel','Cancel / deselect');
- additive.setAttribute('aria-pressed','false');actions.append(additive,cancel);$('properties-panel').prepend(actions);
+ const copyItems=button('ipad-copy-items','Copy items','Copy selected scene items'),pasteItems=button('ipad-paste-items','Paste items','Paste scene items');
+ copyItems.onclick=()=>ScenicDesktop.request('copySceneObjects').catch(error=>toast(error.message));
+ pasteItems.onclick=()=>ScenicDesktop.request('pasteSceneObjects').catch(error=>toast(error.message));
+ additive.setAttribute('aria-pressed','false');actions.append(additive,cancel,copyItems,pasteItems);$('properties-panel').prepend(actions);
  additive.onclick=()=>{state.addSelection=!state.addSelection;additive.classList.toggle('active',state.addSelection);additive.setAttribute('aria-pressed',String(state.addSelection));};
  cancel.onclick=()=>{if(drag)cancelDrag();wallStart=null;choose(null);setTool('select');state.addSelection=false;additive.classList.remove('active');additive.setAttribute('aria-pressed','false');};
  const originalHint=updateCanvasHint;
@@ -81,7 +84,7 @@
  $('open-project').setAttribute('aria-label','Import project…');$('import-shot-list').setAttribute('aria-label','Import shot list CSV');
  $('scene-canvas').setAttribute('aria-label','Interactive scene map. Tap a tool then tap to place. Drag to move. Two fingers pan and zoom.');
  document.querySelector('.sidebar-save-note').lastChild.textContent=state.isPhone?'Saved on this iPhone':'Saved on this iPad';
- $('guide').querySelector('p').textContent+=' On iPhone or iPad, tap a tool then tap the map to place it. Drag with one finger to move or box select. Use two fingers to pan and zoom. Scenes opens scene selection; Items opens the item library on iPad. Properties opens editing controls. In iPad landscape, Settings can keep Scenes and Items beside the map. Add to selection substitutes for Shift when selecting items. Use Pan to move with one finger.';
+ $('guide').querySelector('p').textContent+=' On iPhone or iPad, tap a tool then tap the map to place it. Drag with one finger to move or box select. Use two fingers to pan and zoom. Scenes opens scene selection; Items opens the item library on iPad. Properties opens editing controls. In iPad landscape, Settings can keep Scenes and Items beside the map. Copy items and Paste items in Properties reuse a selection across scenes; an attached keyboard can use Command+C and Command+V. Clear the selection to reveal Duplicate scene in Properties. Add to selection substitutes for Shift when selecting items. Use Pan to move with one finger.';
  document.querySelector('.changelog-footer').textContent='iOS beta updates arrive through TestFlight. The bundled release notes describe the shared Scenic editor.';
  // Use native Files pickers, retaining the editor’s existing parsers and validation.
  for(const [id,kind] of [['project-input','project'],['image-input','image'],['shot-list-input','shots']]){

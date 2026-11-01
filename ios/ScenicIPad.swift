@@ -68,7 +68,7 @@ final class ScenicViewController: UIViewController, WKScriptMessageHandler, WKNa
         let platform = UIDevice.current.userInterfaceIdiom == .pad ? "iPad" : "iOS"
         config.userContentController.addUserScript(WKUserScript(source: "window.SquidPlatform='\(platform)';", injectionTime: .atDocumentStart, forMainFrameOnly: true))
         config.userContentController.addUserScript(WKUserScript(source: "window.ScenicIPad={addSelection:false,isPhone:\(UIDevice.current.userInterfaceIdiom == .phone ? "true" : "false")};", injectionTime: .atDocumentStart, forMainFrameOnly: true))
-        let result = WKWebView(frame: .zero, configuration: config)
+        let result = ScenicClipboardWebView(frame: .zero, configuration: config)
         result.navigationDelegate = self; result.uiDelegate = self
         return result
     }
@@ -96,6 +96,8 @@ final class ScenicViewController: UIViewController, WKScriptMessageHandler, WKNa
         guard message.webView === web, url.lastPathComponent == "index.html" else { return }
 
         switch action {
+        case "copySceneObjects": web.copy(nil); reply(id, result: true)
+        case "pasteSceneObjects": web.paste(nil); reply(id, result: true)
         case "readProject":
             queue.async { [self] in
                 do {

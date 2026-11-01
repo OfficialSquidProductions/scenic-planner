@@ -36,7 +36,7 @@ objects={}
 def obj(key, value): objects[key]=value;return key
 def ident(n):return f'{n:024X}'
 sources=[];children=[];resource_builds=[]
-for index,name in enumerate(['ScenicIPad.swift','WorkspaceStore.swift','Diagnostics.swift']):
+for index,name in enumerate(['ScenicIPad.swift','WorkspaceStore.swift','Diagnostics.swift','ObjectClipboard.swift']):
  f=ident(10+index);b=ident(20+index);obj(f,f'isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = {name}; sourceTree = "<group>";');obj(b,f'isa = PBXBuildFile; fileRef = {f};');sources.append(b);children.append(f)
 for index,(name,typ) in enumerate([('web','folder'),('PrivacyInfo.xcprivacy','text.xml'),('LICENSE.txt','text'),('smoke.js','sourcecode.javascript'),('portable-smoke.js','sourcecode.javascript'),('palette-smoke.js','sourcecode.javascript'),('numbered-smoke.js','sourcecode.javascript'),('desktop-fixture.scenic','text.json'),('Assets.xcassets','folder.assetcatalog')]):
  resource_path=('Tests/Fixtures/' if name in ['smoke.js','portable-smoke.js','palette-smoke.js','numbered-smoke.js','desktop-fixture.scenic'] else 'Resources/')+name
