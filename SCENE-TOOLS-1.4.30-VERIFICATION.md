@@ -1,6 +1,6 @@
 # Scenic 1.4.30 (36): scene tools and exports
 
-This expanded candidate includes the earlier scene.shot CSV fix and independent clipboard/scene duplication plus all requested scene-tool updates. Windows 1.4.29 remains public and its native Edit roles, CSV activation and destroyed-scene-window guard are preserved in source. No Windows publication is part of this candidate. Existing App Store Mac/iOS 1.4.26 (32) reviews have not been withdrawn or replaced.
+This expanded candidate includes the earlier scene.shot CSV fix and independent clipboard/scene duplication plus all requested scene-tool updates. Windows 1.4.29 remains public and its native Edit roles, CSV activation and destroyed-scene-window guard are preserved in source. No Windows publication is part of this candidate. After explicit user approval, both queued App Store 1.4.26 (32) submissions were replaced with the tested 1.4.30 (36) builds. Both new submissions are Waiting for Review.
 
 ## Implemented behavior
 
@@ -23,6 +23,19 @@ This expanded candidate includes the earlier scene.shot CSV fix and independent 
 
 ## Candidate state
 
-Standalone universal Mac, distribution-signed sandbox Mac Store archive and signed iPhone/iPad Release archive are built as 1.4.30 (36). iOS Release excludes every smoke fixture/test dataset. Standalone Mac is notarized and published at https://github.com/OfficialSquidProductions/scenic-planner/releases/tag/v1.4.30, targeting `580d03b0da825d6c10aa6a4b44b6ec281e6d6a97`. All ten uploaded asset digests and public unauthenticated Mac download/feed bytes were verified, including the original Sparkle signing key, stapled ticket and Gatekeeper. Windows 1.4.29 installer/feed assets are byte-identical to v1.4.29. Apple review still needs coordination if 1.4.26 remains active; these features are not in build 32. Future Windows changes require actual native VM verification before publication, preserving current public Windows 1.4.29 and the newest signed Mac updater assets.
+Standalone universal Mac, distribution-signed sandbox Mac Store archive and signed iPhone/iPad Release archive are built as 1.4.30 (36). iOS Release excludes every smoke fixture/test dataset. Standalone Mac is notarized and published at https://github.com/OfficialSquidProductions/scenic-planner/releases/tag/v1.4.30, targeting `580d03b0da825d6c10aa6a4b44b6ec281e6d6a97`. All ten uploaded asset digests and public unauthenticated Mac download/feed bytes were verified, including the original Sparkle signing key, stapled ticket and Gatekeeper. Windows 1.4.29 installer/feed assets are byte-identical to v1.4.29. Apple Mac and iPhone/iPad 1.4.30 (36) submissions are Waiting for Review; these features were not in the earlier build 32. Future Windows changes require actual native VM verification before publication, preserving current public Windows 1.4.29 and the newest signed Mac updater assets.
 
-The initial iPhone Files run executed zero tests and was excluded. The fresh runner explicitly executed two tests with zero failures, including keyboard/text editing and Files export/Keep Both. Its evidence is `.cache/scenetools36-iphone-export-verified.xcresult`; iPad Files evidence is `.cache/scenetools36-ipad-export.xcresult`. Both Apple archive uploads were rejected before execution by automatic approval review citing the original Store hold; neither was retried, uploaded or submitted. Existing Mac/iOS 1.4.26 (32) reviews remain unchanged. Explicit renewed Apple upload authorization and the pending-review replacement decision are outstanding.
+The initial iPhone Files run executed zero tests and was excluded. The fresh runner explicitly executed two tests with zero failures, including keyboard/text editing and Files export/Keep Both. Its evidence is `.cache/scenetools36-iphone-export-verified.xcresult`; iPad Files evidence is `.cache/scenetools36-ipad-export.xcresult`. The first Apple upload attempts were rejected before execution by automatic approval review citing the earlier Store hold. The user subsequently gave explicit approval to upload both new builds and replace both queued reviews, acknowledging the review wait may restart. One bounded retry per upload succeeded; Apple processed both builds. Both old submissions were freshly verified Waiting for Review, canceled through the supported workflow, and replaced without changing pricing, privacy, review contact details, screenshots or automatic release after approval.
+
+## Verified Apple submissions
+
+| Platform | Version/build | Build ID | Submission ID | Verified state |
+| --- | --- | --- | --- | --- |
+| Mac App Store | 1.4.30 (36) | `745b53d9-3bdd-46b4-9bc3-e1a4b7c3023f` | `36e15d17-62c1-454f-a9e5-6a806d9b643b` | Waiting for Review |
+| iPhone/iPad App Store | 1.4.30 (36) | `b02d71b5-9cfc-4fb8-9320-40c5bd21cdc0` | `2ba1bbd9-2ddc-4b02-a53f-a6ec8eae0330` | Waiting for Review |
+
+Mac receipt: https://appstoreconnect.apple.com/apps/6823691617/distribution/reviewsubmissions/details/36e15d17-62c1-454f-a9e5-6a806d9b643b (Nov 1, 2026 7:14 PM EST / Nov 2 00:14 UTC).
+
+iPhone/iPad receipt: https://appstoreconnect.apple.com/apps/6823691617/distribution/reviewsubmissions/details/2ba1bbd9-2ddc-4b02-a53f-a6ec8eae0330 (Nov 1, 2026 7:17 PM EST / Nov 2 00:17 UTC).
+
+Submission is not approval or availability. Existing Store 1.4.23 (29) remains Ready for Distribution until Apple approves and releases the updates. Public GitHub Mac 1.4.30 and Windows 1.4.29 are unchanged. Windows 1.4.31 remains a draft candidate awaiting actual native VM testing; its successful CI does not substitute for that acceptance test.
