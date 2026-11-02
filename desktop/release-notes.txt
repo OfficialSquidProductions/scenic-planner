@@ -1,5 +1,6 @@
-Scenic 1.4.31
+Scenic 1.4.32
 
+- Oversized text pastes remain visible as an unsaved draft with a clear limit message, preserving the previous saved text instead of silently truncating pasted content.
 - Right-click a shot or use its Actions button to delete it safely. Imported-shot deletion keeps and unlinks map cameras; coverage checks preserve your position, focus and expanded details in the shot list.
 - Select actors and cameras in doorways more easily while keeping door frames and leaves selectable.
 - Export all scenes from the scene browser as one multipage PDF or separate PNG files, with ordered scene names, progress and native destination controls.
