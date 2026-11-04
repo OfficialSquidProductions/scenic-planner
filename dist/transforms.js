@@ -12,6 +12,8 @@ const supported=o=>!!o&&!o.locked&&(o.type==='wall'||o.type==='arrow'||boxTypes.
 function handles(o,zoom=1){
  if(!supported(o))return [];
  if(o.type==='arrow')return model.annotationPoints(o).map((p,index)=>({kind:'arrow-point',index,...p}));
+ if(o.type==='wall'&&o.curve){const ps=model.wallCurvePoints(o);return [{kind:'start',...ps[0]},{kind:'bend',...model.curvePoint(ps,.5)},{kind:'end',...ps[2]}];}
+ if(o.type==='floor'&&o.vertices){const ps=model.floorPoints(o);return [{kind:'floor-anchor',x:o.x,y:o.y},...ps.map((p,index)=>({kind:'floor-vertex',index,...p})),...ps.map((p,index)=>({kind:'floor-edge',index,x:(p.x+ps[(index+1)%4].x)/2,y:(p.y+ps[(index+1)%4].y)/2}))];}
  const c=center(o),a=angle(o),toWorld=p=>{const r=rotate(p,a);return{x:c.x+r.x,y:c.y+r.y};};
  if(aimable(o)){const base=Math.max(o.type==='actor'?model.actorFootprint(o).width/2+10:o.type==='light'?24:28,20/zoom);return [{kind:'rotate',...toWorld({x:base+28/zoom,y:0}),base:toWorld({x:base,y:0})}];}
  if(o.type==='wall')return [
@@ -31,6 +33,13 @@ function cursor(o,h){
 function apply(o,h,start,p,{step=0,proportional=false,angleStep=0,min=1.5,max=5000}={}){
  if(!supported(o)||aimable(o)&&h.kind!=='rotate')return {};
  const c=center(o),a=angle(o),dx=p.x-start.x,dy=p.y-start.y;
+ if(o.type==='floor'&&o.vertices&&h.kind.startsWith('floor-')){
+  if(h.kind==='floor-anchor'){const q=n=>step?Math.round(n/step)*step:n;return {x:q(o.x+dx),y:q(o.y+dy)};}
+  const d=rotate({x:dx,y:dy},-a),vertices=structuredClone(o.vertices),indices=h.kind==='floor-edge'?[h.index,(h.index+1)%4]:[h.index],q=n=>step?Math.round(n/step)*step:n;
+  for(const i of indices)vertices[i]={x:q(vertices[i].x*o.width+d.x)/o.width,y:q(vertices[i].y*o.height+d.y)/o.height};
+  return model.floorShapePose(o,vertices)||{};
+ }
+ if(o.type==='wall'&&h.kind==='bend'){const q=n=>Math.max(-5000,Math.min(5000,step?Math.round(n/step)*step:n));return {curve:{x:q((o.curve?.x||0)+dx),y:q((o.curve?.y||0)+dy)}};}
  if(o.type==='arrow'){if(h.kind!=='arrow-point')return {};const points=structuredClone(o.points),d=rotate({x:dx,y:dy},-a);points[h.index]={x:Math.max(-5000,Math.min(5000,points[h.index].x+d.x/o.scale)),y:Math.max(-5000,Math.min(5000,points[h.index].y+d.y/o.scale))};return {points};}
  if(Math.hypot(dx,dy)<1e-9)return aimable(o)?{rotation:o.rotation||0}:o.type==='wall'?{x:o.x,y:o.y,x2:o.x2,y2:o.y2}:{x:o.x,y:o.y,width:o.width,height:o.height,rotation:o.rotation};
  const quantize=n=>step?Math.round(n/step)*step:n,clamp=n=>Math.max(min,Math.min(max,n));

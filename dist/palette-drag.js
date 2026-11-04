@@ -2,7 +2,7 @@
    Touch waits for a hold; a swipe before the hold remains ordinary scrolling. */
 (()=>{
  'use strict';
- const root=document.documentElement,selector='#library [data-asset],#library [data-tool],#tools [data-tool]',tools=new Set(['camera','light','actor','wall','floor']);
+ const root=document.documentElement,selector='#library [data-asset],#library [data-tool],#tools [data-tool]',tools=new Set(['camera','light','actor','wall','curved-wall','floor']);
  const help=document.createElement('p');help.id='palette-drag-help';help.className='palette-drag-help';help.textContent=window.ScenicIPad?'Hold, then drag · Swipe to scroll':'Click, then map · Or drag to place';
  $('library-heading').after(help);
  const status=document.createElement('div');status.className='visually-hidden';status.setAttribute('role','status');status.setAttribute('aria-live','polite');document.body.append(status);
@@ -14,7 +14,7 @@
   const button=target.closest?.(selector);if(!button||button.disabled)return null;
   const asset=button.dataset.asset&&ScenicCatalog.get(button.dataset.asset),type=asset?'asset:'+asset.id:button.dataset.tool;
   if(!asset&&!tools.has(type))return null;
-  return {button,type,name:asset?.name||({camera:'Camera',light:'Light',actor:'Talent',wall:'Wall',floor:'Floor tile'})[type]};
+  return {button,type,name:asset?.name||({camera:'Camera',light:'Light',actor:'Talent',wall:'Wall','curved-wall':'Curved wall',floor:'Floor tile'})[type]};
  }
  function decorate(){if(window.ScenicIPad)$('library-heading').querySelector('.tiny').textContent='TAP OR HOLD & DRAG';document.querySelectorAll(selector).forEach(button=>{if(!source(button))return;button.setAttribute('aria-describedby',help.id);button.draggable=false;});}
  decorate();new MutationObserver(decorate).observe($('library'),{childList:true,subtree:true});
@@ -52,12 +52,12 @@
   }
   consume(event);
   const p=target(point),valid=!!p;
-  ghost.textContent=(valid?'＋ ':'× ')+gesture.name+' · '+(valid?(gesture.type==='wall'?'Drop to start wall':'Drop to add'):'Move to Scene map');
+  ghost.textContent=(valid?'＋ ':'× ')+gesture.name+' · '+(valid?(['wall','curved-wall'].includes(gesture.type)?'Drop to start wall':'Drop to add'):'Move to Scene map');
   ghost.classList.toggle('valid',valid);
   ghost.style.left=Math.max(8,Math.min(innerWidth-228,point.clientX+16))+'px';ghost.style.top=Math.max(8,Math.min(innerHeight-64,point.clientY-64))+'px';
   marker.hidden=!valid;wrap.classList.toggle('palette-drop-ready',valid);
   if(valid){const r=canvas.getBoundingClientRect();marker.style.left=r.left+view.x+p.x*view.z+'px';marker.style.top=r.top+view.y+p.y*view.z+'px';}
-  announce(valid?(gesture.type==='wall'?'Drop to start the wall. Then choose its endpoint.':'Drop to add '+gesture.name+'.'):'Move over the scene map. Release outside it to cancel.');
+  announce(valid?(['wall','curved-wall'].includes(gesture.type)?'Drop to start the wall. Then choose its endpoint.':'Drop to add '+gesture.name+'.'):'Move over the scene map. Release outside it to cancel.');
  }
  function end(point,event){
   if(!gesture)return;
@@ -65,7 +65,7 @@
   consume(event);const p=target(point),item=gesture;clear();suppress(item);
   if(!p){announce('Placement cancelled. No item added.');return;}
   stopPlayback();
-  if(item.type==='wall'){setTool('wall');wallStart=p;hover=p;invalidate();toast('Wall start placed · choose an endpoint');announce('Wall start placed. Tap or click its endpoint.');}
+  if(['wall','curved-wall'].includes(item.type)){setTool(item.type);wallStart=p;hover=p;invalidate();toast('Wall start placed · choose an endpoint');announce('Wall start placed. Tap or click its endpoint.');}
   else{addObject(item.type,p);announce(item.name+' added to the scene.');}
  }
  document.addEventListener('pointerdown',e=>{

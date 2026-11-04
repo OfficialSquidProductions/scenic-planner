@@ -16,7 +16,8 @@ function polygonTouches(points,r){
 function touches(o,r,objects){
  if(o.locked)return false;
  if(o.type==='arrow'){const points=model.annotationPoints(o);let before=points[0];for(let i=1;i<=48;i++){const next=model.curvePoint(points,i/48);if(segmentTouches({...before,x2:next.x,y2:next.y},r,o.lineWidth/2))return true;before=next;}return false;}
- if(o.type==='wall')return segmentTouches(o,r,o.thickness/2);
+ if(o.type==='wall')return model.wallSegments(o).some(w=>segmentTouches(w,r,o.thickness/2));
+ if(o.type==='floor'&&o.vertices){const ps=model.floorPoints(o),corners=[{x:r.left,y:r.top},{x:r.right,y:r.top},{x:r.right,y:r.bottom},{x:r.left,y:r.bottom}];return ps.some(p=>p.x>=r.left&&p.x<=r.right&&p.y>=r.top&&p.y<=r.bottom)||corners.some(p=>model.polygonContains(ps,p))||ps.some((p,i)=>segmentTouches({...p,x2:ps[(i+1)%4].x,y2:ps[(i+1)%4].y},r));}
  if(o.type==='room')return model.roomSegments(o).some(w=>segmentTouches(w,r,w.thickness/2));
  if(o.type==='wallGroup')return objects.some(w=>o.wallIds.includes(w.id)&&w.type==='wall'&&touches(w,r,objects));
  if(o.type==='actor'){

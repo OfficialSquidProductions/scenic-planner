@@ -58,7 +58,7 @@ function duplicateWallGroup(){
  const group=object();if(group?.type!=='wallGroup')return false;
  if(scene().objects.length+group.wallIds.length+1>2000){toast('The scene has reached its item limit.');return true;}
  snapshot();const ids=new Map(group.wallIds.map(id=>[id,uid()]));
- const walls=scene().objects.filter(o=>ids.has(o.id)).map(o=>({...o,id:ids.get(o.id),name:o.name+' copy',x:o.x+30,y:o.y+30,x2:o.x2+30,y2:o.y2+30}));
+ const walls=scene().objects.filter(o=>ids.has(o.id)).map(o=>({...structuredClone(o),id:ids.get(o.id),name:o.name+' copy',x:o.x+30,y:o.y+30,x2:o.x2+30,y2:o.y2+30}));
  const copy={...group,id:uid(),name:group.name+' copy',x:group.x+30,y:group.y+30,wallIds:group.wallIds.map(id=>ids.get(id))};
  scene().objects.push(...walls,copy);choose(copy.id);commit();return true;
 }

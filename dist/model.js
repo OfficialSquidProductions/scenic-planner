@@ -19,6 +19,31 @@ function annotationPoints(o){
  const points=o.type==='arrow'?o.points:[{x:-o.width/2,y:-o.height/2},{x:o.width/2,y:-o.height/2},{x:o.width/2,y:o.height/2},{x:-o.width/2,y:o.height/2}];
  return points.map(p=>({x:o.x+(p.x*c-p.y*s)*scale,y:o.y+(p.x*s+p.y*c)*scale}));
 }
+// Optional shape fields preserve legacy rectangular floors and straight walls.
+// A wall curve stores the offset of its visible midpoint, not an absolute point.
+function wallCurvePoints(o){const mid={x:(o.x+o.x2)/2,y:(o.y+o.y2)/2};return [{x:o.x,y:o.y},{x:mid.x+2*(o.curve?.x||0),y:mid.y+2*(o.curve?.y||0)},{x:o.x2,y:o.y2}];}
+function wallSegments(o){
+ if(!o.curve)return [o];
+ const points=wallCurvePoints(o),n=64;let before=points[0];return Array.from({length:n},(_,i)=>{const next=curvePoint(points,(i+1)/n),w={...before,x2:next.x,y2:next.y,thickness:o.thickness,id:o.id};before=next;return w;});
+}
+function wallLength(o){return wallSegments(o).reduce((n,w)=>n+Math.hypot(w.x2-w.x,w.y2-w.y),0);}
+function floorVertices(o){return o.vertices||[{x:-.5,y:-.5},{x:.5,y:-.5},{x:.5,y:.5},{x:-.5,y:.5}];}
+function floorPoints(o){const a=(o.rotation||0)*Math.PI/180,c=Math.cos(a),s=Math.sin(a);return floorVertices(o).map(p=>({x:o.x+p.x*o.width*c-p.y*o.height*s,y:o.y+p.x*o.width*s+p.y*o.height*c}));}
+function floorShapePose(o,vertices){
+ const ps=vertices.map(p=>({x:p.x*o.width,y:p.y*o.height})),minX=Math.min(...ps.map(p=>p.x)),maxX=Math.max(...ps.map(p=>p.x)),minY=Math.min(...ps.map(p=>p.y)),maxY=Math.max(...ps.map(p=>p.y)),width=maxX-minX,height=maxY-minY;
+ if(width<1.5||height<1.5||width>5000||height>5000)return null;
+ const cx=(minX+maxX)/2,cy=(minY+maxY)/2,a=(o.rotation||0)*Math.PI/180,result={x:o.x+cx*Math.cos(a)-cy*Math.sin(a),y:o.y+cx*Math.sin(a)+cy*Math.cos(a),width,height,vertices:ps.map(p=>({x:(p.x-cx)/width,y:(p.y-cy)/height}))};
+ return coordinate(result.x)&&coordinate(result.y)&&validFloorVertices({...o,...result})?result:null;
+}
+function polygonContains(points,p){let inside=false;for(let i=0,j=points.length-1;i<points.length;j=i++){const a=points[i],b=points[j];if((a.y>p.y)!==(b.y>p.y)&&p.x<(b.x-a.x)*(p.y-a.y)/(b.y-a.y)+a.x)inside=!inside;}return inside;}
+function validFloorVertices(o){
+ const vs=o.vertices;if(!Array.isArray(vs)||vs.length!==4||!vs.every(p=>p&&[p.x,p.y].every(n=>finite(n)&&Math.abs(n)<=.5000001)))return false;
+ const ps=vs.map(p=>({x:p.x*o.width,y:p.y*o.height})),cross=(a,b,c)=>(b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x);
+ const intersects=(a,b,c,d)=>{const eps=1e-7,x=cross(a,b,c),y=cross(a,b,d),z=cross(c,d,a),w=cross(c,d,b);return x*y<0&&z*w<0||Math.abs(x)<eps||Math.abs(y)<eps||Math.abs(z)<eps||Math.abs(w)<eps;};
+ if(intersects(ps[0],ps[1],ps[2],ps[3])||intersects(ps[1],ps[2],ps[3],ps[0]))return false;
+ const area=Math.abs(ps.reduce((n,p,i)=>{const q=ps[(i+1)%4];return n+p.x*q.y-p.y*q.x;},0))/2;
+ return area>=2.25&&floorPoints(o).every(p=>coordinate(p.x)&&coordinate(p.y))&&ps.every((p,i)=>Math.hypot(p.x-ps[(i+1)%4].x,p.y-ps[(i+1)%4].y)>=1.5)&&Math.max(...ps.map(p=>p.x))-Math.min(...ps.map(p=>p.x))<=5000&&Math.max(...ps.map(p=>p.y))-Math.min(...ps.map(p=>p.y))<=5000;
+}
 function annotationBounds(o){const ps=annotationPoints(o),pad=o.type==='arrow'?Math.max(12,o.lineWidth*3):0;return {left:Math.min(...ps.map(p=>p.x))-pad,right:Math.max(...ps.map(p=>p.x))+pad,top:Math.min(...ps.map(p=>p.y))-pad,bottom:Math.max(...ps.map(p=>p.y))+pad};}
 function curvePoint(points,t){const u=1-t;return{x:u*u*points[0].x+2*u*t*points[1].x+t*t*points[2].x,y:u*u*points[0].y+2*u*t*points[1].y+t*t*points[2].y};}
 function segmentDistance(p,a,b){const dx=b.x-a.x,dy=b.y-a.y,t=Math.max(0,Math.min(1,((p.x-a.x)*dx+(p.y-a.y)*dy)/(dx*dx+dy*dy||1)));return Math.hypot(p.x-a.x-t*dx,p.y-a.y-t*dy);}
@@ -48,7 +73,8 @@ function containsPoint(o,p,zoom=1,objects=[]){
  if(o.locked||o.type==='wallGroup')return false;
  if(o.type==='arrow')return arrowContains(o,p,Math.max(3,6/zoom));
  if(o.type==='room')return roomSegments(o).some(w=>segmentDistance(p,w,{x:w.x2,y:w.y2})<=Math.max(5/zoom,o.thickness/2+3));
- if(o.type==='wall')return segmentDistance(p,o,{x:o.x2,y:o.y2})<=Math.max(5/zoom,o.thickness/2+3);
+ if(o.type==='wall')return wallSegments(o).some(w=>segmentDistance(p,w,{x:w.x2,y:w.y2})<=Math.max(5/zoom,o.thickness/2+3));
+ if(o.type==='floor'&&o.vertices){const ps=floorPoints(o);return polygonContains(ps,p)||ps.some((a,i)=>segmentDistance(p,a,ps[(i+1)%4])<=3/zoom);}
  if(o.type==='actor')return actorContains(o,p,3/zoom);
  if(openingKind(o))return openingContains(o,p,zoom,objects);
  if(o.type==='camera'||o.type==='light')return Math.hypot(p.x-o.x,p.y-o.y)<=Math.max(o.kind==='sun'?30:24,8/zoom)||barnDoorSegments(o).some(w=>segmentDistance(p,w,{x:w.x2,y:w.y2})<=2.5+3/zoom);
@@ -87,7 +113,7 @@ function roomSegments(room){
  return vertices.map((p,i)=>({...p,x2:vertices[(i+1)%vertices.length].x,y2:vertices[(i+1)%vertices.length].y,thickness:room.thickness,id:room.id}));
 }
 function boundary(wall){
- let length=0;const segments=(wall.type==='room'?roomSegments(wall):[wall]).map(w=>{const start=length;length+=Math.hypot(w.x2-w.x,w.y2-w.y);return {...w,start,end:length};});
+ let length=0;const segments=(wall.type==='room'?roomSegments(wall):wallSegments(wall)).map(w=>{const start=length;length+=Math.hypot(w.x2-w.x,w.y2-w.y);return {...w,start,end:length};});
  return {segments,length};
 }
 function wallGroupFor(objects,id){return objects.find(o=>o.type==='wallGroup'&&o.wallIds.includes(id));}
@@ -109,7 +135,7 @@ function translateSelection(objects,ids,dx,dy,source=objects){
 function groupWalls(objects,ids,id){
  const walls=objects.filter(o=>ids.includes(o.id)&&o.type==='wall'&&!wallGroupFor(objects,o.id));
  if(walls.length<2||walls.length!==new Set(ids).size||objects.length>=2000)return null;
- const xs=walls.flatMap(w=>[w.x,w.x2]),ys=walls.flatMap(w=>[w.y,w.y2]),minX=Math.min(...xs),maxX=Math.max(...xs),minY=Math.min(...ys),maxY=Math.max(...ys);
+ const segments=walls.flatMap(wallSegments),xs=segments.flatMap(w=>[w.x,w.x2]),ys=segments.flatMap(w=>[w.y,w.y2]),minX=Math.min(...xs),maxX=Math.max(...xs),minY=Math.min(...ys),maxY=Math.max(...ys);
  const width=Math.max(1.5,maxX-minX),height=Math.max(1.5,maxY-minY);if(width>5000||height>5000)return null;
  const group={id,type:'wallGroup',name:'Wall group',x:(minX+maxX)/2,y:(minY+maxY)/2,width,height,rotation:0,keepProportions:false,wallIds:walls.map(w=>w.id)};
  return {group,objects:[...objects,group]};
@@ -120,7 +146,7 @@ function transformWallGroup(objects,id,pose,source=objects){
  if(![group.x,group.y,group.rotation,group.width,group.height].every(finite)||group.width<1.5||group.height<1.5||group.width>5000||group.height>5000)return null;
  const point=(x,y)=>{const dx=x-original.x,dy=y-original.y,lx=(dx*Math.cos(a)-dy*Math.sin(a))*group.width/original.width,ly=(dx*Math.sin(a)+dy*Math.cos(a))*group.height/original.height;return {x:group.x+lx*Math.cos(b)-ly*Math.sin(b),y:group.y+lx*Math.sin(b)+ly*Math.cos(b)};};
  const changed=new Map([[id,group]]);
- for(const wallId of original.wallIds){const wall=source.find(w=>w.id===wallId&&w.type==='wall');if(!wall)return null;const p=point(wall.x,wall.y),q=point(wall.x2,wall.y2);if(![p.x,p.y,q.x,q.y].every(coordinate))return null;changed.set(wallId,{...wall,...p,x2:q.x,y2:q.y});}
+ for(const wallId of original.wallIds){const wall=source.find(w=>w.id===wallId&&w.type==='wall');if(!wall)return null;const p=point(wall.x,wall.y),q=point(wall.x2,wall.y2);if(![p.x,p.y,q.x,q.y].every(coordinate))return null;const curve=wall.curve?(()=>{const m=point((wall.x+wall.x2)/2+wall.curve.x,(wall.y+wall.y2)/2+wall.curve.y);return {x:m.x-(p.x+q.x)/2,y:m.y-(p.y+q.y)/2};})():null;if(curve&&(![curve.x,curve.y].every(n=>finite(n)&&Math.abs(n)<=5000)||!wallCurvePoints({...wall,...p,x2:q.x,y2:q.y,curve}).every(p=>coordinate(p.x)&&coordinate(p.y))))return null;changed.set(wallId,{...wall,...p,x2:q.x,y2:q.y,...(curve?{curve}: {})});}
  return objects.map(o=>changed.get(o.id)||o);
 }
 function splitRoom(objects,id,makeId){
@@ -174,7 +200,7 @@ function snapOpening(o,objects,tolerance=54){
  for(const wall of objects.filter(w=>['wall','room'].includes(w.type))){
  const {segments,length}=boundary(wall);
  for(const w of segments){
-  const curved=wall.asset==='room-circle';
+  const curved=wall.asset==='room-circle'||!!wall.curve;
   const dx=w.x2-w.x,dy=w.y2-w.y,len=Math.hypot(dx,dy);if((!curved&&len<o.width)||len<1||length<o.width)continue;
   const half=curved?0:o.width/2/len,t=Math.max(half,Math.min(1-half,((o.x-w.x)*dx+(o.y-w.y)*dy)/(len*len)));
   const x=w.x+dx*t,y=w.y+dy*t,distance=Math.hypot(o.x-x,o.y-y);
@@ -250,6 +276,8 @@ function validProject(p){
    if(o.type==='camera'&&o.color!==undefined&&!/^#[0-9a-f]{6}$/i.test(o.color))return false;
    if(o.type==='camera'&&((o.sensorWidth!==undefined&&(!finite(o.sensorWidth)||o.sensorWidth<1||o.sensorWidth>100))||(o.viewDistance!==undefined&&(!finite(o.viewDistance)||o.viewDistance<3||o.viewDistance>5000))))return false;
    if(o.shotId!==undefined&&(o.type!=='camera'||typeof o.shotId!=='string'||!s.shotList?.some(shot=>shot.id===o.shotId)))return false;
+   if(o.curve!==undefined&&(o.type!=='wall'||!o.curve||![o.curve.x,o.curve.y].every(n=>finite(n)&&Math.abs(n)<=5000)||!wallCurvePoints(o).every(p=>coordinate(p.x)&&coordinate(p.y))))return false;
+   if(o.vertices!==undefined&&(o.type!=='floor'||!validFloorVertices(o)))return false;
    if(o.type==='wall'&&(!coordinate(o.x2)||!coordinate(o.y2)||o.thickness<=0||o.thickness>100))return false;
    if(['floor','wallGroup','room','image','table','sofa','prop','set','gear','text'].includes(o.type)&&(!(o.width>0&&o.width<=5000)||!(o.height>0&&o.height<=5000)))return false;
    if(o.type==='wallGroup'&&(!Array.isArray(o.wallIds)||o.wallIds.length<2||o.wallIds.length>1999||new Set(o.wallIds).size!==o.wallIds.length||!o.wallIds.every(id=>typeof id==='string'&&s.objects.some(w=>w.id===id&&w.type==='wall'))))return false;
@@ -290,6 +318,6 @@ function workspaceFrom(data,id){
  if(!validProject(data))throw Error('The saved project could not be read. Your existing files have been preserved.');
  const p=structuredClone(data);p.projectId=p.projectId||id;return {version:2,activeProject:p.projectId,projects:[p]};
 }
-const api={lightingLayouts,barnDoorSegments,lightingSymbolPoints,annotationPoints,annotationBounds,curvePoint,arrowContains,informationLabel,openingContains,containsPoint,pickObject,cameraView,cameraCoverage,actorFootprint,actorContains,translateSelection,groupWalls,wallGroupFor,transformWallGroup,splitRoom,roomSegments,playbackElapsed,motionPose,motionDuration,lightColor,openingKind,movable,markLabel,wallPose,syncOpenings,snapOpening,doorLeaves,effectiveWalls,sunState,pathPosition,validProject,validWorkspace,workspaceFrom};
+const api={lightingLayouts,barnDoorSegments,lightingSymbolPoints,wallCurvePoints,wallSegments,wallLength,floorVertices,floorPoints,floorShapePose,polygonContains,validFloorVertices,annotationPoints,annotationBounds,curvePoint,arrowContains,informationLabel,openingContains,containsPoint,pickObject,cameraView,cameraCoverage,actorFootprint,actorContains,translateSelection,groupWalls,wallGroupFor,transformWallGroup,splitRoom,roomSegments,playbackElapsed,motionPose,motionDuration,lightColor,openingKind,movable,markLabel,wallPose,syncOpenings,snapOpening,doorLeaves,effectiveWalls,sunState,pathPosition,validProject,validWorkspace,workspaceFrom};
 if(typeof module==='object'&&module.exports)module.exports=api;else root.ScenicModel=api;
 })(globalThis);

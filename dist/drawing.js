@@ -68,14 +68,15 @@ function drawTransformHandles(o,showHandles=true){
  ctx.save();ctx.strokeStyle=color('--accent');ctx.fillStyle=color('--paper');ctx.lineWidth=1.5/view.z;ctx.setLineDash([4/view.z,4/view.z]);
  if(o.type==='arrow'){const points=ScenicModel.annotationPoints(o);ctx.beginPath();ctx.moveTo(points[0].x,points[0].y);ctx.lineTo(points[1].x,points[1].y);ctx.lineTo(points[2].x,points[2].y);ctx.stroke();}
  else if(o.type==='wall'){
-  ctx.beginPath();ctx.moveTo(o.x,o.y);ctx.lineTo(o.x2,o.y2);ctx.stroke();
-  if(showHandles)label(ScenicTransforms.center(o),formatLength(Math.hypot(o.x2-o.x,o.y2-o.y)),18/view.z);
+  ctx.beginPath();ctx.moveTo(o.x,o.y);if(o.curve){const ps=ScenicModel.wallCurvePoints(o);ctx.quadraticCurveTo(ps[1].x,ps[1].y,o.x2,o.y2);}else ctx.lineTo(o.x2,o.y2);ctx.stroke();
+  if(showHandles)label(ScenicTransforms.center(o),formatLength(ScenicModel.wallLength(o)),18/view.z);
  }else if(o.type==='actor'){localShape(o,()=>{const f=ScenicModel.actorFootprint(o);ctx.beginPath();ctx.ellipse(0,0,f.width/2+6/view.z,f.height/2+6/view.z,0,0,Math.PI*2);ctx.stroke();});}else if(ScenicTransforms.aimable(o)){ctx.beginPath();ctx.arc(o.x,o.y,(o.type==='light'?24:28)+6/view.z,0,Math.PI*2);ctx.stroke();}
+ else if(o.type==='floor'&&o.vertices){pathPolygon(ctx,ScenicModel.floorPoints(o));ctx.stroke();}
  else localShape(o,()=>{const pad=6/view.z,w=o.width??60,h=o.height??60;ctx.strokeRect(-w/2-pad,-h/2-pad,w+pad*2,h+pad*2);});
  ctx.setLineDash([]);
  const handles=playback||!showHandles?[]:ScenicTransforms.handles(o,view.z);
  for(const h of handles){
-  if(h.kind==='rotate'){
+  if(h.kind==='floor-anchor'||h.kind==='bend'){ctx.beginPath();ctx.arc(h.x,h.y,6/view.z,0,Math.PI*2);ctx.fill();ctx.stroke();if(h.kind==='floor-anchor'){ctx.beginPath();ctx.moveTo(h.x-10/view.z,h.y);ctx.lineTo(h.x+10/view.z,h.y);ctx.moveTo(h.x,h.y-10/view.z);ctx.lineTo(h.x,h.y+10/view.z);ctx.stroke();}}else if(h.kind==='rotate'){
    ctx.beginPath();ctx.moveTo(h.base.x,h.base.y);ctx.lineTo(h.x,h.y);ctx.stroke();
    ctx.beginPath();ctx.arc(h.x,h.y,6/view.z,0,Math.PI*2);ctx.fill();ctx.stroke();
    // Small turning arc makes the rotation control distinct from resize handles.
@@ -89,7 +90,7 @@ function updateTransformReadout(o){
  if(o.type!=='wall'){
   const field=document.querySelector('[data-prop="rotation"]'),output=$('out-rotation');if(field)field.value=o.rotation||0;if(output)output.textContent=Math.round((o.rotation||0)*10)/10+'°';
  }
- const length=document.querySelector('.measurement-readout');if(length&&o.type==='wall')length.textContent='Centerline length: '+formatLength(Math.hypot(o.x2-o.x,o.y2-o.y));
+ const length=document.querySelector('.measurement-readout');if(length&&o.type==='wall')length.textContent='Centerline length: '+formatLength(ScenicModel.wallLength(o));
 }
 function cancelDrag(){
  if(!drag)return;
@@ -100,7 +101,7 @@ function cancelDrag(){
 }
 
 function drawWallSelection(w){
- ctx.save();ctx.strokeStyle=color('--accent');ctx.lineWidth=Math.max(w.thickness,3/view.z);ctx.setLineDash([6/view.z,4/view.z]);ctx.beginPath();ctx.moveTo(w.x,w.y);ctx.lineTo(w.x2,w.y2);ctx.stroke();ctx.restore();
+ ctx.save();ctx.strokeStyle=color('--accent');ctx.lineWidth=Math.max(w.thickness,3/view.z);ctx.setLineDash([6/view.z,4/view.z]);ctx.beginPath();ctx.moveTo(w.x,w.y);if(w.curve){const ps=ScenicModel.wallCurvePoints(w);ctx.quadraticCurveTo(ps[1].x,ps[1].y,w.x2,w.y2);}else ctx.lineTo(w.x2,w.y2);ctx.stroke();ctx.restore();
 }
 
 function drawMarquee(){
