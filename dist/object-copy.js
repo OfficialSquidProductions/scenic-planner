@@ -4,7 +4,7 @@
 const common=typeof module==='object'&&module.exports;
 const model=common?require('./model.js'):root.ScenicModel;
 const portable=common?require('./project-file.js'):root.ScenicProjectFile;
-const PREFIX='SCENIC OBJECTS 1\n',FORMAT='org.squidproductions.scenic.objects';
+const PREFIX='SCENIC OBJECTS 1\n',PREFIX2='SCENIC OBJECTS 2\n',FORMAT='org.squidproductions.scenic.objects';
 const key=value=>String(value).trim().toUpperCase();
 const validId=value=>typeof value==='string'&&/^[a-zA-Z0-9_.:-]{1,200}$/.test(value);
 function validateScene(scene){portable.validate({version:1,name:'Clipboard',active:scene.id,scenes:[scene]});}
@@ -30,15 +30,16 @@ function capture(project,sceneId,selection,makeId){
  const linked=new Set(copied.objects.map(o=>o.shotId).filter(Boolean));
  const shotList=structuredClone((scene.shotList||[]).filter(s=>linked.has(s.id)));
  validateScene({id:'clipboard',title:'Clipboard',ambient:30,objects:copied.objects,shotList});
- return {format:FORMAT,version:1,token:makeId(),sourceProjectId:project.projectId,sourceSceneId:sceneId,...copied,shotList};
+ const version=copied.objects.some(o=>o.curve||o.vertices||o.barnDoors!==undefined||o.bounceSide||model.lightingLayouts?.own(o)&&o.type==='gear')?2:1;
+ return {format:FORMAT,version,token:makeId(),sourceProjectId:project.projectId,sourceSceneId:sceneId,...copied,shotList};
 }
-function encode(payload){const text=PREFIX+JSON.stringify(payload);decode(text);return text;}
-function supported(text){return typeof text==='string'&&text.startsWith(PREFIX);}
+function encode(payload){const text=(payload.version===2?PREFIX2:PREFIX)+JSON.stringify(payload);decode(text);return text;}
+function supported(text){return typeof text==='string'&&(text.startsWith(PREFIX)||text.startsWith(PREFIX2));}
 function decode(text){
  if(!supported(text))return null;
  if(text.length>portable.MAX_FILE||new TextEncoder().encode(text).length>portable.MAX_FILE)throw Error('Choose a Scenic object copy of 60 MB or less.');
- let p;try{p=JSON.parse(text.slice(PREFIX.length));}catch{throw Error('This Scenic object copy is damaged.');}
- if(!p||p.format!==FORMAT||p.version!==1||![p.token,p.sourceProjectId,p.sourceSceneId].every(validId)||!Array.isArray(p.objects)||!p.objects.length||!Array.isArray(p.shotList)||!Array.isArray(p.selection)||!p.selection.length||new Set(p.selection).size!==p.selection.length||!p.selection.every(id=>validId(id)&&p.objects.some(o=>o.id===id)))throw Error('This Scenic object copy is not supported.');
+ let p;try{p=JSON.parse(text.slice(text.startsWith(PREFIX2)?PREFIX2.length:PREFIX.length));}catch{throw Error('This Scenic object copy is damaged.');}
+ if(!p||p.format!==FORMAT||![1,2].includes(p.version)||![p.token,p.sourceProjectId,p.sourceSceneId].every(validId)||!Array.isArray(p.objects)||!p.objects.length||!Array.isArray(p.shotList)||!Array.isArray(p.selection)||!p.selection.length||new Set(p.selection).size!==p.selection.length||!p.selection.every(id=>validId(id)&&p.objects.some(o=>o.id===id)))throw Error('This Scenic object copy is not supported.');
  validateScene({id:'clipboard',title:'Clipboard',ambient:30,objects:p.objects,shotList:p.shotList});
  return p;
 }
@@ -88,6 +89,6 @@ function duplicateScene(project,sceneId,makeId){
  model.lightingLayouts?.cloneState(source,scene,next,cloned.ids,shotIds);
  checkedProject({...project,active:scene.id,scenes:[...project.scenes,scene]});return scene;
 }
-const api={PREFIX,capture,encode,decode,supported,planPaste,duplicateScene};
+const api={PREFIX,PREFIX2,capture,encode,decode,supported,planPaste,duplicateScene};
 if(common)module.exports=api;else root.ScenicObjectCopies=api;
 })(globalThis);
