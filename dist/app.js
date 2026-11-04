@@ -115,7 +115,7 @@ function pathPolygon(c,points){c.beginPath();points.forEach((p,i)=>i?c.lineTo(p.
 function localShape(o,fn){ctx.save();ctx.translate(o.x,o.y);ctx.rotate((o.rotation||0)*Math.PI/180);fn();ctx.restore();}
 function label(o,text,offset=33){ctx.save();ctx.font='11px Futura, sans-serif';ctx.textAlign='center';ctx.fillStyle=color('--map-text');ctx.fillText(text,o.x,o.y+offset);ctx.restore();}
 function rounded(c,x,y,w,h,r){c.beginPath();c.roundRect(x,y,w,h,r);}
-let lightInteractionCache=null;
+let lightInteractionCache=null,lightRasterCache=null;
 function lightInteractionResult(){
  const objects=scene().objects.map(o=>o.type==='light'?displayObject(o):o),walls=ScenicModel.effectiveWalls(objects),sunObject=objects.find(o=>o.kind==='sun'&&o.enabled),sun=sunObject?ScenicModel.sunState(sunObject):null;
  const optics=objects.filter(o=>o.type==='light'||ScenicCatalog.isModifier(o)),key=JSON.stringify([optics,walls.map(w=>[w.x,w.y,w.x2,w.y2]),sun]);
@@ -123,7 +123,7 @@ function lightInteractionResult(){
  return lightInteractionCache.result;
 }
 function drawLighting(c,viewport){
- if(window.ScenicLightInteractions){const result=lightInteractionResult();ScenicLightInteractions.draw(c,result);const status=$('lighting-detail');if(status){status.hidden=!result.stats.truncated;status.textContent=result.stats.truncated?' · Detail limited':'';status.title='Large or repeated lighting interactions are bounded for responsiveness. This is a 2D planning approximation.';}return;}
+ if(window.ScenicLightInteractions){const result=lightInteractionResult();if(result.stats.renderLimited){const matrix=c.getTransform(),frame=[canvas.width,canvas.height,matrix.a,matrix.b,matrix.c,matrix.d,matrix.e,matrix.f].join(',');if(lightRasterCache?.result!==result||lightRasterCache.frame!==frame){const raster=document.createElement('canvas');raster.width=canvas.width;raster.height=canvas.height;const painter=raster.getContext('2d');painter.setTransform(matrix);ScenicLightInteractions.draw(painter,result);lightRasterCache={result,frame,canvas:raster};}c.save();c.setTransform(1,0,0,1,0,0);c.drawImage(lightRasterCache.canvas,0,0);c.restore();}else ScenicLightInteractions.draw(c,result);const status=$('lighting-detail');if(status){status.hidden=!result.stats.truncated;status.textContent=result.stats.truncated?' · Detail limited':'';status.title='Large or repeated lighting interactions are bounded for responsiveness. This is a 2D planning approximation.';}return;}
 const walls=ScenicModel.effectiveWalls(scene().objects);for(const l of scene().objects.filter(o=>o.type==='light'&&o.kind!=='sun'&&o.enabled&&o.power>0).map(displayObject)){c.save();pathPolygon(c,ScenicGeometry.visibility(l,walls,l.radius));c.clip();if(l.beam<360){const a=l.rotation*Math.PI/180,b=l.beam*Math.PI/360;c.beginPath();c.moveTo(l.x,l.y);c.arc(l.x,l.y,l.radius,a-b,a+b);c.closePath();c.clip();}const rgb=ScenicModel.lightColor(l),strength=l.power/100;const g=c.createRadialGradient(l.x,l.y,0,l.x,l.y,l.radius);g.addColorStop(0,`rgba(${rgb},${strength*.68})`);g.addColorStop(.22,`rgba(${rgb},${strength*.40})`);g.addColorStop(.6,`rgba(${rgb},${strength*.15})`);g.addColorStop(1,`rgba(${rgb},0)`);c.fillStyle=g;c.fillRect(l.x-l.radius,l.y-l.radius,l.radius*2,l.radius*2);c.restore();}
 }
 // Decode before exporting too: freshly reopened projects have a cold image cache.

@@ -104,12 +104,24 @@ function solve(objects,walls,options={}){
    for(const child of output)if(queue.length<LIMITS.emitters)queue.push(child);else stats.truncated=true;
   }
  }
+ stats.renderLimited=beams.filter(b=>b.photometric).reduce((n,b)=>n+b.rays.length,0)>2800;if(stats.renderLimited)stats.truncated=true;
  return {beams,surfaces,events,stats};
 }
 function draw(c,result){
  for(const beam of result.beams){if(beam.rays.length<2)continue;c.save();const alpha=beam.kind==='direct'?.68*beam.energy:Math.min(.68,Math.sqrt(beam.energy)*1.4),g=c.createRadialGradient(beam.x,beam.y,0,beam.x,beam.y,beam.radius);if(beam.photometric){for(const t of [0,.03,.08,.16,.28,.45,.65,.82,1]){const value=beam.energy*attenuation(beam,t*beam.radius),display=['reflect','white','diffuse'].includes(beam.kind)?Math.sqrt(Math.max(0,value)):Math.max(0,value),opacity=.78*(1-Math.exp(-display*.65));g.addColorStop(t,`rgba(${beam.rgb},${opacity})`);}}else{g.addColorStop(0,`rgba(${beam.rgb},${alpha})`);g.addColorStop(.22,`rgba(${beam.rgb},${alpha*.59})`);g.addColorStop(.60,`rgba(${beam.rgb},${alpha*.22})`);g.addColorStop(1,`rgba(${beam.rgb},0)`);}c.fillStyle=g;
   if(['direct','through'].includes(beam.kind)&&!beam.photometric){c.beginPath();c.moveTo(beam.x,beam.y);for(const p of beam.rays)c.lineTo(p.x,p.y);c.closePath();c.fill();c.restore();continue;}
-  for(let i=0;i<beam.rays.length-1;i++){const p=beam.rays[i],q=beam.rays[i+1];c.globalAlpha=(p.profile+q.profile)/2;c.beginPath();c.moveTo(beam.x,beam.y);c.lineTo(p.x,p.y);c.lineTo(q.x,q.y);c.closePath();c.fill();}c.restore();
+  if(beam.photometric&&result.stats.renderLimited){
+   // Clip once to every original traced shadow edge. Only the angular display
+   // profile is simplified; reduced drawing must never bypass a blocker.
+   c.beginPath();c.moveTo(beam.x,beam.y);for(const p of beam.rays)c.lineTo(p.x,p.y);c.closePath();c.clip();
+   const count=Math.max(6,Math.min(32,Math.floor(2200/result.beams.length))),span=beam.end-beam.start,breaks=Array.from({length:count+1},(_,i)=>beam.start+span*i/count);
+   if(beam.normal){const normal=Math.atan2(beam.normal.y,beam.normal.x);for(const side of [-1,1]){const edge=turn(normal+side*PI/2-beam.angle);if(edge>beam.start&&edge<beam.end)breaks.push(edge);}}
+   breaks.sort((a,b)=>a-b);
+   for(let i=0;i<breaks.length-1;i++){const lo=breaks[i],hi=breaks[i+1],offset=(lo+hi)/2,a=beam.angle+offset,front=!beam.normal||Math.cos(a)*beam.normal.x+Math.sin(a)*beam.normal.y>0;
+    c.globalAlpha=front?(beam.kind==='direct'?angularProfile(beam,offset):beam.kind==='through'?1:Math.max(0,Math.cos(offset/(span/2)*PI/2))**1.2):0;if(c.globalAlpha===0)continue;
+    c.beginPath();c.moveTo(beam.x,beam.y);c.arc(beam.x,beam.y,beam.radius,beam.angle+lo,beam.angle+hi);c.closePath();c.fill();
+   }
+  }else for(let i=0;i<beam.rays.length-1;i++){const p=beam.rays[i],q=beam.rays[i+1];c.globalAlpha=(p.profile+q.profile)/2;c.beginPath();c.moveTo(beam.x,beam.y);c.lineTo(p.x,p.y);c.lineTo(q.x,q.y);c.closePath();c.fill();}c.restore();
  }
 }
 const api={LIMITS,screen,material,fixture,fixtures,attenuation,angularProfile,spatial,firstHit,solve,draw};if(common)module.exports=api;else root.ScenicLightInteractions=api;
