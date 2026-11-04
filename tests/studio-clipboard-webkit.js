@@ -3,7 +3,7 @@ try{
  doc=ScenicProjectFile.parse(clipboardFixture);workspace={version:2,activeProject:doc.projectId,projects:[doc]};doc.active=doc.scenes[0].id;selected=null;selectedIds.clear();history=[];future=[];commit();
  const wall={id:uid(),type:'wall',name:'Independent curve',x:200,y:200,x2:500,y2:200,thickness:8,curve:{x:20,y:80}};scene().objects.push(wall);
  addObject('asset:bounce-board',{x:300,y:300});const board=object();board.bounceSide='Black';
- const source=scene(),before=JSON.stringify(source);const lamp=source.objects.find(o=>o.studioOptics===true);if(!lamp)throw Error('Synthetic fixture must contain a new Studio Light');setSelection([wall.id,board.id,lamp.id]);showShots(false);canvas.focus();
+ /* Normalize active lighting archive before comparing autosave materialization. */workspaceData();const source=scene(),before=JSON.stringify(source);const lamp=source.objects.find(o=>o.studioOptics===true);if(!lamp)throw Error('Synthetic fixture must contain a new Studio Light');setSelection([wall.id,board.id,lamp.id]);showShots(false);canvas.focus();
  await request('qaCopy');await until(async()=>(await request('qaClipboardState')).text.startsWith('SCENIC OBJECTS 2\n'),'native advanced copy');
  check((await request('qaClipboardState')).copies===0,'Native Mac routes new format through structured object clipboard');
  activateScene(doc.scenes[1].id);canvas.focus();const count=scene().objects.length;await request('qaPaste');await until(()=>scene().objects.length===count+3,'native advanced paste');
