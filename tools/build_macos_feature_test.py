@@ -6,7 +6,7 @@ ROOT=pathlib.Path(__file__).resolve().parent.parent
 def run(*args):
     subprocess.run([str(a) for a in args],check=True)
 
-def build(out):
+def build(out,build_number=1):
     out=out.resolve()
     if out.exists():raise ValueError('Use a new output directory; earlier test builds are preserved.')
     out.mkdir(parents=True)
@@ -30,16 +30,17 @@ final class ScenicUpdates {
         run('swiftc','-O','-module-cache-path',cache/'swift','-target',arch+'-apple-macos13.3',native,stub,ROOT/'macos/Reports.swift',ROOT/'macos/ObjectClipboard.swift',ROOT/'macos/ScenePNGExport.swift','-o',cache/('Scenic-'+arch))
     run('lipo','-create',cache/'Scenic-arm64',cache/'Scenic-x86_64','-output',mac/'ScenicFeatureTest')
     shutil.copytree(ROOT/'dist',res/'web');shutil.copy2(ROOT/'LICENSE',res/'Scenic-LICENSE.txt')
-    shutil.copy2(ROOT/'desktop/changelog.json',res/'Scenic-Changelog.json')
+    notes=[{'version':'1.4.32 Feature Test '+str(build_number),'changes':['Unpublished local test with isolated autosave and no automatic updates.','Lighting Flags: flex fills, negative fill, reversible bounce board and diffusion kit.','Fixture barn-door diagrams, per-shot lighting plans and labeled shot PDF exports.','Editable curved walls, shaped floor outlines and incident sun direction arrows.']}];(res/'Scenic-Changelog.json').write_text(json.dumps(notes))
+    (res/'web/changelog.js').write_text('window.ScenicChangelog='+json.dumps({'version':'1.4.32 Feature Test '+str(build_number),'entries':notes})+';')
     html=res/'web/index.html';text=html.read_text().replace('<title>Scenic · Squid Productions</title>','<title>Scenic Feature Test</title>').replace('<body>','<body data-feature-test="true">')
     # Visible identity without replacing production branding or project content.
     text=text.replace('Set the scene. Shape the light.','FEATURE TEST · Isolated autosave · Unpublished')
     html.write_text(text)
-    plist={'CFBundleExecutable':'ScenicFeatureTest','CFBundleIdentifier':'org.squidproductions.scenic.feature-test','CFBundleName':'Scenic Feature Test','CFBundleDisplayName':'Scenic Feature Test','CFBundlePackageType':'APPL','CFBundleShortVersionString':'1.4.32','CFBundleVersion':'1','LSMinimumSystemVersion':'13.3','NSHighResolutionCapable':True,'NSPrincipalClass':'NSApplication','NSHumanReadableCopyright':'Scenic Feature Test · Squid Productions'}
+    plist={'CFBundleExecutable':'ScenicFeatureTest','CFBundleIdentifier':'org.squidproductions.scenic.feature-test','CFBundleName':'Scenic Feature Test','CFBundleDisplayName':'Scenic Feature Test','CFBundlePackageType':'APPL','CFBundleShortVersionString':'1.4.32','CFBundleVersion':str(build_number),'LSMinimumSystemVersion':'13.3','NSHighResolutionCapable':True,'NSPrincipalClass':'NSApplication','NSHumanReadableCopyright':'Scenic Feature Test · Squid Productions'}
     (contents/'Info.plist').write_bytes(plistlib.dumps(plist))
     run('codesign','--force','--sign','-','--timestamp=none',app);run('codesign','--verify','--deep','--strict',app)
     run(mac/'ScenicFeatureTest','--storage-test')
     manifest={'app':str(app),'bundleId':plist['CFBundleIdentifier'],'workspace':'~/Library/Application Support/Scenic Feature Test','updater':False,'fileAssociations':False,'sourceCommit':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),'resourceSHA256':{str(p.relative_to(res/'web')):hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted((res/'web').rglob('*')) if p.is_file()}}
     (out/'build-manifest.json').write_text(json.dumps(manifest,indent=2)+'\n');print(app)
 if __name__=='__main__':
-    parser=argparse.ArgumentParser();parser.add_argument('--output',type=pathlib.Path,required=True);build(parser.parse_args().output)
+    parser=argparse.ArgumentParser();parser.add_argument('--output',type=pathlib.Path,required=True);parser.add_argument('--build',type=int,default=1);args=parser.parse_args();assert args.build>0;build(args.output,args.build)

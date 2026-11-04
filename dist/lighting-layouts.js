@@ -13,7 +13,7 @@ function entries(s){
  return rows;
 }
 function current(s){return s.shotLighting?.enabled?s.shotLighting.active:'shared';}
-function label(s,key=current(s)){return key==='shared'?'Shared lighting':entries(s).find(e=>e.key===key)?.label||s.shotLighting?.layouts.find(e=>e.key===key)?.label||'Saved lighting';}
+function label(s,key=current(s)){return String(key==='shared'?'Shared lighting':entries(s).find(e=>e.key===key)?.label||s.shotLighting?.layouts.find(e=>e.key===key)?.label||'Saved lighting').slice(0,2000);}
 function flush(s){
  const data=s.shotLighting;if(!data?.enabled)return;
  const value=state(s);
