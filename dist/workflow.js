@@ -103,6 +103,7 @@ function bindExtraInspector(){const o=object();if(!o)return;
  if($('play-path'))$('play-path').onclick=()=>{if(playback?.id===o.id)stopPlayback();else{showShots(false);playback={id:o.id,start:performance.now(),duration:(o.pathDuration||5)*1000};}renderInspector();invalidate();};
 }
 function afterObjectChange(o,prop,previous){if(!o)return;stopPlayback();
+ if(prop==='locked')updateCanvasHint();
  if(prop==='barnDoors'){const fields=$('barn-door-adjustments');if(fields)fields.disabled=!o.barnDoors;}
  if(o.type==='camera'&&['lens','sensorWidth','viewDistance'].includes(prop)){
   o.fov=ScenicModel.cameraView(o).fov;
