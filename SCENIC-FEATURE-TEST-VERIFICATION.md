@@ -1,5 +1,7 @@
 # Scenic Feature Test — lighting and editable geometry
 
+Revision 6 evidence below is retained as the baseline. The latest unpublished revision is **1.4.32 (8)** with interacting light controls; see [the updated test guide](SCENIC-INTERACTIVE-LIGHTING-TEST.md).
+
 Local unpublished candidate **1.4.32 (6)**, built from `9ea091e` on `feature/scenic-lighting-geometry-test`. Source commits remain local. No release, feed, App Store submission or installed production app was changed.
 
 ## Open the separate app
