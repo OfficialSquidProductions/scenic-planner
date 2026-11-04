@@ -39,7 +39,8 @@ function drawSun(c,left,top,right,bottom){
  lc.setTransform(1,0,0,1,0,0);lc.clearRect(0,0,lightCanvas.width,lightCanvas.height);lc.save();lc.setTransform(c.getTransform());
  const rgb=ScenicGeometry.temperature(state.temperature);lc.fillStyle=`rgba(${rgb},${state.strength*.38})`;lc.fillRect(left,top,right-left,bottom-top);
  lc.globalCompositeOperation='destination-out';lc.fillStyle='#000';const distance=Math.max(20000,Math.hypot(right-left,bottom-top)*5),dx=Math.cos(state.rayAngle)*distance,dy=Math.sin(state.rayAngle)*distance;
- for(const w of ScenicModel.effectiveWalls(scene().objects)){pathPolygon(lc,[{x:w.x,y:w.y},{x:w.x2,y:w.y2},{x:w.x2+dx,y:w.y2+dy},{x:w.x+dx,y:w.y+dy}]);lc.fill();}
+ const screens=window.ScenicLightInteractions?scene().objects.filter(o=>ScenicCatalog.isModifier(o)&&o.modifierEnabled!==false&&(o.modifierStrength??100)>0).map(o=>({...ScenicLightInteractions.screen(o),opacity:(o.modifierStrength??100)/100})):[];
+ for(const w of [...ScenicModel.effectiveWalls(scene().objects),...screens]){lc.globalAlpha=w.opacity??1;pathPolygon(lc,[{x:w.x,y:w.y},{x:w.x2,y:w.y2},{x:w.x2+dx,y:w.y2+dy},{x:w.x+dx,y:w.y+dy}]);lc.fill();}
  lc.restore();c.save();c.setTransform(1,0,0,1,0,0);c.drawImage(lightCanvas,0,0);c.restore();
 }
 function drawSunMarker(o){

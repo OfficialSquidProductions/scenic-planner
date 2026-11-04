@@ -115,7 +115,17 @@ function pathPolygon(c,points){c.beginPath();points.forEach((p,i)=>i?c.lineTo(p.
 function localShape(o,fn){ctx.save();ctx.translate(o.x,o.y);ctx.rotate((o.rotation||0)*Math.PI/180);fn();ctx.restore();}
 function label(o,text,offset=33){ctx.save();ctx.font='11px Futura, sans-serif';ctx.textAlign='center';ctx.fillStyle=color('--map-text');ctx.fillText(text,o.x,o.y+offset);ctx.restore();}
 function rounded(c,x,y,w,h,r){c.beginPath();c.roundRect(x,y,w,h,r);}
-function drawLighting(c,viewport){const walls=ScenicModel.effectiveWalls(scene().objects);for(const l of scene().objects.filter(o=>o.type==='light'&&o.kind!=='sun'&&o.enabled&&o.power>0).map(displayObject)){c.save();pathPolygon(c,ScenicGeometry.visibility(l,walls,l.radius));c.clip();if(l.beam<360){const a=l.rotation*Math.PI/180,b=l.beam*Math.PI/360;c.beginPath();c.moveTo(l.x,l.y);c.arc(l.x,l.y,l.radius,a-b,a+b);c.closePath();c.clip();}const rgb=ScenicModel.lightColor(l),strength=l.power/100;const g=c.createRadialGradient(l.x,l.y,0,l.x,l.y,l.radius);g.addColorStop(0,`rgba(${rgb},${strength*.68})`);g.addColorStop(.22,`rgba(${rgb},${strength*.40})`);g.addColorStop(.6,`rgba(${rgb},${strength*.15})`);g.addColorStop(1,`rgba(${rgb},0)`);c.fillStyle=g;c.fillRect(l.x-l.radius,l.y-l.radius,l.radius*2,l.radius*2);c.restore();}}
+let lightInteractionCache=null;
+function lightInteractionResult(){
+ const objects=scene().objects.map(o=>o.type==='light'?displayObject(o):o),walls=ScenicModel.effectiveWalls(objects),sunObject=objects.find(o=>o.kind==='sun'&&o.enabled),sun=sunObject?ScenicModel.sunState(sunObject):null;
+ const optics=objects.filter(o=>o.type==='light'||ScenicCatalog.isModifier(o)),key=JSON.stringify([optics,walls.map(w=>[w.x,w.y,w.x2,w.y2]),sun]);
+ if(lightInteractionCache?.key!==key)lightInteractionCache={key,result:ScenicLightInteractions.solve(objects,walls,{sun})};
+ return lightInteractionCache.result;
+}
+function drawLighting(c,viewport){
+ if(window.ScenicLightInteractions){const result=lightInteractionResult();ScenicLightInteractions.draw(c,result);const status=$('lighting-detail');if(status){status.hidden=!result.stats.truncated;status.textContent=result.stats.truncated?' · Detail limited':'';status.title='Large or repeated lighting interactions are bounded for responsiveness. This is a 2D planning approximation.';}return;}
+const walls=ScenicModel.effectiveWalls(scene().objects);for(const l of scene().objects.filter(o=>o.type==='light'&&o.kind!=='sun'&&o.enabled&&o.power>0).map(displayObject)){c.save();pathPolygon(c,ScenicGeometry.visibility(l,walls,l.radius));c.clip();if(l.beam<360){const a=l.rotation*Math.PI/180,b=l.beam*Math.PI/360;c.beginPath();c.moveTo(l.x,l.y);c.arc(l.x,l.y,l.radius,a-b,a+b);c.closePath();c.clip();}const rgb=ScenicModel.lightColor(l),strength=l.power/100;const g=c.createRadialGradient(l.x,l.y,0,l.x,l.y,l.radius);g.addColorStop(0,`rgba(${rgb},${strength*.68})`);g.addColorStop(.22,`rgba(${rgb},${strength*.40})`);g.addColorStop(.6,`rgba(${rgb},${strength*.15})`);g.addColorStop(1,`rgba(${rgb},0)`);c.fillStyle=g;c.fillRect(l.x-l.radius,l.y-l.radius,l.radius*2,l.radius*2);c.restore();}
+}
 // Decode before exporting too: freshly reopened projects have a cold image cache.
 async function prepareSceneImages(objects){
  await Promise.allSettled(objects.filter(o=>(o.type==='image'||o.type==='floor')&&o.src).map(o=>imageFor(o).decode()));
@@ -138,12 +148,15 @@ async function importFloorImage(file,target){
  }catch{toast('This image could not be opened');}
 }
 function imageFor(o){if(images.has(o.src))return images.get(o.src);const img=new Image();img.onload=invalidate;img.src=o.src;images.set(o.src,img);return img;}
+function drawModifierGuide(o){
+ localShape(o,()=>{const length=Math.min(50,Math.max(18,o.height*.45));ctx.save();ctx.globalAlpha=o.modifierEnabled===false?.35:1;ctx.strokeStyle=o.asset==='flex-gold'?'#a47720':o.asset==='flex-black'||o.asset==='negative-fill'?'#bbc0cb':'#617b95';ctx.fillStyle=ctx.strokeStyle;ctx.lineWidth=1.6/view.z;ctx.setLineDash([4/view.z,3/view.z]);ctx.beginPath();ctx.moveTo(-o.width/2,0);ctx.lineTo(o.width/2,0);ctx.stroke();ctx.setLineDash([]);ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(0,-length);ctx.lineTo(-4/view.z,-length+7/view.z);ctx.moveTo(0,-length);ctx.lineTo(4/view.z,-length+7/view.z);ctx.stroke();ctx.restore();});
+}
 function drawDressing(o){if(ScenicModel.openingKind(o)){drawOpening(o);return;}localShape(o,()=>{
  const item=ScenicCatalog.get(o.asset),shape=item?.shape||(o.type==='sofa'?'sofa':'table'),[body,detail]=ScenicCatalog.shapes[shape];
  const [bx,by,bw,bh]=ScenicCatalog.shapeBounds[shape];ctx.translate(-o.width/2,-o.height/2);ctx.beginPath();ctx.rect(0,0,o.width,o.height);ctx.clip();ctx.scale(o.width/bw,o.height/bh);ctx.translate(-bx,-by);ctx.lineWidth=Math.min(1.3,24*1.4/Math.min(o.width,o.height));
  const modifier=ScenicCatalog.isModifier(o)?ScenicCatalog.modifierStyle(o):null;ctx.fillStyle=modifier?.fill||(o.type==='prop'?color('--paper'):color('--map-prop'));ctx.strokeStyle=modifier?.line||(o.type==='prop'?color('--map-text'):color('--map-prop-line'));if(o.asset==='diffusion-kit')ctx.globalAlpha=.8;
  const outline=new Path2D(body);ctx.fill(outline);ctx.stroke(outline);if(modifier)ctx.strokeStyle=modifier.detail;ctx.stroke(new Path2D(detail));
- });if(o.id===selected&&o.asset)label(o,o.name,Math.hypot(o.width,o.height)/2+18);}
+ });if(ScenicCatalog.isModifier(o))drawModifierGuide(o);if(o.id===selected&&o.asset)label(o,o.name,Math.hypot(o.width,o.height)/2+18);}
 function draw(exporting=false){const dpr=canvas.width/size.w;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,size.w,size.h);ctx.fillStyle=color('--map');ctx.fillRect(0,0,size.w,size.h);ctx.save();ctx.translate(view.x,view.y);ctx.scale(view.z,view.z);
  const left=-view.x/view.z,top=-view.y/view.z,right=left+size.w/view.z,bottom=top+size.h/view.z;
  if(grid&&!exporting){ctx.fillStyle=color('--grid');const step=UNITS_PER_INCH*12;for(let x=Math.floor(left/step)*step;x<right;x+=step)for(let y=Math.floor(top/step)*step;y<bottom;y+=step){ctx.beginPath();ctx.arc(x,y,.8/view.z,0,Math.PI*2);ctx.fill();}}
