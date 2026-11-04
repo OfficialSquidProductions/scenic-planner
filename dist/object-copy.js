@@ -43,7 +43,7 @@ function decode(text){
  return p;
 }
 function allocator(project,makeId){
- const used=new Set([project.projectId,...project.scenes.flatMap(s=>[s.id,...s.objects.flatMap(o=>[o.id,...(o.marks||[]).map(m=>m.id).filter(Boolean)]),...(s.shotList||[]).map(s=>s.id)])]);
+ const used=new Set([project.projectId,...project.scenes.flatMap(s=>[s.id,...(model.lightingLayouts?.allObjects(s)||s.objects).flatMap(o=>[o.id,...(o.marks||[]).map(m=>m.id).filter(Boolean)]),...(s.shotList||[]).map(s=>s.id)])]);
  return ()=>{for(let i=0;i<100;i++){const id=makeId();if(validId(id)&&!used.has(id)){used.add(id);return id;}}throw Error('Could not create an independent copy. Try again.');};
 }
 function cloneObjects(objects,next,offset,shotIds){
@@ -84,7 +84,8 @@ function duplicateScene(project,sceneId,makeId){
  scene.title=source.title+' — COPY';scene.subtitle=(source.subtitle||source.title)+' copy';
  const names=new Set(project.scenes.map(s=>s.title));let n=2;while(names.has(scene.title))scene.title=source.title+' — COPY '+n++;
  if(scene.shotList)for(const shot of scene.shotList){const old=shot.id;shot.id=next();shotIds.set(old,shot.id);}
- scene.objects=cloneObjects(source.objects,next,0,shotIds).objects;
+ const cloned=cloneObjects(source.objects,next,0,shotIds);scene.objects=cloned.objects;
+ model.lightingLayouts?.cloneState(source,scene,next,cloned.ids,shotIds);
  checkedProject({...project,active:scene.id,scenes:[...project.scenes,scene]});return scene;
 }
 const api={PREFIX,capture,encode,decode,supported,planPaste,duplicateScene};

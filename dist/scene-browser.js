@@ -2,7 +2,7 @@
 (() => {
  let isOpen=false,popup=null,revision=0,timer;
  const cache=new Map(),popupURL=new URL('scene-browser.html',location.href).href;
- function snapshot(){return {productionId:doc.projectId,name:doc.name,theme:doc.theme,active:doc.active,revision,scenes:doc.scenes.map((s,i)=>({id:s.id,title:s.title,number:i+1}))};}
+ function snapshot(){const current=doc.scenes.find(s=>s.id===doc.active);return {productionId:doc.projectId,name:doc.name,theme:doc.theme,active:doc.active,revision,...(current?.shotLighting?.enabled?{shotExport:current.title}:{}),scenes:doc.scenes.map((s,i)=>({id:s.id,title:s.title,number:i+1}))};}
  function browserSend(message){
   try{if(popup&&!popup.closed&&popup.location.href===popupURL)popup.postMessage(message,location.origin==='null'?'*':location.origin);}catch{}
  }

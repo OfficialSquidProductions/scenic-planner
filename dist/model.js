@@ -4,6 +4,7 @@
 const catalog=typeof module==='object'&&module.exports?require('./catalog.js'):root.ScenicCatalog;
 const geometry=typeof module==='object'&&module.exports?require('./engine.js'):root.ScenicGeometry;
 const solar=typeof module==='object'&&module.exports?require('./solar.js'):root.ScenicSolar;
+const lightingLayouts=typeof module==='object'&&module.exports?require('./lighting-layouts.js'):root.ScenicLightingLayouts;
 const shotLists=typeof module==='object'&&module.exports?require('./shot-list.js'):root.ScenicShotList;
 const finite=n=>Number.isFinite(n),coordinate=n=>finite(n)&&Math.abs(n)<100000;
 const openingKind=o=>o.type==='set'&&(o.asset==='door'||o.asset?.startsWith('door-'))?'door':o.type==='set'&&(o.asset==='window'||o.asset?.startsWith('window-'))?'window':null;
@@ -269,6 +270,7 @@ function validProject(p){
    if(o.pathDuration!==undefined&&(!finite(o.pathDuration)||o.pathDuration<1||o.pathDuration>60))return false;
   }
   for(const o of s.objects.filter(openingKind))if(o.wallId&&!s.objects.some(w=>w.id===o.wallId&&['wall','room'].includes(w.type)))return false;
+  if(s.shotLighting!==undefined&&(!lightingLayouts||!lightingLayouts.validate(s,copy=>validProject({version:1,name:'Lighting validation',active:copy.id,scenes:[copy]}))))return false;
   const grouped=s.objects.filter(o=>o.type==='wallGroup').flatMap(o=>o.wallIds);if(new Set(grouped).size!==grouped.length)return false;
  }
  return ids.has(p.active);
@@ -279,6 +281,6 @@ function workspaceFrom(data,id){
  if(!validProject(data))throw Error('The saved project could not be read. Your existing files have been preserved.');
  const p=structuredClone(data);p.projectId=p.projectId||id;return {version:2,activeProject:p.projectId,projects:[p]};
 }
-const api={annotationPoints,annotationBounds,curvePoint,arrowContains,informationLabel,openingContains,containsPoint,pickObject,cameraView,cameraCoverage,actorFootprint,actorContains,translateSelection,groupWalls,wallGroupFor,transformWallGroup,splitRoom,roomSegments,playbackElapsed,motionPose,motionDuration,lightColor,openingKind,movable,markLabel,wallPose,syncOpenings,snapOpening,doorLeaves,effectiveWalls,sunState,pathPosition,validProject,validWorkspace,workspaceFrom};
+const api={lightingLayouts,annotationPoints,annotationBounds,curvePoint,arrowContains,informationLabel,openingContains,containsPoint,pickObject,cameraView,cameraCoverage,actorFootprint,actorContains,translateSelection,groupWalls,wallGroupFor,transformWallGroup,splitRoom,roomSegments,playbackElapsed,motionPose,motionDuration,lightColor,openingKind,movable,markLabel,wallPose,syncOpenings,snapOpening,doorLeaves,effectiveWalls,sunState,pathPosition,validProject,validWorkspace,workspaceFrom};
 if(typeof module==='object'&&module.exports)module.exports=api;else root.ScenicModel=api;
 })(globalThis);

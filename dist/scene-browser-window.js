@@ -29,7 +29,8 @@
  function render(data){
   if(!data||!Array.isArray(data.scenes))return;closeMenu();const scroll=snapshot?.productionId===data.productionId?grid.scrollTop:0;snapshot=data;version++;queue=[];observer?.disconnect();grid.replaceChildren();if(!exporting)status.textContent='';
   document.documentElement.dataset.theme=data.theme==='dark'?'dark':'light';document.title=data.name+' · Scenes · Scenic';
-  document.getElementById('browser-production').textContent=data.name;document.getElementById('browser-count').textContent=data.scenes.length+' '+(data.scenes.length===1?'scene':'scenes');
+  exportButton.textContent=data.shotExport?'Export all shots':'Export all';const png=exportFormat.querySelector?.('option[value="png"]');if(png)png.disabled=!!data.shotExport;if(data.shotExport)exportFormat.value='pdf';exportFormat.title=data.shotExport?'One page per shot in '+data.shotExport:'Every scene in this production';
+  document.getElementById('browser-production').textContent=data.name+(data.shotExport?' · '+data.shotExport+' · shot layouts':'');document.getElementById('browser-count').textContent=data.scenes.length+' '+(data.scenes.length===1?'scene':'scenes');
   const items=new Map();
   observer=new IntersectionObserver(entries=>{for(const entry of entries){if(entry.isIntersecting){const item=items.get(entry.target);if(item){queue.push(item);observer.unobserve(entry.target);}}}pump();},{root:grid,rootMargin:'240px'});
   for(const scene of data.scenes){

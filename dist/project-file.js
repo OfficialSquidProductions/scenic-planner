@@ -50,7 +50,7 @@ function imageInfo(src){
 }
 function validate(project){
  tree(project);
- if(project?.portable!==undefined&&(project.portable?.format!==FORMAT||project.portable?.version!==VERSION))fail('This Scenic file uses an unsupported format version. Update Scenic before opening it.');
+ if(project?.portable!==undefined&&(project.portable?.format!==FORMAT||![1,2].includes(project.portable?.version)))fail('This Scenic file uses an unsupported format version. Update Scenic before opening it.');
  if(project?.version!==1)fail('This project version is not supported. Update Scenic before opening it.');
  if(!model.validProject(project))fail('This file does not contain a valid Scenic project.');
  if(project.theme!==undefined&&!['light','dark'].includes(project.theme))fail('Invalid project theme.');
@@ -82,7 +82,9 @@ async function checkImages(project){
 }
 function serialize(project){
  validate(project);
- const copy=structuredClone(project);copy.portable={format:FORMAT,version:VERSION};
+ const copy=structuredClone(project);
+ const features=[];if(copy.scenes.some(s=>s.shotLighting))features.push('shot-lighting');if(copy.scenes.some(s=>s.objects.some(o=>o.curve||o.vertices)))features.push('editable-geometry');if(copy.scenes.some(s=>(model.lightingLayouts?.allObjects(s)||s.objects).some(o=>o.barnDoors||o.barnDoors===false||o.bounceSide||model.lightingLayouts?.own(o)&&o.type==='gear')))features.push('lighting-modifiers');
+ copy.portable={format:FORMAT,version:features.length?2:VERSION,...(features.length?{features}:{})};
  const text=JSON.stringify(copy);if(bytes(text)>MAX_FILE)fail('This project exceeds the 60 MB portable file limit. Reduce its reference images before sharing.');
  return text;
 }
