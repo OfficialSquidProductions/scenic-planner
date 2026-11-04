@@ -29,7 +29,7 @@ Walls and indicated optical surfaces bound the paths. For the new model, project
 
 Every modifier icon is shown at **78° above the floor plane**, within the requested 75–80° range. The overhead height is `physical height × cos(78°)`; width and the dashed optical-surface line stay unchanged. Actual saved dimensions, position, map rotation, front/back face and light interception do not change. Library artwork also uses a narrow upright symbol with a stand mark.
 
-Map rotation still aims the reflective normal. The display tilt is not a vertical optical simulation. Click regions, selection outlines, marquee geometry, resizing anchors and export framing all use the same projected footprint. Height handles convert projected drag back to physical height. Foreground actors/cameras retain their selection priority.
+Map rotation still aims the reflective normal. The display tilt is not a vertical optical simulation. Click regions, selection outlines, marquee geometry, resizing anchors and export framing all use the same projected footprint. Corner handles scale the whole icon uniformly, preserving the current width/height ratio. Side distortion handles and independent width/height fields are disabled. Existing saved dimensions and ratios are preserved. Foreground actors/cameras retain their selection priority.
 
 ## Compatibility and limits
 

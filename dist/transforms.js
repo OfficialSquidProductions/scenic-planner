@@ -22,7 +22,7 @@ function handles(o,zoom=1){
  ];
  const footprint=model.mapFootprint(o),w=footprint.width/2+6/zoom,h=footprint.height/2+6/zoom;
  const positions=[[-1,-1],[1,-1],[1,1],[-1,1],[0,-1],[1,0],[0,1],[-1,0]];
- return [{kind:'rotate',...toWorld({x:0,y:-h-28/zoom}),base:toWorld({x:0,y:-h})},...positions.map(([sx,sy])=>({kind:'resize',sx,sy,...toWorld({x:sx*w,y:sy*h})}))];
+ return [{kind:'rotate',...toWorld({x:0,y:-h-28/zoom}),base:toWorld({x:0,y:-h})},...positions.filter(([sx,sy])=>!model.isModifier(o)||sx&&sy).map(([sx,sy])=>({kind:'resize',sx,sy,...toWorld({x:sx*w,y:sy*h})}))];
 }
 function hit(o,p,zoom){return handles(o,zoom).find(h=>Math.hypot(p.x-h.x,p.y-h.y)<=10/zoom)||null;}
 function cursor(o,h){
@@ -32,6 +32,7 @@ function cursor(o,h){
 }
 function apply(o,h,start,p,{step=0,proportional=false,angleStep=0,min=1.5,max=5000}={}){
  if(!supported(o)||aimable(o)&&h.kind!=='rotate')return {};
+ if(model.isModifier(o)&&h.kind==='resize'){if(!h.sx||!h.sy)return {};proportional=true;}
  const c=center(o),a=angle(o),dx=p.x-start.x,dy=p.y-start.y;
  if(o.type==='floor'&&o.vertices&&h.kind.startsWith('floor-')){
   if(h.kind==='floor-anchor'){const q=n=>step?Math.round(n/step)*step:n;return {x:q(o.x+dx),y:q(o.y+dy)};}

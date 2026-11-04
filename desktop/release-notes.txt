@@ -1,10 +1,8 @@
-Scenic 1.4.30
+Scenic 1.4.33
 
-- Right-click a shot or use its Actions button to delete it safely. Imported-shot deletion keeps and unlinks map cameras; coverage checks preserve your position, focus and expanded details in the shot list.
-- Select actors and cameras in doorways more easily while keeping door frames and leaves selectable.
-- Export all scenes from the scene browser as one multipage PDF or separate PNG files, with ordered scene names, progress and native destination controls.
-- Drag selected camera and light information boxes independently. Labels follow their owners, keep their relative positions when copied, and offer a checkbox for colored connector lines.
-- Add scalable text and curved arrows from the top toolbar. Shape arrows with start, middle and end handles and choose their color in Properties.
-- Find coffee mugs, drinking cups and paper cups under Props, and Couch / sofa under Set. Existing mug and sofa objects retain their original asset identities.
-- Copy selected scene objects across scenes with independent properties, images, groups and shot links. iPhone/iPad offer Copy items and Paste items in Properties plus attached-keyboard Command+C/V; scene duplication, Undo/Redo and portable persistence are supported.
-- Includes numbered-scene CSV import while preserving descriptions, Script coverage, camera links and supported legacy numbering.
+- Add compact upright lighting flags, silver/gold/white/black flex fills, negative fill, reversible bounce boards and diffusion. Flag corners scale uniformly; side stretching and independent width/height edits are disabled while existing project dimensions remain intact.
+- Preview fixture-class distance falloff, Fresnel focus, source width, angle-dependent bounce, warm gold reflection, diffusion and absorption. New Studio Lights enable the approximation; existing lights retain their saved preview until enabled. Manufacturer references and assumptions are available in Properties. This is a relative 2D planning preview, not calibrated lux or exposure.
+- Open fixture barn doors outward and adjust each leaf independently to shape the depicted beam. Top and bottom doors affect the approximate throughput; left and right appear in the overhead chart.
+- Use Settings → Scene lighting layouts to enable independent lighting per camera or shot. New scenes default to shared lighting; turning the setting off restores the shared plan and retains saved variants. Export a selected plan or a scene-shot multipage PDF.
+- Draw curved walls with endpoint and bend handles, shape floor outlines with corner/edge points, and move complete shapes by their bodies. Placement-locked floors remain selectable so they can be unlocked in Properties. Sun arrows show the incoming-light direction.
+- Keep complex lighting previews responsive with bounded tracing and cached field rendering while preserving traced shadows. Flags retain a visible W.I.P. warning.

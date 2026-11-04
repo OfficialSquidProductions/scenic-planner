@@ -87,6 +87,7 @@ function drawTransformHandles(o,showHandles=true){
  ctx.restore();
 }
 function updateTransformReadout(o){
+ const modifierSize=$('modifier-size-readout');if(modifierSize&&ScenicCatalog.isModifier(o))modifierSize.textContent='Size: '+formatLength(o.width)+' × '+formatLength(o.height);
  for(const key of ['x','y','x2','y2','width','height','labelOffsetX','labelOffsetY']){for(const field of document.querySelectorAll(`[data-prop="${key}"][data-length]`)){if(field.dataset.inside){field.dataset.min=36-o.thickness;field.dataset.max=5000-o.thickness;}if(Number.isFinite(o[key]))field.value=formatLength(o[key]-(field.dataset.inside?o.thickness:0));}}
  if(o.type!=='wall'){
   const field=document.querySelector('[data-prop="rotation"]'),output=$('out-rotation');if(field)field.value=o.rotation||0;if(output)output.textContent=Math.round((o.rotation||0)*10)/10+'°';
