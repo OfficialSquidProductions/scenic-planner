@@ -146,15 +146,33 @@ function modifierStyle(o){const id=o.asset||o.id;const dark=id==='flex-black'||i
 // folds inward. Only the left/right leaves are visible in a top-down chart.
 function barnDoorGeometry(o){if(o.type!=='light'||o.kind==='sun'||!o.barnDoors)return [];return ['barnLeft','barnRight'].map((key,index)=>{const sign=index===0?-1:1,a=(o[key]??0)*Math.PI/180,start={x:14,y:sign*11},end={x:14+22*Math.cos(a),y:sign*(11-22*Math.sin(a))};return {key,start,end};});}
 function sunRayGuide(state){const a=state.rayAngle,c=Math.cos(a),s=Math.sin(a);return {start:{x:c*34,y:s*34},tip:{x:c*88,y:s*88},left:{x:c*76-s*6,y:s*76+c*6},right:{x:c*76+s*6,y:s*76-c*6}};}
+// Studio entries are generic classes, not measured copies of named fixtures.
+// See STUDIO-LIGHT-RESEARCH.md for manufacturer references and chosen assumptions.
+const STUDIO_REFERENCE_DISTANCE=3/0.0254*UNITS_PER_INCH;
+const studioProfiles={
+ 'led-panel':{relative:1,core:.5,aperture:18,samples:3,label:'Broad LED panel',basis:'Panel-class assumption; reference: Aputure Nova P300c, 1,100 lux at 3 m / 5500 K and 120° beam. This generic panel is not a measured Nova.',url:'https://aputure.com/en-US/products/nova-p300c'},
+ softbox:{relative:.5,core:.7,aperture:36,samples:3,label:'Diffused source / softbox',basis:'Assumed lamp + diffusion, not a measured fixture. Aputure Light Dome III supports several lamps and diffusion strengths; output depends on the fitted source. Default relative output is an artistic choice.',url:'https://help.aputure.com/en/modifiers/light-dome-iii-faqs'},
+ fresnel:{relative:2.3,core:.2,aperture:4.4,samples:1,label:'Focusing tungsten Fresnel',basis:'Fresnel-class approximation. ARRI 650 Plus 2022 reference: 5,861 / 2,528 / 1,194 lux at 3 m for 13° / 30° / 54°. The generic fixture uses rounded relative ratios, not calibrated lux.',url:'https://www.arri.com/resource/blob/188698/6fb2a09b07571095083e2dab3dbf0bfe/arri-fresnel-overview-poster-en-aug22-data.pdf'},
+ 'tube-light':{relative:.06,core:.6,aperture:48,samples:3,label:'Four-foot LED tube',basis:'Tube-class assumption. amaran PT4C reference: 332 lux at 1 m / 5600 K, 180° beam. Relative output and far-field continuation here are estimates, not PT4C measurements.',url:'https://help.aputure.com/en/amaran-pixel-tubes/photometrics-technical-specifications-amaran-pixel-tube'}
+};
+function studioProfile(o){return o?.type==='light'&&o.kind!=='sun'?studioProfiles[o.asset]||null:null;}
+function studioOutput(o){
+ const p=studioProfile(o);if(!p||o.studioOptics!==true)return null;
+ let relative=p.relative;
+ if(o.asset==='fresnel'){const table=[[13,5.3],[30,2.3],[54,1.1]],b=Math.max(13,Math.min(54,o.beam));for(let i=1;i<table.length;i++)if(b<=table[i][0]){const [a,v]=table[i-1],[z,w]=table[i];relative=v+(w-v)*(b-a)/(z-a);break;}}
+ return {...p,relative,core:p.core/0.0254*UNITS_PER_INCH,aperture:p.aperture*UNITS_PER_INCH};
+}
+const MODIFIER_DISPLAY_TILT=78;
+function mapFootprint(o){return {width:o.width,height:isModifier(o)?o.height*Math.cos(MODIFIER_DISPLAY_TILT*Math.PI/180):o.height};}
 const lightPresets={
- 'led-panel':{power:75,temperature:5600,beam:120,radius:650},
- softbox:{power:65,temperature:5600,beam:140,radius:550},
- fresnel:{power:90,temperature:3200,beam:45,radius:900},
- 'tube-light':{power:50,temperature:5600,beam:180,radius:400},
+ 'led-panel':{power:75,temperature:5600,beam:120,radius:950,studioOptics:true},
+ softbox:{power:65,temperature:5600,beam:140,radius:800,studioOptics:true},
+ fresnel:{power:90,temperature:3200,beam:30,radius:1400,studioOptics:true},
+ 'tube-light':{power:50,temperature:5600,beam:180,radius:400,studioOptics:true},
  practical:{power:45,temperature:2700,beam:360,radius:300},
  overhead:{power:65,temperature:4000,beam:360,radius:500},
  sun:{power:80,temperature:5600,beam:360,radius:1000,kind:'sun',rotation:0,time:12,sunrise:6,sunset:18,riseDirection:90,setDirection:270}
 };
-const api={isModifier,modifierNormal,modifierStyle,barnDoorGeometry,sunRayGuide,DEFAULT_WALL_THICKNESS,ACTOR_FOOTPRINT,shapeBounds,lightPresets,UNITS_PER_INCH,formatLength,parseLength,items,shapes,get:id=>items.find(item=>item.id===id)};
+const api={STUDIO_REFERENCE_DISTANCE,studioProfiles,studioProfile,studioOutput,MODIFIER_DISPLAY_TILT,mapFootprint,isModifier,modifierNormal,modifierStyle,barnDoorGeometry,sunRayGuide,DEFAULT_WALL_THICKNESS,ACTOR_FOOTPRINT,shapeBounds,lightPresets,UNITS_PER_INCH,formatLength,parseLength,items,shapes,get:id=>items.find(item=>item.id===id)};
 if(typeof module==='object'&&module.exports)module.exports=api;else root.ScenicCatalog=api;
 })(globalThis);

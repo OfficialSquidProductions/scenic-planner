@@ -30,7 +30,7 @@ function capture(project,sceneId,selection,makeId){
  const linked=new Set(copied.objects.map(o=>o.shotId).filter(Boolean));
  const shotList=structuredClone((scene.shotList||[]).filter(s=>linked.has(s.id)));
  validateScene({id:'clipboard',title:'Clipboard',ambient:30,objects:copied.objects,shotList});
- const version=copied.objects.some(o=>o.curve||o.vertices||o.barnDoors!==undefined||o.bounceSide||model.lightingLayouts?.own(o)&&o.type==='gear')?2:1;
+ const version=copied.objects.some(o=>o.curve||o.vertices||o.studioOptics!==undefined||o.barnDoors!==undefined||o.bounceSide||model.lightingLayouts?.own(o)&&o.type==='gear')?2:1;
  return {format:FORMAT,version,token:makeId(),sourceProjectId:project.projectId,sourceSceneId:sceneId,...copied,shotList};
 }
 function encode(payload){const text=(payload.version===2?PREFIX2:PREFIX)+JSON.stringify(payload);decode(text);return text;}

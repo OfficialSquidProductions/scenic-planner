@@ -82,7 +82,7 @@ function containsPoint(o,p,zoom=1,objects=[]){
  if(o.type==='actor')return actorContains(o,p,3/zoom);
  if(openingKind(o))return openingContains(o,p,zoom,objects);
  if(o.type==='camera'||o.type==='light')return Math.hypot(p.x-o.x,p.y-o.y)<=Math.max(o.kind==='sun'?30:24,8/zoom)||barnDoorSegments(o).some(w=>segmentDistance(p,w,{x:w.x2,y:w.y2})<=2.5+3/zoom);
- const a=-(o.rotation||0)*Math.PI/180,dx=p.x-o.x,dy=p.y-o.y,x=dx*Math.cos(a)-dy*Math.sin(a),y=dx*Math.sin(a)+dy*Math.cos(a);return Math.abs(x)<=o.width/2+3/zoom&&Math.abs(y)<=o.height/2+3/zoom;
+ const a=-(o.rotation||0)*Math.PI/180,dx=p.x-o.x,dy=p.y-o.y,x=dx*Math.cos(a)-dy*Math.sin(a),y=dx*Math.sin(a)+dy*Math.cos(a),f=catalog.mapFootprint(o);return Math.abs(x)<=f.width/2+3/zoom&&Math.abs(y)<=f.height/2+3/zoom;
 }
 function pickObject(objects,p,zoom=1){
  const priority=o=>['text','arrow'].includes(o.type)?6:['actor','camera','light'].includes(o.type)?5:openingKind(o)?3:o.type==='floor'?0:o.type==='image'?1:['wall','room'].includes(o.type)?2:4;
@@ -277,6 +277,7 @@ function validProject(p){
    if(o.bounceSide!==undefined&&(o.type!=='gear'||o.asset!=='bounce-board'||!['White','Black'].includes(o.bounceSide)))return false;
    if(o.modifierEnabled!==undefined&&(o.type!=='gear'||!catalog.isModifier(o)||typeof o.modifierEnabled!=='boolean'))return false;
    if(o.modifierStrength!==undefined&&(o.type!=='gear'||!catalog.isModifier(o)||!finite(o.modifierStrength)||o.modifierStrength<0||o.modifierStrength>100))return false;
+   if(o.studioOptics!==undefined&&(!catalog.studioProfile(o)||typeof o.studioOptics!=='boolean'))return false;
    if(o.barnDoors!==undefined&&(o.type!=='light'||o.kind==='sun'||typeof o.barnDoors!=='boolean'))return false;
    if(['barnTop','barnBottom','barnLeft','barnRight'].some(k=>o[k]!==undefined&&(o.type!=='light'||o.kind==='sun'||!finite(o[k])||o[k]<-75||o[k]>90)))return false;
    if(o.type==='camera'&&o.color!==undefined&&!/^#[0-9a-f]{6}$/i.test(o.color))return false;
@@ -324,6 +325,6 @@ function workspaceFrom(data,id){
  if(!validProject(data))throw Error('The saved project could not be read. Your existing files have been preserved.');
  const p=structuredClone(data);p.projectId=p.projectId||id;return {version:2,activeProject:p.projectId,projects:[p]};
 }
-const api={lightingLayouts,barnDoorSegments,lightingSymbolPoints,wallCurvePoints,wallSegments,wallLength,floorVertices,floorPoints,floorShapePose,polygonContains,validFloorVertices,annotationPoints,annotationBounds,curvePoint,arrowContains,informationLabel,openingContains,containsPoint,pickObject,cameraView,cameraCoverage,actorFootprint,actorContains,translateSelection,groupWalls,wallGroupFor,transformWallGroup,splitRoom,roomSegments,playbackElapsed,motionPose,motionDuration,lightColor,openingKind,movable,markLabel,wallPose,syncOpenings,snapOpening,doorLeaves,effectiveWalls,sunState,pathPosition,validProject,validWorkspace,workspaceFrom};
+const api={mapFootprint:catalog.mapFootprint,lightingLayouts,barnDoorSegments,lightingSymbolPoints,wallCurvePoints,wallSegments,wallLength,floorVertices,floorPoints,floorShapePose,polygonContains,validFloorVertices,annotationPoints,annotationBounds,curvePoint,arrowContains,informationLabel,openingContains,containsPoint,pickObject,cameraView,cameraCoverage,actorFootprint,actorContains,translateSelection,groupWalls,wallGroupFor,transformWallGroup,splitRoom,roomSegments,playbackElapsed,motionPose,motionDuration,lightColor,openingKind,movable,markLabel,wallPose,syncOpenings,snapOpening,doorLeaves,effectiveWalls,sunState,pathPosition,validProject,validWorkspace,workspaceFrom};
 if(typeof module==='object'&&module.exports)module.exports=api;else root.ScenicModel=api;
 })(globalThis);

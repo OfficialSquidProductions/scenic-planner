@@ -20,7 +20,7 @@ function handles(o,zoom=1){
   {kind:'rotate',...toWorld({x:0,y:-(o.thickness/2+30/zoom)}),base:c},
   {kind:'start',x:o.x,y:o.y},{kind:'end',x:o.x2,y:o.y2}
  ];
- const w=o.width/2+6/zoom,h=o.height/2+6/zoom;
+ const footprint=model.mapFootprint(o),w=footprint.width/2+6/zoom,h=footprint.height/2+6/zoom;
  const positions=[[-1,-1],[1,-1],[1,1],[-1,1],[0,-1],[1,0],[0,1],[-1,0]];
  return [{kind:'rotate',...toWorld({x:0,y:-h-28/zoom}),base:toWorld({x:0,y:-h})},...positions.map(([sx,sy])=>({kind:'resize',sx,sy,...toWorld({x:sx*w,y:sy*h})}))];
 }
@@ -59,13 +59,14 @@ function apply(o,h,start,p,{step=0,proportional=false,angleStep=0,min=1.5,max=50
  }
  const d=rotate({x:dx,y:dy},-a);
  let w=h.sx?clamp(quantize(o.width+h.sx*d.x)):o.width;
- let height=h.sy?clamp(quantize(o.height+h.sy*d.y)):o.height;
+ const heightScale=model.mapFootprint(o).height/o.height;
+ let height=h.sy?clamp(quantize(o.height+h.sy*d.y/heightScale)):o.height;
  if(proportional&&(h.sx||h.sy)){
   let scale=h.sx&&h.sy?(o.width*w+o.height*height)/(o.width*o.width+o.height*o.height):h.sx?w/o.width:height/o.height;
   scale=Math.max(Math.max(min/o.width,min/o.height),Math.min(Math.min(max/o.width,max/o.height),scale));
   w=o.width*scale;height=o.height*scale;
  }
- const shift=rotate({x:h.sx*(w-o.width)/2,y:h.sy*(height-o.height)/2},a);
+ const shift=rotate({x:h.sx*(w-o.width)/2,y:h.sy*(height-o.height)*heightScale/2},a);
  return {x:o.x+shift.x,y:o.y+shift.y,width:w,height};
 }
 const api={angle,center,rotate,normalize,aimable,supported,handles,hit,cursor,apply};

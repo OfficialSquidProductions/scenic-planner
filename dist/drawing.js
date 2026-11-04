@@ -73,7 +73,7 @@ function drawTransformHandles(o,showHandles=true){
   if(showHandles)label(ScenicTransforms.center(o),formatLength(ScenicModel.wallLength(o)),18/view.z);
  }else if(o.type==='actor'){localShape(o,()=>{const f=ScenicModel.actorFootprint(o);ctx.beginPath();ctx.ellipse(0,0,f.width/2+6/view.z,f.height/2+6/view.z,0,0,Math.PI*2);ctx.stroke();});}else if(ScenicTransforms.aimable(o)){ctx.beginPath();ctx.arc(o.x,o.y,(o.type==='light'?24:28)+6/view.z,0,Math.PI*2);ctx.stroke();}
  else if(o.type==='floor'&&o.vertices){pathPolygon(ctx,ScenicModel.floorPoints(o));ctx.stroke();}
- else localShape(o,()=>{const pad=6/view.z,w=o.width??60,h=o.height??60;ctx.strokeRect(-w/2-pad,-h/2-pad,w+pad*2,h+pad*2);});
+ else localShape(o,()=>{const pad=6/view.z,f=ScenicModel.mapFootprint(o),w=f.width??60,h=f.height??60;ctx.strokeRect(-w/2-pad,-h/2-pad,w+pad*2,h+pad*2);});
  ctx.setLineDash([]);
  const handles=playback||!showHandles?[]:ScenicTransforms.handles(o,view.z);
  for(const h of handles){

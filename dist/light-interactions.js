@@ -18,13 +18,29 @@ function material(o,incoming){
  return {kind:'white',normal:facing,efficiency:.67,spread:155*PI/180,tint:[1,1,1]};
 }
 function fixture(o){
- const half=clamp(o.beam,1,360)*PI/360;let lo=-half,hi=half,throughput=1;
+ const studio=catalog.studioOutput(o),half=clamp(o.beam,1,360)*PI/360,outer=studio?Math.min(PI,half*1.5):half;let lo=-outer,hi=outer,throughput=1;
  if(o.barnDoors){
   const leaf=key=>{const a=clamp(o[key]??0,-75,90)*PI/180;return Math.atan2(11-22*Math.sin(a),14+22*Math.cos(a));};
   lo=Math.max(lo,-leaf('barnLeft'));hi=Math.min(hi,leaf('barnRight'));
   const vertical=key=>Math.max(0,Math.cos(Math.max(0,clamp(o[key]??0,-75,90))*PI/180));throughput=(vertical('barnTop')+vertical('barnBottom'))/2;
  }
- return {id:o.id,sourceId:o.id,x:o.x,y:o.y,angle:(o.rotation||0)*PI/180,start:lo,end:hi,radius:o.radius,energy:o.power/100*throughput,rgb:model.lightColor(o),kind:'direct',depth:0,path:[]};
+ const gain=studio?studio.relative*(catalog.STUDIO_REFERENCE_DISTANCE**2+studio.core**2)/studio.core**2:1;
+ return {id:o.id,sourceId:o.id,x:o.x,y:o.y,angle:(o.rotation||0)*PI/180,start:lo,end:hi,radius:o.radius,energy:o.power/100*throughput*gain,rgb:model.lightColor(o),kind:'direct',depth:0,path:[],...(studio?{photometric:true,core:studio.core,halfPeak:half,outer}:{} )};
+}
+function fixtures(o){
+ const base=fixture(o),profile=catalog.studioOutput(o);if(!profile||profile.samples===1)return [base];
+ const n={x:-Math.sin(base.angle),y:Math.cos(base.angle)};
+ return [-.35,0,.35].map((u,i)=>({...base,id:base.id+':sample'+i,x:base.x+n.x*profile.aperture*u,y:base.y+n.y*profile.aperture*u,energy:base.energy/3}));
+}
+function attenuation(e,d){
+ if(!e.photometric)return falloff(d/e.radius);
+ const t=clamp((1-d/e.radius)/.18,0,1),taper=t*t*(3-2*t);
+ return e.core**2/(e.core**2+d*d)*taper;
+}
+function angularProfile(e,offset){
+ if(!e.photometric)return 1;
+ const gaussian=Math.exp(-Math.LN2*(offset/e.halfPeak)**2),t=clamp((e.outer-Math.abs(offset))/(e.outer*.15),0,1);
+ return gaussian*t*t*(3-2*t);
 }
 function spatial(obstacles){
  const cells=new Map(),long=[];const cell=LIMITS.cell;
@@ -52,7 +68,7 @@ function secondary(group,e){
  const o=group.surface.object,incoming=unit({x:group.dx,y:group.dy}),m=material(o,incoming),amount=clamp(o.modifierStrength??100,0,100)/100,point={x:group.x/group.flux,y:group.y/group.flux},radius=Math.max(1,e.radius-group.distance/group.flux),incidence=Math.abs(dot(incoming,m.normal));
  const reflected=unit({x:incoming.x-2*dot(incoming,m.normal)*m.normal.x,y:incoming.y-2*dot(incoming,m.normal)*m.normal.y});
  const direction=m.kind==='diffuse'?unit({x:incoming.x*.45+m.normal.x*.55,y:incoming.y*.45+m.normal.y*.55}):m.kind==='white'?m.normal:reflected;
- const base={id:e.id+':'+o.id+':'+group.bin,sourceId:e.sourceId,radius,depth:e.depth+1,path:[...e.path,o.id],skipId:o.id,rgb:e.rgb.map((c,i)=>Math.round(c*m.tint[i])),kind:m.kind,energy:group.flux*amount*m.efficiency*(m.kind==='absorb'?0:.35+.65*incidence),angle:Math.atan2(direction.y,direction.x),normal:m.normal};
+ const base={id:e.id+':'+o.id+':'+group.bin,sourceId:e.sourceId,radius,depth:e.depth+1,path:[...e.path,o.id],skipId:o.id,rgb:e.rgb.map((c,i)=>Math.round(c*m.tint[i])),kind:m.kind,energy:group.flux*amount*m.efficiency*(m.kind==='absorb'?0:e.photometric?1:.35+.65*incidence),angle:Math.atan2(direction.y,direction.x),normal:m.normal,...(e.photometric?{photometric:true,core:Math.max(12,Math.min(120,o.width/3))}:{} )};
  const out=[];
  if(base.energy>.00002&&radius>2)out.push({...base,x:point.x+direction.x*.12,y:point.y+direction.y*.12,start:-m.spread/2,end:m.spread/2});
  if(amount<1&&radius>2)out.push({...base,id:base.id+':through',x:point.x+incoming.x*.12,y:point.y+incoming.y*.12,energy:group.flux*(1-amount),angle:Math.atan2(incoming.y,incoming.x),start:-Math.max(.01,group.spread)/2,end:Math.max(.01,group.spread)/2,rgb:e.rgb,kind:'through',normal:null});
@@ -61,7 +77,7 @@ function secondary(group,e){
 function solve(objects,walls,options={}){
  const stats={intersections:0,rays:0,emitters:0,truncated:false},surfaces=objects.filter(o=>catalog.isModifier(o)&&o.modifierEnabled!==false&&(o.modifierStrength??100)>0).map(screen),index=spatial([...walls.map((w,i)=>({...w,id:'wall:'+i})),...surfaces]);
  const lights=objects.filter(o=>o.type==='light'&&o.kind!=='sun'&&o.enabled&&o.power>0);if(lights.length>LIMITS.lights)stats.truncated=true;
- const queue=lights.slice(0,LIMITS.lights).map(fixture),beams=[],events=[];
+ const queue=lights.slice(0,LIMITS.lights).flatMap(fixtures),beams=[],events=[];
  const sun=options.sun;
  if(sun?.daylight&&sun.strength>0){
   const incoming={x:Math.cos(sun.rayAngle),y:Math.sin(sun.rayAngle)},rgb=geometry.temperature(sun.temperature);
@@ -74,8 +90,8 @@ function solve(objects,walls,options={}){
   if(cursor>=LIMITS.emitters){stats.truncated=true;break;}const e=queue[cursor];if(e.end<=e.start||e.energy<.00002||e.radius<=0)continue;
   const angles=rayAngles(e,index),rays=[],groups=new Map(),span=e.end-e.start;
   for(let i=0;i<angles.length;i++){
-   const offset=angles[i],a=e.angle+offset,hemisphere=!e.normal||Math.cos(a)*e.normal.x+Math.sin(a)*e.normal.y>0,profile=hemisphere?(['direct','through'].includes(e.kind)?1:Math.max(0,Math.cos(offset/(span/2)*PI/2))**1.2):0;
-   const result=firstHit(e,a,e.radius,index,e.skipId,stats),weight=((i?offset-angles[i-1]:0)+(i<angles.length-1?angles[i+1]-offset:0))/2/span,flux=e.energy*weight*profile*falloff(result.distance/e.radius);
+   const offset=angles[i],a=e.angle+offset,hemisphere=!e.normal||Math.cos(a)*e.normal.x+Math.sin(a)*e.normal.y>0,profile=hemisphere?(['direct','through'].includes(e.kind)?e.kind==='direct'?angularProfile(e,offset):1:Math.max(0,Math.cos(offset/(span/2)*PI/2))**1.2):0;
+   const result=firstHit(e,a,e.radius,index,e.skipId,stats),weight=((i?offset-angles[i-1]:0)+(i<angles.length-1?angles[i+1]-offset:0))/2/span,flux=e.energy*weight*profile*attenuation(e,result.distance);
    rays.push({x:result.x,y:result.y,angle:a,profile,hitId:result.hit?.id||null});stats.rays++;
    const surface=result.hit;if(!surface?.modifier||flux<.0000001)continue;
    if(e.path.includes(surface.id)||e.depth>=LIMITS.depth){if(material(surface.object,result.direction).kind!=='absorb')stats.truncated=true;continue;}
@@ -91,10 +107,10 @@ function solve(objects,walls,options={}){
  return {beams,surfaces,events,stats};
 }
 function draw(c,result){
- for(const beam of result.beams){if(beam.rays.length<2)continue;c.save();const alpha=beam.kind==='direct'?.68*beam.energy:Math.min(.68,Math.sqrt(beam.energy)*1.4),g=c.createRadialGradient(beam.x,beam.y,0,beam.x,beam.y,beam.radius);g.addColorStop(0,`rgba(${beam.rgb},${alpha})`);g.addColorStop(.22,`rgba(${beam.rgb},${alpha*.59})`);g.addColorStop(.60,`rgba(${beam.rgb},${alpha*.22})`);g.addColorStop(1,`rgba(${beam.rgb},0)`);c.fillStyle=g;
-  if(['direct','through'].includes(beam.kind)){c.beginPath();c.moveTo(beam.x,beam.y);for(const p of beam.rays)c.lineTo(p.x,p.y);c.closePath();c.fill();c.restore();continue;}
+ for(const beam of result.beams){if(beam.rays.length<2)continue;c.save();const alpha=beam.kind==='direct'?.68*beam.energy:Math.min(.68,Math.sqrt(beam.energy)*1.4),g=c.createRadialGradient(beam.x,beam.y,0,beam.x,beam.y,beam.radius);if(beam.photometric){for(const t of [0,.03,.08,.16,.28,.45,.65,.82,1]){const value=beam.energy*attenuation(beam,t*beam.radius),display=['reflect','white','diffuse'].includes(beam.kind)?Math.sqrt(Math.max(0,value)):Math.max(0,value),opacity=.78*(1-Math.exp(-display*.65));g.addColorStop(t,`rgba(${beam.rgb},${opacity})`);}}else{g.addColorStop(0,`rgba(${beam.rgb},${alpha})`);g.addColorStop(.22,`rgba(${beam.rgb},${alpha*.59})`);g.addColorStop(.60,`rgba(${beam.rgb},${alpha*.22})`);g.addColorStop(1,`rgba(${beam.rgb},0)`);}c.fillStyle=g;
+  if(['direct','through'].includes(beam.kind)&&!beam.photometric){c.beginPath();c.moveTo(beam.x,beam.y);for(const p of beam.rays)c.lineTo(p.x,p.y);c.closePath();c.fill();c.restore();continue;}
   for(let i=0;i<beam.rays.length-1;i++){const p=beam.rays[i],q=beam.rays[i+1];c.globalAlpha=(p.profile+q.profile)/2;c.beginPath();c.moveTo(beam.x,beam.y);c.lineTo(p.x,p.y);c.lineTo(q.x,q.y);c.closePath();c.fill();}c.restore();
  }
 }
-const api={LIMITS,screen,material,fixture,spatial,firstHit,solve,draw};if(common)module.exports=api;else root.ScenicLightInteractions=api;
+const api={LIMITS,screen,material,fixture,fixtures,attenuation,angularProfile,spatial,firstHit,solve,draw};if(common)module.exports=api;else root.ScenicLightInteractions=api;
 })(globalThis);

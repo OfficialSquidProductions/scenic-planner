@@ -83,7 +83,7 @@ async function checkImages(project){
 function serialize(project){
  validate(project);
  const copy=structuredClone(project);
- const features=[];if(copy.scenes.some(s=>s.shotLighting))features.push('shot-lighting');if(copy.scenes.some(s=>s.objects.some(o=>o.curve||o.vertices)))features.push('editable-geometry');if(copy.scenes.some(s=>(model.lightingLayouts?.allObjects(s)||s.objects).some(o=>o.barnDoors||o.barnDoors===false||o.bounceSide||model.lightingLayouts?.own(o)&&o.type==='gear')))features.push('lighting-modifiers');
+ const features=[];if(copy.scenes.some(s=>(model.lightingLayouts?.allObjects(s)||s.objects).some(o=>o.studioOptics!==undefined)))features.push('studio-optics');if(copy.scenes.some(s=>s.shotLighting))features.push('shot-lighting');if(copy.scenes.some(s=>s.objects.some(o=>o.curve||o.vertices)))features.push('editable-geometry');if(copy.scenes.some(s=>(model.lightingLayouts?.allObjects(s)||s.objects).some(o=>o.barnDoors||o.barnDoors===false||o.bounceSide||model.lightingLayouts?.own(o)&&o.type==='gear')))features.push('lighting-modifiers');
  copy.portable={format:FORMAT,version:features.length?2:VERSION,...(features.length?{features}:{})};
  const text=JSON.stringify(copy);if(bytes(text)>MAX_FILE)fail('This project exceeds the 60 MB portable file limit. Reduce its reference images before sharing.');
  return text;
