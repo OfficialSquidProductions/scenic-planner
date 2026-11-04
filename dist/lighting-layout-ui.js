@@ -38,5 +38,5 @@
    row.addEventListener('keydown',e=>{if(e.target===row&&(e.key==='Enter'||e.key===' ')){e.preventDefault();action();}});
   });
  }
- window.ScenicLightingUI={inspector,bind,render,camera,activate,shotButton,bindShots};render();
+ window.ScenicLightingUI={inspector,bind,render,camera,activate,shotButton,bindShots};render();renderInspector();renderShots();
 })();

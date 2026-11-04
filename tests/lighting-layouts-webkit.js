@@ -1,5 +1,6 @@
 const results=[];const check=(value,name)=>{if(!value)throw Error(name);results.push(name);};
 try{
+ check(!!$('shot-lighting-enabled'),'Fresh launch shows scene lighting setting before any edit');
  const incoming=ScenicShotList.importCSV('Scene,Shot,Description\n3,3.10,Later setup\n3,3.2,Earlier setup',uid)[0];
  incoming.title='Scene 3 bathroom';incoming.objects=[{id:'floor',type:'floor',name:'Bathroom floor',x:400,y:300,width:650,height:500,rotation:0,color:'#bbaf9c'},{id:'wall',type:'wall',name:'Wall',x:150,y:100,x2:750,y2:100,thickness:8}];
  doc={version:1,projectId:'lighting-native',name:'SYNTHETIC FEATURE QA',active:incoming.id,theme:'light',scenes:[incoming,{id:'later',title:'Later existing scene',ambient:100,objects:[]}]};workspace={version:2,activeProject:doc.projectId,projects:[doc]};history=[];future=[];selected=null;selectedIds.clear();commit();
