@@ -32,12 +32,12 @@ if(typeof window!=='undefined')(()=>{
  function cancelled(job){if(job.cancelled)throw Error('Export cancelled.');}
  async function raster(project,target,index,format){
   for(const o of target.objects.filter(o=>(o.type==='image'||o.type==='floor')&&o.src)){const image=imageFor(o);if(!image.complete)await image.decode();if(!image.naturalWidth)throw Error('A reference or floor image in '+target.title+' could not be read.');}
-  const previous={doc,canvas,ctx,size,view,selected,selectedIds,playback,drag,theme:document.documentElement.dataset.theme};
+  const previous={doc,canvas,ctx,size,view,selected,selectedIds,playback,drag,grid,simulation,theme:document.documentElement.dataset.theme};
   try{
-   document.documentElement.dataset.theme=project.theme;drag=null;const map=document.createElement('canvas');map.width=1800;map.height=1165;doc={...project,active:target.id,scenes:project.scenes.map(s=>s.id===target.id?target:s)};canvas=map;ctx=map.getContext('2d');size={w:1800,h:1165};selected=null;selectedIds=new Set();playback=null;fit({minimumZoom:0});draw(true);
-   const surface=document.createElement('canvas');surface.width=1800;surface.height=1250;ctx=surface.getContext('2d');ctx.drawImage(map,0,85);ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle=color('--paper');ctx.fillRect(0,0,1800,85);ctx.fillStyle=color('--ink');ctx.font='25px Futura,sans-serif';ctx.fillText(String(index+1).padStart(2,'0')+' · '+target.title,45,40,1710);ctx.font='11px Futura,sans-serif';ctx.fillStyle=color('--muted');ctx.fillText(project.name+'   /   SCENIC · SQUID PRODUCTIONS',45,64,1710);
+   document.documentElement.dataset.theme=project.theme;simulation=project.editorSettings?.simulation??previous.simulation;grid=project.editorSettings?.grid??previous.grid;drag=null;const map=document.createElement('canvas');map.width=1800;map.height=1165;doc={...project,active:target.id,scenes:project.scenes.map(s=>s.id===target.id?target:s)};canvas=map;ctx=map.getContext('2d');size={w:1800,h:1165};selected=null;selectedIds=new Set();playback=null;fit({minimumZoom:0});draw(true);
+   const surface=document.createElement('canvas');surface.width=1800;surface.height=1250;ctx=surface.getContext('2d');ctx.drawImage(map,0,85);ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle=color('--paper');ctx.fillRect(0,0,1800,85);ctx.fillStyle=color('--ink');ctx.font='25px Futura,sans-serif';ctx.fillText(String(index+1).padStart(2,'0')+' · '+target.title,45,40,1710);ctx.font='11px Futura,sans-serif';ctx.fillStyle=color('--muted');ctx.fillText(project.name+'   /   SCENIC · SQUID PRODUCTIONS'+(window.ScenicLightInteractions&&simulation?'   /   2D LIGHTING APPROXIMATION':''),45,64,1710);
    const encoded=surface.toDataURL(format==='pdf'?'image/jpeg':'image/png',.94).split(',')[1];if(!encoded)throw Error('The scene image could not be created.');return Uint8Array.from(atob(encoded),c=>c.charCodeAt(0));
-  }finally{doc=previous.doc;canvas=previous.canvas;ctx=previous.ctx;size=previous.size;view=previous.view;selected=previous.selected;selectedIds=previous.selectedIds;playback=previous.playback;drag=previous.drag;document.documentElement.dataset.theme=previous.theme;updateZoom();invalidate();}
+  }finally{doc=previous.doc;canvas=previous.canvas;ctx=previous.ctx;size=previous.size;view=previous.view;selected=previous.selected;selectedIds=previous.selectedIds;playback=previous.playback;drag=previous.drag;grid=previous.grid;simulation=previous.simulation;document.documentElement.dataset.theme=previous.theme;updateZoom();invalidate();}
  }
  async function map(productionId,sceneId){
   if(active||mapRunning)throw Error('Finish or cancel the current scene export first.');
@@ -45,14 +45,14 @@ if(typeof window!=='undefined')(()=>{
   if(drag)throw Error('Finish moving the current item before exporting.');
   mapRunning=true;
   try{
-   const project=structuredClone(doc),index=project.scenes.findIndex(s=>s.id===sceneId),source=project.scenes[index],target=source.shotLighting?.enabled?ScenicModel.lightingLayouts.shotScene(source,ScenicModel.lightingLayouts.current(source)):source,filename=ScenicBatchFiles.filename(target,index);
+   const project=structuredClone(doc);project.editorSettings={grid,snap,simulation};const index=project.scenes.findIndex(s=>s.id===sceneId),source=project.scenes[index],target=source.shotLighting?.enabled?ScenicModel.lightingLayouts.shotScene(source,ScenicModel.lightingLayouts.current(source)):source,filename=ScenicBatchFiles.filename(target,index);
    const data=await raster(project,target,index,'png');if(data.length>ScenicBatchFiles.MAX_BYTES)throw Error('This map export exceeds 80 MB.');
    return {data,filename};
   }finally{mapRunning=false;}
  }
  async function start(productionId,format){
   if(active||mapRunning)throw Error('Finish or cancel the current scene export first.');if(productionId!==doc.projectId)throw Error('Reopen Scenes for the active production.');if(!['pdf','png'].includes(format))throw Error('Choose PDF or PNG.');if(drag)throw Error('Finish moving the current item before exporting.');
-  const project=structuredClone(doc);for(const s of project.scenes)ScenicModel.lightingLayouts?.flush(s);const current=project.scenes.find(s=>s.id===project.active),shots=!!current?.shotLighting?.enabled;
+  const project=structuredClone(doc);project.editorSettings={grid,snap,simulation};for(const s of project.scenes)ScenicModel.lightingLayouts?.flush(s);const current=project.scenes.find(s=>s.id===project.active),shots=!!current?.shotLighting?.enabled;
   if(shots&&format!=='pdf')throw Error('Use one PDF to export this scene’s shot lighting layouts.');
   const targets=shots?ScenicModel.lightingLayouts.entries(current).map(entry=>ScenicModel.lightingLayouts.shotScene(current,entry.key)):project.scenes;
   if(shots&&!targets.length)throw Error('Add a camera or import shots before exporting all shot layouts.');if(shots&&targets.length>1000)throw Error('Export up to 1,000 shots in one PDF.');
