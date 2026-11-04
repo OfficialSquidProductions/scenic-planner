@@ -1,4 +1,18 @@
-# Scenic Feature Test 1.4.32 (8): interacting light controls
+# Scenic Feature Test 1.4.32 (10): floor and Settings feedback
+
+Latest unpublished local app: `release/Scenic-Feature-Test-10/Scenic Feature Test.app`. Source: `0f4be28def93ec01800756523aa54eda1ecde5d6` on `feature/scenic-lighting-geometry-test`. Revision 10 supersedes revision 8; revision 9 was an internal check candidate. Existing test projects retain the same isolated test identity and storage. Production Scenic, updater feeds and App Store submissions are unchanged.
+
+- **Floors:** always render beneath other objects. Placement-locked floors can now be selected on an exposed map area, with movement still protected. In Properties, turn off **Lock placement** to move or reshape; the canvas instructions update immediately. When completely covered, use **Scene layers → floor name**, then Properties. Actors/cameras above a floor still receive clicks before the floor, including overlaps with floor shape handles. Existing locks are preserved rather than silently removed.
+- **Settings (bottom left) → Scene lighting layouts → Separate lighting per camera / shot:** a prominent checkbox and **On / Off** status appear before Appearance, even while an object is selected. The current scene is named beside the setting. **New scenes default to Off.** Existing scenes retain their saved mode. On selects independent plans through cameras, Shot List rows or the map's layout selector; Off restores shared lighting and retains all shot variants. Saved-layout count explains what remains. The Scene Properties switch remains synchronized.
+- **Lights → Flags:** a prominent **W.I.P. — Flags are a work in progress and may have bugs.** warning accompanies the placement hint in light and dark themes.
+
+**42/42 shared CJS suites passed**. Final packaged resources passed **147 native WebKit checks** across feedback (39), lighting layouts (29), editable geometry (34), lighting interactions (32) and numbered CSV import (13). These cover floor locks/selection/overlaps/handles/drag/Undo, Settings visibility and mode synchronization, old/new project defaults, camera/Shot List switching, off/on archives, portable save/reopen and exports. Native UI checks used the separate QA app/storage and confirmed actual Settings visibility, camera archive restoration, floor selection/unlock/body dragging, W.I.P. warning and cold-launch persistence. The final hint correction was also verified interactively in revision 10.
+
+Evidence: `.cache/feedback-final-native-summary.json`, `.cache/feedback-shared-results.json`, `.cache/feedback-qa/Final-feedback.png`, `Final-shot-layouts.pdf` and `Final-rendered/`. The PDF parsed and rasterized natively as two pages, labeled Shot 3.2 then Shot 3.10; PNG and PDF content were visually inspected. The packaged universal binary, strict ad-hoc signature, runtime resource hashes, disabled updater and absent file association were verified. Production and existing Feature Test workspace/backup fingerprints were unchanged through isolated QA (four files).
+
+Native Windows, iPhone/iPad and Intel Mac execution for these unpublished changes remain outstanding. No platform publication is authorized. The preview limitations below still apply. Optional synthetic lighting examples are included in revision 10's `Examples/` folder; importing adds a copy.
+
+## Earlier interacting-light controls (revision 8)
 
 Updated unpublished local candidate: `release/Scenic-Feature-Test-8/Scenic Feature Test.app`. Built from `fe678795ce88d9e9774074d65ac76475c2989524` on local branch `feature/scenic-lighting-geometry-test`.
 
