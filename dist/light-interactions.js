@@ -9,6 +9,7 @@ const clamp=(x,a,b)=>Math.max(a,Math.min(b,x)),dot=(a,b)=>a.x*b.x+a.y*b.y,unit=v
 function screen(o){const a=(o.rotation||0)*PI/180,t={x:Math.cos(a),y:Math.sin(a)},n={x:t.y,y:-t.x},half=o.width/2;return {id:o.id,object:o,n,x:o.x-t.x*half,y:o.y-t.y*half,x2:o.x+t.x*half,y2:o.y+t.y*half,modifier:true};}
 function material(o,incoming){
  const n=screen(o).n,front=dot(incoming,n)<0,facing=front?n:{x:-n.x,y:-n.y};let kind=o.asset;
+ if(['flex-silver','flex-gold','flex-white'].includes(kind)&&!front)return {kind:'absorb',normal:facing,efficiency:0,spread:0,tint:[1,1,1]};
  if(kind==='bounce-board')kind=(o.bounceSide||'White')===(front?'White':'Black')?'flex-white':'flex-black';
  if(kind==='negative-fill'||kind==='flex-black')return {kind:'absorb',normal:facing,efficiency:0,spread:0,tint:[1,1,1]};
  if(kind==='diffusion-kit')return {kind:'diffuse',normal:{x:-facing.x,y:-facing.y},efficiency:.72,spread:150*PI/180,tint:[1,1,1]};

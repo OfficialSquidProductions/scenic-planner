@@ -65,6 +65,7 @@ function openingContains(o,p,zoom,objects){
 }
 function barnDoorSegments(o){const a=(o.rotation||0)*Math.PI/180,c=Math.cos(a),s=Math.sin(a),world=p=>({x:o.x+p.x*c-p.y*s,y:o.y+p.x*s+p.y*c});return catalog.barnDoorGeometry(o).map(leaf=>{const p=world(leaf.start),q=world(leaf.end);return {...p,x2:q.x,y2:q.y};});}
 function lightingSymbolPoints(o){
+ if(catalog.isModifier(o)){const n=catalog.modifierNormal(o),length=Math.min(50,Math.max(18,o.height*.45));return [{x:o.x+n.x*length,y:o.y+n.y*length}];}
  if(o.type!=='light')return [];
  if(o.kind==='sun'){const state=sunState(o);if(state.error)return [];return Object.values(catalog.sunRayGuide(state)).map(p=>({x:o.x+p.x,y:o.y+p.y}));}
  return barnDoorSegments(o).flatMap(w=>[w,{x:w.x2,y:w.y2}]);

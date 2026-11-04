@@ -15,7 +15,7 @@ const straight={...light,rotation:0,barnLeft:0,barnRight:90};const leaves=model.
 const before=JSON.stringify(project);let n=0;const uid=()=>`copy-${++n}`,payload=copy.capture(project,'source',objects.map(o=>o.id),uid),plan=copy.planPaste(project,'later',payload,uid);assert.equal(plan.scene.objects.length,8);assert.equal(plan.scene.objects.at(-1).barnBottom,80);assert.equal(plan.scene.objects.find(o=>o.asset==='bounce-board').bounceSide,'Black');plan.scene.objects.at(-1).barnLeft=90;assert.equal(JSON.stringify(project),before);
 const duplicate=copy.duplicateScene(project,'source',uid);assert.equal(duplicate.objects.length,8);assert(duplicate.objects.every(o=>!objects.some(source=>source.id===o.id)));
 for(const rayAngle of [0,Math.PI/2,Math.PI,-Math.PI/2,.8]){const g=catalog.sunRayGuide({rayAngle});const dot=(g.tip.x-g.start.x)*Math.cos(rayAngle)+(g.tip.y-g.start.y)*Math.sin(rayAngle);assert(dot>0,'Sun arrow travels away from the icon in the incident-light direction');assert(Math.hypot(g.tip.x,g.tip.y)>Math.hypot(g.left.x,g.left.y));}
-assert.equal(model.lightingSymbolPoints(light).length,4);assert.equal(model.lightingSymbolPoints(objects[0]).length,0);
+assert.equal(model.lightingSymbolPoints(light).length,4);assert.equal(model.lightingSymbolPoints(objects[0]).length,1);
 console.log('Lighting modifiers verified: seven passive catalog assets, strict/legacy validation, physical dimensions, colored surfaces, bounce side, barn-door hit/marquee geometry, independent clipboard/scene copies, portable persistence and incident sun arrows.');
 
 // Extended angles preserve old values while allowing independently opened leaves.
