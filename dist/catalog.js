@@ -139,9 +139,11 @@ const items=entries.map(([id,name,category,group,width,height,shape])=>({id,name
 const modifierIds=new Set(['flex-silver','flex-gold','flex-white','flex-black','negative-fill','bounce-board','diffusion-kit']);
 for(const item of items)if(modifierIds.has(item.id))item.modifier=true;
 const isModifier=value=>modifierIds.has(typeof value==='string'?value:value?.asset||value?.id);
+// Reflective front is local -Y, independent of the drawing's aspect ratio.
+function modifierNormal(o){const a=(o.rotation||0)*Math.PI/180;return {x:Math.sin(a),y:-Math.cos(a)};}
 function modifierStyle(o){const id=o.asset||o.id;const dark=id==='flex-black'||id==='negative-fill'||id==='bounce-board'&&o.bounceSide==='Black';return {fill:dark?'#23242b':id==='flex-gold'?'#d6b260':id==='flex-silver'?'#b9c3cd':'#f6f5ef',line:dark?'#9195a1':'#4d5260',detail:dark?'#575b69':'#9b9fa7'};}
-// Diagram geometry: 0° is open, 90° folded toward the beam. Top/bottom
-// adjustments are stored for planning but cannot be represented in top-down view.
+// Door geometry: negative angles open outward, 0° points forward, and 90°
+// folds inward. Only the left/right leaves are visible in a top-down chart.
 function barnDoorGeometry(o){if(o.type!=='light'||o.kind==='sun'||!o.barnDoors)return [];return ['barnLeft','barnRight'].map((key,index)=>{const sign=index===0?-1:1,a=(o[key]??0)*Math.PI/180,start={x:14,y:sign*11},end={x:14+22*Math.cos(a),y:sign*(11-22*Math.sin(a))};return {key,start,end};});}
 function sunRayGuide(state){const a=state.rayAngle,c=Math.cos(a),s=Math.sin(a);return {start:{x:c*34,y:s*34},tip:{x:c*88,y:s*88},left:{x:c*76-s*6,y:s*76+c*6},right:{x:c*76+s*6,y:s*76-c*6}};}
 const lightPresets={
@@ -153,6 +155,6 @@ const lightPresets={
  overhead:{power:65,temperature:4000,beam:360,radius:500},
  sun:{power:80,temperature:5600,beam:360,radius:1000,kind:'sun',rotation:0,time:12,sunrise:6,sunset:18,riseDirection:90,setDirection:270}
 };
-const api={isModifier,modifierStyle,barnDoorGeometry,sunRayGuide,DEFAULT_WALL_THICKNESS,ACTOR_FOOTPRINT,shapeBounds,lightPresets,UNITS_PER_INCH,formatLength,parseLength,items,shapes,get:id=>items.find(item=>item.id===id)};
+const api={isModifier,modifierNormal,modifierStyle,barnDoorGeometry,sunRayGuide,DEFAULT_WALL_THICKNESS,ACTOR_FOOTPRINT,shapeBounds,lightPresets,UNITS_PER_INCH,formatLength,parseLength,items,shapes,get:id=>items.find(item=>item.id===id)};
 if(typeof module==='object'&&module.exports)module.exports=api;else root.ScenicCatalog=api;
 })(globalThis);

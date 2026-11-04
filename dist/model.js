@@ -271,8 +271,10 @@ function validProject(p){
    if(['labelOffsetX','labelOffsetY'].some(k=>o[k]!==undefined&&(!['camera','light'].includes(o.type)||!finite(o[k])||Math.abs(o[k])>10000)))return false;
    if(o.labelConnector!==undefined&&(!['camera','light'].includes(o.type)||typeof o.labelConnector!=='boolean'))return false;
    if(o.bounceSide!==undefined&&(o.type!=='gear'||o.asset!=='bounce-board'||!['White','Black'].includes(o.bounceSide)))return false;
+   if(o.modifierEnabled!==undefined&&(o.type!=='gear'||!catalog.isModifier(o)||typeof o.modifierEnabled!=='boolean'))return false;
+   if(o.modifierStrength!==undefined&&(o.type!=='gear'||!catalog.isModifier(o)||!finite(o.modifierStrength)||o.modifierStrength<0||o.modifierStrength>100))return false;
    if(o.barnDoors!==undefined&&(o.type!=='light'||o.kind==='sun'||typeof o.barnDoors!=='boolean'))return false;
-   if(['barnTop','barnBottom','barnLeft','barnRight'].some(k=>o[k]!==undefined&&(o.type!=='light'||o.kind==='sun'||!finite(o[k])||o[k]<0||o[k]>90)))return false;
+   if(['barnTop','barnBottom','barnLeft','barnRight'].some(k=>o[k]!==undefined&&(o.type!=='light'||o.kind==='sun'||!finite(o[k])||o[k]<-75||o[k]>90)))return false;
    if(o.type==='camera'&&o.color!==undefined&&!/^#[0-9a-f]{6}$/i.test(o.color))return false;
    if(o.type==='camera'&&((o.sensorWidth!==undefined&&(!finite(o.sensorWidth)||o.sensorWidth<1||o.sensorWidth>100))||(o.viewDistance!==undefined&&(!finite(o.viewDistance)||o.viewDistance<3||o.viewDistance>5000))))return false;
    if(o.shotId!==undefined&&(o.type!=='camera'||typeof o.shotId!=='string'||!s.shotList?.some(shot=>shot.id===o.shotId)))return false;
