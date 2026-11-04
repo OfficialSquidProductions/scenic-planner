@@ -50,7 +50,7 @@ function allObjects(s){
 }
 function shotScene(s,key){
  const target=copy(s);flush(target);
- if(!target.shotLighting?.enabled)throw Error('Enable separate lighting per shot in Scene properties first.');
+ if(!target.shotLighting?.enabled)throw Error('Enable Separate lighting per camera / shot in Settings → Scene lighting layouts first.');
  if(key!=='shared')activate(target,key);
  else if(current(target)!=='shared')activate(target,'shared');
  const title=s.title+' · '+label(target,key);target.title=title;target.exportShot=key!=='shared';

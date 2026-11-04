@@ -71,7 +71,10 @@ function lightingSymbolPoints(o){
  return barnDoorSegments(o).flatMap(w=>[w,{x:w.x2,y:w.y2}]);
 }
 function containsPoint(o,p,zoom=1,objects=[]){
- if(o.locked||o.type==='wallGroup')return false;
+ // A floor's placement lock protects movement, not access to its Properties.
+ // Keep foreground objects first in pickObject so selecting a floor never
+ // makes an actor/camera above it inaccessible.
+ if(o.locked&&o.type!=='floor'||o.type==='wallGroup')return false;
  if(o.type==='arrow')return arrowContains(o,p,Math.max(3,6/zoom));
  if(o.type==='room')return roomSegments(o).some(w=>segmentDistance(p,w,{x:w.x2,y:w.y2})<=Math.max(5/zoom,o.thickness/2+3));
  if(o.type==='wall')return wallSegments(o).some(w=>segmentDistance(p,w,{x:w.x2,y:w.y2})<=Math.max(5/zoom,o.thickness/2+3));

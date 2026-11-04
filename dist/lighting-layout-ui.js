@@ -12,6 +12,14 @@
  }
  function activate(key,options={}){return perform(()=>layouts.activate(scene(),key),options);}
  function camera(camera){if(scene().shotLighting?.enabled&&camera?.type==='camera')return activate(layouts.forCamera(scene(),camera),{cameraId:camera.id,record:true});return false;}
+ function settings(){
+  const toggle=$('settings-shot-lighting-enabled');if(!toggle)return;
+  const data=scene().shotLighting;toggle.checked=!!data?.enabled;
+  $('settings-lighting-scene').textContent=scene().title;
+  $('settings-lighting-state').textContent=data?.enabled?'On':'Off';
+  $('settings-lighting-retained').textContent=data?.layouts.length?`${data.layouts.length} saved shot ${data.layouts.length===1?'layout':'layouts'} retained${data.enabled?'.':'; turn on to use them again.'}`:'New scenes start with this setting off.';
+  toggle.onchange=()=>{const on=toggle.checked;if(!perform(()=>layouts.enable(scene(),on)))settings();};
+ }
  function inspector(){
   const data=scene().shotLighting;
   return `<div class="section-label">LIGHTING LAYOUTS</div><label class="toggle-label">Separate lighting per shot<input id="shot-lighting-enabled" aria-label="Separate lighting per shot" type="checkbox" ${data?.enabled?'checked':''}></label><p class="empty-hint">${data?.enabled?'Select a camera, a shot in Shot list, or a layout above the map. Shared lighting is the baseline for new shots. Each shot keeps its own lights, flags, positions and ambient light; shared changes do not replace existing shot layouts.':'All cameras use the shared scene layout. Enable to keep independent plans for shots and cameras. Turning this off restores the shared layout and keeps saved shot layouts.'}</p>${data?.layouts.length?`<p class="empty-hint">${data.layouts.length} saved shot ${data.layouts.length===1?'layout':'layouts'} retained${data.enabled?'':'; enable to edit them again'}.</p>`:''}`;
@@ -20,7 +28,7 @@
   const toggle=$('shot-lighting-enabled');if(toggle)toggle.onchange=()=>{const on=toggle.checked;if(!perform(()=>layouts.enable(scene(),on)))toggle.checked=!!scene().shotLighting?.enabled;};
  }
  function render(){
-  const bar=$('lighting-layout-bar');if(!bar)return;const s=scene(),data=s.shotLighting;bar.hidden=!data?.enabled;
+  settings();const bar=$('lighting-layout-bar');if(!bar)return;const s=scene(),data=s.shotLighting;bar.hidden=!data?.enabled;
   if(!data?.enabled){bar.innerHTML='';return;}
   const choices=[{key:'shared',label:'Shared lighting'},...layouts.entries(s)];
   for(const saved of data.layouts)if(!choices.some(e=>e.key===saved.key))choices.push({key:saved.key,label:saved.label+' · saved / removed shot'});
@@ -38,5 +46,5 @@
    row.addEventListener('keydown',e=>{if(e.target===row&&(e.key==='Enter'||e.key===' ')){e.preventDefault();action();}});
   });
  }
- window.ScenicLightingUI={inspector,bind,render,camera,activate,shotButton,bindShots};render();renderInspector();renderShots();
+ window.ScenicLightingUI={inspector,bind,render,settings,camera,activate,shotButton,bindShots};render();renderInspector();renderShots();
 })();

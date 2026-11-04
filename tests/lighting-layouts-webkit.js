@@ -10,7 +10,7 @@ try{
  addObject('camera',{x:400,y:450});const firstCamera=selected;ScenicShotList.linkCamera(object(),incoming.shotList.find(s=>s.number==='3.2'));
  addObject('camera',{x:650,y:450});const secondCamera=selected;ScenicShotList.linkCamera(object(),incoming.shotList.find(s=>s.number==='3.10'));choose(null);commit();
  const baseline=JSON.stringify(scene().objects.filter(ScenicLightingLayouts.own));
- const setting=$('shot-lighting-enabled');check(setting&&!setting.checked,'Native Scene inspector offers opt-in setting');setting.click();
+ $('settings-button').click();const setting=$('settings-shot-lighting-enabled');check($('settings').open&&setting&&!setting.checked,'Settings offers per-camera / shot lighting off by default');setting.click();$('close-settings').click();
  check(scene().shotLighting.enabled&&!$('lighting-layout-bar').hidden,'Opt-in shows layout selector');
  choose(firstCamera);check(scene().shotLighting.active==='shot:'+incoming.shotList.find(s=>s.number==='3.2').id,'Camera selection activates linked shot');
  choose(lampId);object().x=90;object().power=25;commit();choose(boardId);object().bounceSide='White';object().x=670;commit();
