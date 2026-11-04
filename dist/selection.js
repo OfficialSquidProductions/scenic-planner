@@ -27,7 +27,7 @@ function touches(o,r,objects){
   if(o.x>=r.left&&o.x<=r.right&&o.y>=r.top&&o.y<=r.bottom)return true;
   return points.some((p,i)=>{const q=points[(i+1)%4],dx=q.x-p.x,dy=q.y-p.y,t=Math.max(0,Math.min(1,-(p.x*dx+p.y*dy)/(dx*dx+dy*dy||1)));return Math.hypot(p.x+t*dx,p.y+t*dy)<=1;});
  }
- if(['camera','light'].includes(o.type)){const radius=o.kind==='sun'?29:o.type==='actor'?19:23,x=Math.max(r.left,Math.min(r.right,o.x)),y=Math.max(r.top,Math.min(r.bottom,o.y));return Math.hypot(o.x-x,o.y-y)<=radius;}
+ if(['camera','light'].includes(o.type)){const radius=o.kind==='sun'?29:o.type==='actor'?19:23,x=Math.max(r.left,Math.min(r.right,o.x)),y=Math.max(r.top,Math.min(r.bottom,o.y));return Math.hypot(o.x-x,o.y-y)<=radius||model.barnDoorSegments(o).some(w=>segmentTouches(w,r,2.5));}
  const a=(o.rotation||0)*Math.PI/180,c=Math.cos(a),s=Math.sin(a),w=o.width/2,h=o.height/2;
  return polygonTouches([[-w,-h],[w,-h],[w,h],[-w,h]].map(([x,y])=>({x:o.x+x*c-y*s,y:o.y+x*s+y*c})),r);
 }

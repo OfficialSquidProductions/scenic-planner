@@ -44,7 +44,7 @@ function drawSun(c,left,top,right,bottom){
 }
 function drawSunMarker(o){
  const state=ScenicModel.sunState(o);localShape(o,()=>{ctx.strokeStyle=state.daylight&&o.enabled?'#e4b65d':color('--muted');ctx.fillStyle='#d8ad5922';ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,18,0,Math.PI*2);ctx.fill();ctx.stroke();for(let i=0;i<8;i++){const a=i*Math.PI/4;ctx.beginPath();ctx.moveTo(Math.cos(a)*23,Math.sin(a)*23);ctx.lineTo(Math.cos(a)*29,Math.sin(a)*29);ctx.stroke();}});
- if(o.solarReal&&!state.error){ctx.save();ctx.translate(o.x,o.y);ctx.strokeStyle=color('--accent');ctx.lineWidth=1.5/view.z;const toward=state.rayAngle+Math.PI;ctx.setLineDash([3/view.z,3/view.z]);ctx.beginPath();ctx.moveTo(Math.cos(toward)*33,Math.sin(toward)*33);ctx.lineTo(Math.cos(toward)*62,Math.sin(toward)*62);ctx.stroke();ctx.restore();
+ if(!state.error){const guide=ScenicCatalog.sunRayGuide(state);ctx.save();ctx.translate(o.x,o.y);ctx.strokeStyle=state.daylight&&o.enabled?'#c89937':color('--muted');ctx.fillStyle=ctx.strokeStyle;ctx.lineWidth=1.8/view.z;ctx.setLineDash([4/view.z,3/view.z]);ctx.beginPath();ctx.moveTo(guide.start.x,guide.start.y);ctx.lineTo(guide.tip.x,guide.tip.y);ctx.stroke();ctx.setLineDash([]);ctx.beginPath();ctx.moveTo(guide.tip.x,guide.tip.y);ctx.lineTo(guide.left.x,guide.left.y);ctx.lineTo(guide.right.x,guide.right.y);ctx.closePath();ctx.fill();ctx.restore();
  }
 }
 
@@ -136,4 +136,13 @@ function drawSceneAnnotation(o){
  }
  const p=ScenicModel.annotationPoints(o);ctx.save();ctx.strokeStyle=o.color;ctx.fillStyle=o.color;ctx.lineCap='round';ctx.lineJoin='round';ctx.lineWidth=o.lineWidth;ctx.beginPath();ctx.moveTo(p[0].x,p[0].y);ctx.quadraticCurveTo(p[1].x,p[1].y,p[2].x,p[2].y);ctx.stroke();
  const before=Math.hypot(p[2].x-p[1].x,p[2].y-p[1].y)>.01?p[1]:p[0],a=Math.atan2(p[2].y-before.y,p[2].x-before.x),head=Math.max(12,o.lineWidth*3);ctx.beginPath();ctx.moveTo(p[2].x,p[2].y);ctx.lineTo(p[2].x-head*Math.cos(a-.48),p[2].y-head*Math.sin(a-.48));ctx.lineTo(p[2].x-head*Math.cos(a+.48),p[2].y-head*Math.sin(a+.48));ctx.closePath();ctx.fill();ctx.restore();
+}
+
+// Local coordinates match the fixture aim: the overhead leaves are left/right
+// relative to its forward direction, not fixed screen directions.
+function drawBarnDoors(o){
+ const leaves=ScenicCatalog.barnDoorGeometry(o);if(!leaves.length)return;
+ ctx.save();ctx.strokeStyle=color('--map-prop-line');ctx.fillStyle=doc.theme==='dark'?'#48454f':'#54515e';ctx.lineWidth=1.2/view.z;
+ for(const leaf of leaves){const a=leaf.start,b=leaf.end,dx=b.x-a.x,dy=b.y-a.y,len=Math.hypot(dx,dy),nx=-dy/len*2.5,ny=dx/len*2.5;ctx.beginPath();ctx.moveTo(a.x+nx,a.y+ny);ctx.lineTo(b.x+nx,b.y+ny);ctx.lineTo(b.x-nx,b.y-ny);ctx.lineTo(a.x-nx,a.y-ny);ctx.closePath();ctx.fill();ctx.stroke();}
+ ctx.restore();
 }

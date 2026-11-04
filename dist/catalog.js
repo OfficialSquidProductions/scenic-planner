@@ -94,8 +94,19 @@ entries.push(
  ['tube-light','LED tube','lights','Studio lights',48,3,'panel'],
  ['practical','Practical lamp','lights','Practical lights',14,14,'lamp'],
  ['overhead','Overhead light','lights','Practical lights',24,24,'lamp'],
- ['sun','Sun','lights','Daylight',36,36,'sun']
+ ['sun','Sun','lights','Daylight',36,36,'sun'],
+ ['flex-silver','Flex fill · silver','lights','Flags',42,42,'flex-fill'],
+ ['flex-gold','Flex fill · gold','lights','Flags',42,42,'flex-fill'],
+ ['flex-white','Flex fill · white','lights','Flags',42,42,'flex-fill'],
+ ['flex-black','Flex fill · black','lights','Flags',42,42,'flex-fill'],
+ ['negative-fill','Negative fill','lights','Flags',48,72,'negative-fill'],
+ ['bounce-board','White / black bounce board','lights','Flags',48,48,'bounce-board'],
+ ['diffusion-kit','Diffusion flag kit','lights','Flags',48,48,'diffusion-kit']
 );
+shapes['flex-fill']=['M23 12A11 11 0 1 1 1 12A11 11 0 1 1 23 12Z','M20 12A8 8 0 1 1 4 12A8 8 0 1 1 20 12Z'];
+shapes['negative-fill']=['M0 0H24V24H0Z','M2 2H22V22H2Z M3 3L21 21 M21 3L3 21'];
+shapes['bounce-board']=['M0 0H24V24H0Z','M12 0V24 M2 2H10V22H2Z M14 2H22V22H14Z'];
+shapes['diffusion-kit']=['M0 0H24V24H0Z','M2 2H22V22H2Z M8 2V22 M16 2V22 M2 8H22 M2 16H22'];
 shapes.window=['M0 0H24V24H0Z','M0 6H24 M0 18H24 M12 0V24'];
 shapes.panel=['M0 0H24V24H0Z','M3 3H21V21H3Z M6 0V24 M12 0V24 M18 0V24'];
 shapes.softbox=['M6 0H18L24 6V18L18 24H6L0 18V6Z','M12 0V24 M0 12H24'];
@@ -120,11 +131,19 @@ const shapeBounds=Object.fromEntries(Object.keys(shapes).map(shape=>[shape,[0,0,
 Object.assign(shapeBounds,{
  remote:[3,0,18,24],phone:[2,0,20,24],mug:[1,0,23,24],cup:[1,1,22,22],'paper-cup':[1,1,22,22],bottle:[2,0,20,24],
  keys:[0,6,24,13],controller:[0,2,24,225/11],toilet:[2,0,20,24],spot:[3,0,18,24],
- 'room-square':[1,1,22,22],'room-circle':[1,1,22,22],'room-l':[1,1,22,22],
+ 'flex-fill':[1,1,22,22],'room-square':[1,1,22,22],'room-circle':[1,1,22,22],'room-l':[1,1,22,22],
  'monitor-stand':[0,0,24,22],'monitor-cart':[0,3,24,18],stand:[2,0,20,22],
  boom:[0,3,24,18],tripod:[1,0,22,23],sandbag:[0,1,24,22],'gear-cart':[0,0,24,22]
 });
 const items=entries.map(([id,name,category,group,width,height,shape])=>({id,name,category,group,width:width*UNITS_PER_INCH,height:height*UNITS_PER_INCH,shape}));
+const modifierIds=new Set(['flex-silver','flex-gold','flex-white','flex-black','negative-fill','bounce-board','diffusion-kit']);
+for(const item of items)if(modifierIds.has(item.id))item.modifier=true;
+const isModifier=value=>modifierIds.has(typeof value==='string'?value:value?.asset||value?.id);
+function modifierStyle(o){const id=o.asset||o.id;const dark=id==='flex-black'||id==='negative-fill'||id==='bounce-board'&&o.bounceSide==='Black';return {fill:dark?'#23242b':id==='flex-gold'?'#d6b260':id==='flex-silver'?'#b9c3cd':'#f6f5ef',line:dark?'#9195a1':'#4d5260',detail:dark?'#575b69':'#9b9fa7'};}
+// Diagram geometry: 0° is open, 90° folded toward the beam. Top/bottom
+// adjustments are stored for planning but cannot be represented in top-down view.
+function barnDoorGeometry(o){if(o.type!=='light'||o.kind==='sun'||!o.barnDoors)return [];return ['barnLeft','barnRight'].map((key,index)=>{const sign=index===0?-1:1,a=(o[key]??0)*Math.PI/180,start={x:14,y:sign*11},end={x:14+22*Math.cos(a),y:sign*(11-22*Math.sin(a))};return {key,start,end};});}
+function sunRayGuide(state){const a=state.rayAngle,c=Math.cos(a),s=Math.sin(a);return {start:{x:c*34,y:s*34},tip:{x:c*88,y:s*88},left:{x:c*76-s*6,y:s*76+c*6},right:{x:c*76+s*6,y:s*76-c*6}};}
 const lightPresets={
  'led-panel':{power:75,temperature:5600,beam:120,radius:650},
  softbox:{power:65,temperature:5600,beam:140,radius:550},
@@ -134,6 +153,6 @@ const lightPresets={
  overhead:{power:65,temperature:4000,beam:360,radius:500},
  sun:{power:80,temperature:5600,beam:360,radius:1000,kind:'sun',rotation:0,time:12,sunrise:6,sunset:18,riseDirection:90,setDirection:270}
 };
-const api={DEFAULT_WALL_THICKNESS,ACTOR_FOOTPRINT,shapeBounds,lightPresets,UNITS_PER_INCH,formatLength,parseLength,items,shapes,get:id=>items.find(item=>item.id===id)};
+const api={isModifier,modifierStyle,barnDoorGeometry,sunRayGuide,DEFAULT_WALL_THICKNESS,ACTOR_FOOTPRINT,shapeBounds,lightPresets,UNITS_PER_INCH,formatLength,parseLength,items,shapes,get:id=>items.find(item=>item.id===id)};
 if(typeof module==='object'&&module.exports)module.exports=api;else root.ScenicCatalog=api;
 })(globalThis);

@@ -38,6 +38,12 @@ function openingContains(o,p,zoom,objects){
  const sign=o.swingSide==='Side B'?-1:1,leaf=(hinge,dir,width)=>segmentDistance(q,{x:hinge,y:0},{x:hinge+(o.open?0:dir*width),y:o.open?sign*width:0})<=pad;
  return ['door-double','door-french'].includes(o.asset)?leaf(-half,1,half)||leaf(half,-1,half):leaf(o.hinge==='Right'?half:-half,o.hinge==='Right'?-1:1,o.width);
 }
+function barnDoorSegments(o){const a=(o.rotation||0)*Math.PI/180,c=Math.cos(a),s=Math.sin(a),world=p=>({x:o.x+p.x*c-p.y*s,y:o.y+p.x*s+p.y*c});return catalog.barnDoorGeometry(o).map(leaf=>{const p=world(leaf.start),q=world(leaf.end);return {...p,x2:q.x,y2:q.y};});}
+function lightingSymbolPoints(o){
+ if(o.type!=='light')return [];
+ if(o.kind==='sun'){const state=sunState(o);if(state.error)return [];return Object.values(catalog.sunRayGuide(state)).map(p=>({x:o.x+p.x,y:o.y+p.y}));}
+ return barnDoorSegments(o).flatMap(w=>[w,{x:w.x2,y:w.y2}]);
+}
 function containsPoint(o,p,zoom=1,objects=[]){
  if(o.locked||o.type==='wallGroup')return false;
  if(o.type==='arrow')return arrowContains(o,p,Math.max(3,6/zoom));
@@ -45,7 +51,7 @@ function containsPoint(o,p,zoom=1,objects=[]){
  if(o.type==='wall')return segmentDistance(p,o,{x:o.x2,y:o.y2})<=Math.max(5/zoom,o.thickness/2+3);
  if(o.type==='actor')return actorContains(o,p,3/zoom);
  if(openingKind(o))return openingContains(o,p,zoom,objects);
- if(o.type==='camera'||o.type==='light')return Math.hypot(p.x-o.x,p.y-o.y)<=Math.max(o.kind==='sun'?30:24,8/zoom);
+ if(o.type==='camera'||o.type==='light')return Math.hypot(p.x-o.x,p.y-o.y)<=Math.max(o.kind==='sun'?30:24,8/zoom)||barnDoorSegments(o).some(w=>segmentDistance(p,w,{x:w.x2,y:w.y2})<=2.5+3/zoom);
  const a=-(o.rotation||0)*Math.PI/180,dx=p.x-o.x,dy=p.y-o.y,x=dx*Math.cos(a)-dy*Math.sin(a),y=dx*Math.sin(a)+dy*Math.cos(a);return Math.abs(x)<=o.width/2+3/zoom&&Math.abs(y)<=o.height/2+3/zoom;
 }
 function pickObject(objects,p,zoom=1){
@@ -238,6 +244,9 @@ function validProject(p){
    if(o.type==='arrow'&&(!(o.scale>=.1&&o.scale<=10)||!(o.lineWidth>=1&&o.lineWidth<=20)||!Array.isArray(o.points)||o.points.length!==3||!o.points.every(p=>p&&[p.x,p.y].every(n=>finite(n)&&Math.abs(n)<=5000))))return false;
    if(['labelOffsetX','labelOffsetY'].some(k=>o[k]!==undefined&&(!['camera','light'].includes(o.type)||!finite(o[k])||Math.abs(o[k])>10000)))return false;
    if(o.labelConnector!==undefined&&(!['camera','light'].includes(o.type)||typeof o.labelConnector!=='boolean'))return false;
+   if(o.bounceSide!==undefined&&(o.type!=='gear'||o.asset!=='bounce-board'||!['White','Black'].includes(o.bounceSide)))return false;
+   if(o.barnDoors!==undefined&&(o.type!=='light'||o.kind==='sun'||typeof o.barnDoors!=='boolean'))return false;
+   if(['barnTop','barnBottom','barnLeft','barnRight'].some(k=>o[k]!==undefined&&(o.type!=='light'||o.kind==='sun'||!finite(o[k])||o[k]<0||o[k]>90)))return false;
    if(o.type==='camera'&&o.color!==undefined&&!/^#[0-9a-f]{6}$/i.test(o.color))return false;
    if(o.type==='camera'&&((o.sensorWidth!==undefined&&(!finite(o.sensorWidth)||o.sensorWidth<1||o.sensorWidth>100))||(o.viewDistance!==undefined&&(!finite(o.viewDistance)||o.viewDistance<3||o.viewDistance>5000))))return false;
    if(o.shotId!==undefined&&(o.type!=='camera'||typeof o.shotId!=='string'||!s.shotList?.some(shot=>shot.id===o.shotId)))return false;
@@ -248,10 +257,10 @@ function validProject(p){
    if(o.type==='actor'&&['width','height'].some(k=>o[k]!==undefined&&(!finite(o[k])||o[k]<1.5||o[k]>5000)))return false;
    if(o.type==='image'&&o.keepProportions!==undefined&&typeof o.keepProportions!=='boolean')return false;
    if(o.type==='room'&&(catalog.get(o.asset)?.category!=='walls'||o.thickness<=0||o.thickness>100||o.keepProportions!==undefined&&typeof o.keepProportions!=='boolean'))return false;
-   if(['prop','set','gear'].includes(o.type)&&catalog.get(o.asset)?.category!==(o.type==='prop'?'props':o.type))return false;
+   if(['prop','set','gear'].includes(o.type)&&catalog.get(o.asset)?.category!==(o.type==='prop'?'props':o.type)&&!(o.type==='gear'&&catalog.isModifier(o)))return false;
    if(o.type==='light'){
     if(o.radius<1||o.radius>2000||o.power<0||o.power>100||o.beam<1||o.beam>360||o.temperature<2000||o.temperature>10000||typeof o.enabled!=='boolean')return false;
-    if(o.asset&&catalog.get(o.asset)?.category!=='lights')return false;
+    if(o.asset&&(catalog.get(o.asset)?.category!=='lights'||catalog.isModifier(o)))return false;
     if(o.rgbEnabled!==undefined&&typeof o.rgbEnabled!=='boolean'||['red','green','blue'].some(k=>o[k]!==undefined&&(!Number.isInteger(o[k])||o[k]<0||o[k]>255)))return false;
     if(['width','height'].some(k=>o[k]!==undefined&&(!finite(o[k])||o[k]<=0||o[k]>5000)))return false;
     if(o.kind==='sun'){
@@ -281,6 +290,6 @@ function workspaceFrom(data,id){
  if(!validProject(data))throw Error('The saved project could not be read. Your existing files have been preserved.');
  const p=structuredClone(data);p.projectId=p.projectId||id;return {version:2,activeProject:p.projectId,projects:[p]};
 }
-const api={lightingLayouts,annotationPoints,annotationBounds,curvePoint,arrowContains,informationLabel,openingContains,containsPoint,pickObject,cameraView,cameraCoverage,actorFootprint,actorContains,translateSelection,groupWalls,wallGroupFor,transformWallGroup,splitRoom,roomSegments,playbackElapsed,motionPose,motionDuration,lightColor,openingKind,movable,markLabel,wallPose,syncOpenings,snapOpening,doorLeaves,effectiveWalls,sunState,pathPosition,validProject,validWorkspace,workspaceFrom};
+const api={lightingLayouts,barnDoorSegments,lightingSymbolPoints,annotationPoints,annotationBounds,curvePoint,arrowContains,informationLabel,openingContains,containsPoint,pickObject,cameraView,cameraCoverage,actorFootprint,actorContains,translateSelection,groupWalls,wallGroupFor,transformWallGroup,splitRoom,roomSegments,playbackElapsed,motionPose,motionDuration,lightColor,openingKind,movable,markLabel,wallPose,syncOpenings,snapOpening,doorLeaves,effectiveWalls,sunState,pathPosition,validProject,validWorkspace,workspaceFrom};
 if(typeof module==='object'&&module.exports)module.exports=api;else root.ScenicModel=api;
 })(globalThis);
