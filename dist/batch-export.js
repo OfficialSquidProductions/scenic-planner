@@ -4,7 +4,7 @@
 const MAX_BYTES=80*1024*1024,encoder=new TextEncoder();
 const bytes=text=>encoder.encode(text),sum=parts=>parts.reduce((n,p)=>n+p.length,0);
 function safeName(value,fallback='Scenes'){return String(value).normalize('NFKD').replace(/[^a-z0-9 _-]/gi,'').trim().replace(/\s+/g,' ').slice(0,70)||fallback;}
-function filename(scene,index){return String(index+1).padStart(3,'0')+' - '+safeName(scene.title,'Scene')+'.png';}
+function filename(scene,index){return String(index+1).padStart(3,'0')+' - '+safeName(scene.exportShot?scene.title.replace(/(\d)\.(?=\d)/g,'$1-'):scene.title,'Scene')+'.png';}
 function pdf(images,width=1800,height=1250,maxPages=100){
  if(!Number.isInteger(maxPages)||maxPages<1||maxPages>1000||!images.length||images.length>maxPages)throw Error('Choose 1 to '+maxPages+' export pages.');
  const objects=[],pages=images.map((_,i)=>3+i*3);

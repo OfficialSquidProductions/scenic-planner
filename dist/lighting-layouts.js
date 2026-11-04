@@ -53,7 +53,7 @@ function shotScene(s,key){
  if(!target.shotLighting?.enabled)throw Error('Enable separate lighting per shot in Scene properties first.');
  if(key!=='shared')activate(target,key);
  else if(current(target)!=='shared')activate(target,'shared');
- const title=s.title+' · '+label(target,key);target.title=title;
+ const title=s.title+' · '+label(target,key);target.title=title;target.exportShot=key!=='shared';
  // Export snapshots need no mutable variant state.
  delete target.shotLighting;return target;
 }

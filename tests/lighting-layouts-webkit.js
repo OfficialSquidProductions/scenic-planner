@@ -22,7 +22,7 @@ try{
  showShots(true);renderShots();const row=[...document.querySelectorAll('[data-shot-row]')].find(r=>r.getAttribute('aria-label')==='Shot 3.2');row.click();check(shotView&&ScenicLightingLayouts.label(scene())==='Shot 3.2','Shot row selects layout without leaving list');
  const exportNames=[],exportData=[];const originalExport=ScenicDesktop.exportFile;ScenicDesktop.exportFile=async(blob,name)=>{exportNames.push(name);exportData.push(new Uint8Array(await blob.arrayBuffer()));return '/synthetic/'+name;};
  const beforeExport=JSON.stringify(workspaceData()),savedView=view,savedSelection=selectedIds,savedHistory=history.length;
- const mapResult=await ScenicBatchExport.map(doc.projectId,doc.active);check(mapResult.filename.includes('Shot 32'),'Selected map filename labels Scene and Shot');
+ const mapResult=await ScenicBatchExport.map(doc.projectId,doc.active);check(mapResult.filename.includes('Shot 3-2'),'Selected map filename labels Scene and Shot');
  const out=await ScenicBatchExport.start(doc.projectId,'pdf');check(out.completed&&out.count===2,'All shots exports one page per scene shot');
  const pdfText=new TextDecoder('latin1').decode(exportData[0]);check((pdfText.match(/\/Type \/Page\b/g)||[]).length===2,'Actual PDF contains two pages');check(exportNames[0].includes('all shots.pdf'),'PDF filename identifies shot batch');
  check(JSON.stringify(workspaceData())===beforeExport&&view===savedView&&selectedIds===savedSelection&&history.length===savedHistory,'Export preserves active shot, document, selection, view and Undo');
