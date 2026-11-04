@@ -45,7 +45,7 @@ final class ScenicClipboardWebView: WKWebView {
             guard let self else { done(); return }
             self.callAsyncJavaScript("return window.ScenicObjectClipboard?.copy() ?? null", arguments: [:], in: nil, in: .page) { result in
                 if case .success(let value) = result, let text = value as? String,
-                   text.hasPrefix("SCENIC OBJECTS 1\n"), text.utf8.count <= 60 * 1024 * 1024 {
+                   (text.hasPrefix("SCENIC OBJECTS 1\n") || text.hasPrefix("SCENIC OBJECTS 2\n")), text.utf8.count <= 60 * 1024 * 1024 {
                     self.objectPasteboard.string = text
                 } else { self.normalCopy(sender) }
                 done()

@@ -28,7 +28,7 @@ final class ScenicObjectClipboard: NSObject {
             guard let self, let web = self.webView() else { done(); return }
             guard self.isSceneWindow() else { self.normalAction(#selector(NSText.copy(_:))); done(); return }
             web.callAsyncJavaScript("return window.ScenicObjectClipboard?.copy() ?? null", arguments: [:], in: nil, in: .page) { result in
-                if case .success(let value) = result, let text = value as? String, text.hasPrefix("SCENIC OBJECTS 1\n"), text.utf8.count <= 60 * 1024 * 1024 {
+                if case .success(let value) = result, let text = value as? String, (text.hasPrefix("SCENIC OBJECTS 1\n") || text.hasPrefix("SCENIC OBJECTS 2\n")), text.utf8.count <= 60 * 1024 * 1024 {
                     self.pasteboard.clearContents(); self.pasteboard.setString(text, forType: .string)
                 } else { self.normalAction(#selector(NSText.copy(_:))) }
                 done()
