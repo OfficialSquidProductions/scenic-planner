@@ -173,3 +173,7 @@ main{container-type:inline-size}
 
 /* Shot actions stay available to touch and keyboard users as well as right-click. */
 .shot-row-actions{display:flex;align-items:center;gap:10px}.shot-row-actions [data-shot-actions]{min-width:36px;min-height:36px;padding:4px 9px;font-size:20px;line-height:1}.imported-shot:focus-visible,[data-shot-kind="camera"]:focus-visible{outline:2px solid var(--accent);outline-offset:3px}#shot-context{min-width:210px}#shot-context button{color:var(--accent-ink)}.shot-delete-actions{display:flex;justify-content:flex-end;gap:10px}.shot-delete-actions .danger{color:var(--accent-ink)}
+
+/* Keep the label reset separate from the next field at every inspector width. */
+.info-label-actions{margin:0 0 18px;min-width:0}
+.info-label-actions button{min-width:0;max-width:100%;white-space:normal;overflow-wrap:anywhere;line-height:1.4}

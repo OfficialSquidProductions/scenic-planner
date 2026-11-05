@@ -22,10 +22,12 @@ final class PortableCheck: NSObject, NSApplicationDelegate, WKScriptMessageHandl
         if action == "readProject" { result = ["project":NSNull(),"recovered":false] }
         if action == "getCrashReport" { result = ["needsPrompt":false,"log":""] }
         if action == "saveProject" { saved = data["project"] as? String }
-        if action == "capturePalette" {
+        if action == "capturePalette" || action == "captureSnapshot" {
             web.takeSnapshot(with:nil) { image,error in
                 if let tiff=image?.tiffRepresentation,let bitmap=NSBitmapImageRep(data:tiff),let png=bitmap.representation(using:.png,properties:[:]) {
-                    let path=URL(fileURLWithPath:self.args[3]).deletingLastPathComponent().appendingPathComponent("screenshots/desktop-drag-feedback.png")
+                    let name = (data["name"] as? String ?? "snapshot").filter { $0.isLetter || $0.isNumber || $0 == "-" }
+                    let relative = action == "capturePalette" ? "screenshots/desktop-drag-feedback.png" : name+".png"
+                    let path=URL(fileURLWithPath:self.args[3]).deletingLastPathComponent().appendingPathComponent(relative)
                     try? png.write(to:path)
                 }
                 self.reply(id,error == nil)

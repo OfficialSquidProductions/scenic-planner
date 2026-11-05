@@ -181,3 +181,7 @@ main{container-type:inline-size}
 
 /* Test feedback: discoverable scene controls and modifier status. */
 #settings .settings-lighting{padding:16px;margin:0 0 20px;border:2px solid var(--accent-ink);border-radius:10px;background:var(--well)}#settings .settings-lighting h2{margin:0 0 9px;font-size:18px}#settings .settings-lighting p{font-size:11px;line-height:1.6;margin:9px 0 0}#settings .settings-lighting-scene{overflow-wrap:anywhere}#settings .settings-lighting-toggle{font-size:13px;line-height:1.5;gap:10px;margin:14px 0 8px}#settings-lighting-state{font-weight:700;color:var(--accent-ink);margin-left:auto}#settings-shot-lighting-enabled{width:22px;height:22px;flex:0 0 22px;accent-color:var(--accent-ink)}.catalog-wip{padding:12px 10px;margin:2px 0 10px;border:2px solid var(--accent-ink);border-radius:7px;background:var(--accent-soft);color:var(--ink);font-size:12px;line-height:1.6}.catalog-wip strong{display:block;color:var(--accent-ink);font-size:18px;letter-spacing:1px}
+
+/* Keep the label reset separate from the next field at every inspector width. */
+.info-label-actions{margin:0 0 18px;min-width:0}
+.info-label-actions button{min-width:0;max-width:100%;white-space:normal;overflow-wrap:anywhere;line-height:1.4}
