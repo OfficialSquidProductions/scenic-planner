@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.4.34",
+    "changes": [
+      "Simplified camera, talent, light and lighting-flag Properties by removing lengthy helper explanations while preserving controls, values, original shot details and coverage tracking.",
+      "Separated Reset label position into its own row so it remains readable and clickable in narrow Properties panels.",
+      "Removed the fixed-color Camera, Talent and Light legend from the map. Icon colors remain editable; zoom, compass and map controls are unchanged."
+    ]
+  },
+  {
     "version": "1.4.33",
     "changes": [
       "Add compact upright lighting flags, silver/gold/white/black flex fills, negative fill, reversible bounce boards and diffusion. Flag corners scale uniformly; side stretching and independent width/height edits are disabled while existing project dimensions remain intact.",
