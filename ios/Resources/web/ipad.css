@@ -68,7 +68,6 @@ html.ipad-app,html.ipad-app body{height:100%;overflow:hidden;-webkit-text-size-a
  .ipad-app .scene-heading{padding:12px;--scene-heading-expanded-height:110px}
  .ipad-app .view-tabs button{padding:8px;font-size:12px}
  .ipad-app .toolbar-right .simulation{font-size:0}
- .ipad-app .map-legend{display:none}
 }
 
 @media(max-width:600px){.ipad-app #help,.ipad-app #theme{display:none}.ipad-app #share-project{font-size:12px}.ipad-app .workspace>.topbar{padding:0 6px;gap:4px}}
